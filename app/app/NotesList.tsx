@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import { SlashCommands } from './SlashCommands'
 
 type Note = {
   id: string
@@ -16,7 +17,8 @@ function Editor({ note, onUpdate }: { note: Note, onUpdate: (content: string) =>
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Placeholder.configure({ placeholder: 'Commence à écrire...' }),
+      Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
+      SlashCommands,
     ],
     content: note.content || '',
     onUpdate: ({ editor }) => {
@@ -32,7 +34,6 @@ function Editor({ note, onUpdate }: { note: Note, onUpdate: (content: string) =>
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
       <div className="flex gap-1 px-6 py-2 border-b flex-wrap">
         <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="G" title="Gras" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
@@ -114,7 +115,6 @@ export default function NotesList({ initialNotes, userId }: { initialNotes: Note
 
   return (
     <div className="flex w-full h-screen">
-      {/* Sidebar */}
       <div className="w-64 border-r bg-gray-50 flex flex-col">
         <div className="p-4 border-b flex items-center justify-between">
           <span className="font-semibold">Idée</span>
@@ -137,7 +137,6 @@ export default function NotesList({ initialNotes, userId }: { initialNotes: Note
         </div>
       </div>
 
-      {/* Éditeur */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {selected ? (
           <>
