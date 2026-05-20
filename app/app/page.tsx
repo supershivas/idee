@@ -1,20 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import NotesList from './NotesList'
+import App from './App'
 
 export default async function AppPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: notes } = await supabase
-    .from('notes')
+  const { data: pages } = await supabase
+    .from('pages')
     .select('*')
-    .order('updated_at', { ascending: false })
+    .order('position', { ascending: true })
 
-  return (
-    <main className="flex min-h-screen">
-      <NotesList initialNotes={notes || []} userId={user.id} />
-    </main>
-  )
+  return <App initialPages={pages || []} userId={user.id} />
 }
