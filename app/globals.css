@@ -22,3 +22,20 @@
 .prose blockquote { border-left: 3px solid #e5e7eb; padding-left: 1rem; color: #6b7280; }
 .prose code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.9em; }
 .prose pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+
+/* Supprime le style Tippy par défaut */
+.tippy-box {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.tippy-content {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.tippy-arrow {
+  display: none !important;
+}
