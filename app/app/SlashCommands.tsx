@@ -3,10 +3,11 @@ import { Extension } from '@tiptap/core'
 import Suggestion from '@tiptap/suggestion'
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import 'tippy.js/dist/tippy.css'
 
-const commands = [
+const getCommands = (onAddSubpage: () => void) => [
+  { title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: '📄', action: () => onAddSubpage() },
   { title: 'Titre 1', description: 'Grand titre', icon: 'H1', action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
   { title: 'Titre 2', description: 'Titre moyen', icon: 'H2', action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
   { title: 'Titre 3', description: 'Petit titre', icon: 'H3', action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
@@ -19,6 +20,7 @@ const commands = [
 
 const CommandList = forwardRef((props: any, ref) => {
   const [selected, setSelected] = useState(0)
+  const commands = getCommands(props.onAddSubpage || (() => {}))
   const filtered = commands.filter(c =>
     c.title.toLowerCase().includes(props.query.toLowerCase())
   )
@@ -63,19 +65,48 @@ CommandList.displayName = 'CommandList'
 export const SlashCommands = Extension.create({
   name: 'slashCommands',
   addOptions() {
-    return { suggestion: { char: '/', command: ({ editor, range, props }) => { editor.chain().focus().deleteRange(range).run(); props.action(editor) } } }
+    return {
+      onAddSubpage: () => {},
+      suggestion: {
+        char: '/',
+        command: ({ editor, range, props }) => {
+          editor.chain().focus().deleteRange(range).run()
+          props.action(editor)
+        }
+      }
+    }
   },
   addProseMirrorPlugins() {
-    return [Suggestion({ editor: this.editor, ...this.options.suggestion,
+    const onAddSubpage = this.options.onAddSubpage
+    return [Suggestion({
+      editor: this.editor,
+      ...this.options.suggestion,
       render: () => {
         let component, popup
         return {
           onStart: props => {
-            component = new ReactRenderer(CommandList, { props, editor: props.editor })
-            popup = tippy('body', { getReferenceClientRect: props.clientRect, appendTo: () => document.body, content: component.element, showOnCreate: true, interactive: true, trigger: 'manual', placement: 'bottom-start' })
+            component = new ReactRenderer(CommandList, {
+              props: { ...props, onAddSubpage },
+              editor: props.editor
+            })
+            popup = tippy('body', {
+              getReferenceClientRect: props.clientRect,
+              appendTo: () => document.body,
+              content: component.element,
+              showOnCreate: true,
+              interactive: true,
+              trigger: 'manual',
+              placement: 'bottom-start',
+            })
           },
-          onUpdate: props => { component.updateProps(props); popup[0].setProps({ getReferenceClientRect: props.clientRect }) },
-          onKeyDown: props => { if (props.event.key === 'Escape') { popup[0].hide(); return true }; return component.ref?.onKeyDown(props) },
+          onUpdate: props => {
+            component.updateProps({ ...props, onAddSubpage })
+            popup[0].setProps({ getReferenceClientRect: props.clientRect })
+          },
+          onKeyDown: props => {
+            if (props.event.key === 'Escape') { popup[0].hide(); return true }
+            return component.ref?.onKeyDown(props)
+          },
           onExit: () => { popup[0].destroy(); component.destroy() },
         }
       }
