@@ -1,10 +1,21 @@
 'use client'
-import { useEffect, useRef } from 'react'
-import data from '@emoji-mart/data'
-import { Picker } from '@emoji-mart/react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: string) => void, onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [Picker, setPicker] = useState<any>(null)
+  const [data, setData] = useState<any>(null)
+
+  // Import dynamique pour éviter les erreurs TypeScript avec @emoji-mart
+  useEffect(() => {
+    Promise.all([
+      import('@emoji-mart/react'),
+      import('@emoji-mart/data'),
+    ]).then(([pickerModule, dataModule]) => {
+      setPicker(() => pickerModule.Picker)
+      setData(dataModule.default)
+    })
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -18,12 +29,18 @@ export default function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: s
 
   return (
     <div ref={ref} className="absolute z-50 shadow-2xl rounded-xl mt-2">
-      <Picker 
-        data={data} 
-        onEmojiSelect={(emoji: any) => onSelect(emoji.native)}
-        locale="fr"
-        theme="light"
-      />
+      {Picker && data ? (
+        <Picker
+          data={data}
+          onEmojiSelect={(emoji: any) => onSelect(emoji.native)}
+          locale="fr"
+          theme="light"
+        />
+      ) : (
+        <div className="w-64 h-40 flex items-center justify-center bg-white rounded-xl border text-sm text-gray-400">
+          Chargement…
+        </div>
+      )}
     </div>
   )
 }
