@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
 import ShareButton from './ShareButton'
+import ExportButton from './ExportButton'
+import HistoryButton from './HistoryButton'
 
 export type Page = {
   id: string
@@ -202,16 +204,30 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     await supabase.from('pages').update({ icon }).eq('id', id)
   }
 
-  async function updateContent(content: string) {
-    if (!selected) return
-    const updated = { ...selected, content, updated_at: new Date().toISOString() }
-    setSelected(prev => prev ? { ...prev, content } : null)
-    setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
-    setSaving(true)
-    const supabase = createClient()
-    await supabase.from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
-    setSaving(false)
+const lastSaveRef = { current: 0 }
+
+async function updateContent(content: string) {
+  if (!selected) return
+  const updated = { ...selected, content, updated_at: new Date().toISOString() }
+  setSelected(prev => prev ? { ...prev, content } : null)
+  setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
+  setSaving(true)
+  const supabase = createClient()
+  await supabase.from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
+
+  // Snapshot toutes les 2 minutes max
+  const now = Date.now()
+  if (now - lastSaveRef.current > 2 * 60 * 1000) {
+    lastSaveRef.current = now
+    await supabase.from('page_history').insert({
+      page_id: selected.id,
+      user_id: userId,
+      title: selected.title,
+      content,
+    })
   }
+  setSaving(false)
+}
 
   async function deletePage(id: string) {
     const supabase = createClient()
@@ -299,7 +315,12 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                   placeholder="Sans titre"
                 />
                 <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-  {saving && <span className="text-xs text-gray-400">Sauvegarde...</span>}
+  {saving && <span className="text-xs text-gray-400 hidden sm:inline">Sauvegarde...</span>}
+  <HistoryButton page={selected} onRestore={(title, content) => {
+    setSelected(prev => prev ? { ...prev, title, content } : null)
+    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
+  }} />
+  <ExportButton page={selected} />
   <ShareButton page={selected as any} onUpdate={(updates) => {
     setSelected(prev => prev ? { ...prev, ...updates } : null)
     setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
