@@ -278,7 +278,50 @@ async function updateContent(content: string) {
     setPages(remaining)
     setSelected(remaining[0] || null)
   }
+async function movePage(draggedId: string, targetId: string, position: 'before' | 'after' | 'inside') {
+  const dragged = pages.find(p => p.id === draggedId)
+  const target = pages.find(p => p.id === targetId)
+  if (!dragged || !target) return
 
+  // Empêche de déplacer une page dans l'un de ses descendants
+  let check: Page | undefined = target
+  while (check) {
+    if (check.id === draggedId) return
+    check = pages.find(p => p.id === check!.parent_id)
+  }
+
+  let newParentId: string | null
+  if (position === 'inside') {
+    newParentId = targetId
+  } else {
+    newParentId = target.parent_id
+  }
+
+  // Recalcule les positions
+  const siblings = pages
+    .filter(p => p.parent_id === newParentId && p.id !== draggedId)
+    .sort((a, b) => a.position - b.position)
+
+  const targetIndex = siblings.findIndex(p => p.id === targetId)
+  const insertAt = position === 'before' ? targetIndex : targetIndex + 1
+
+  siblings.splice(position === 'inside' ? siblings.length : insertAt, 0, { ...dragged, parent_id: newParentId })
+
+  const updates = siblings.map((p, i) => ({ id: p.id, position: i, parent_id: newParentId }))
+
+  // Update local
+  setPages(prev => prev.map(p => {
+    const update = updates.find(u => u.id === p.id)
+    if (update) return { ...p, position: update.position, parent_id: update.parent_id as string | null }
+    return p
+  }))
+
+  // Update Supabase
+  const supabase = createClient()
+  await Promise.all(updates.map(u =>
+    supabase.from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)
+  ))
+}
   async function logout() {
     const supabase = createClient()
     await supabase.auth.signOut()
