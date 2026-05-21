@@ -5,16 +5,15 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
+import { Plugin } from '@tiptap/pm/state' // <-- AJOUTÉ pour gérer les événements
 import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
 import { createClient } from '@/lib/supabase/client'
 
+// --- COMPOSANTS INTERNES EXISTANTS ---
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
   return (
-    <button onClick={onClick} title={title}
-      className={`px-2 py-1 rounded text-sm font-medium transition-colors ${active ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-600'}`}>
-      {label}
-    </button>
+    <button onClick={onClick} title={title}\n      className={`px-2 py-1 rounded text-sm font-medium transition-colors ${active ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-600'}`}>\n      {label}\n    </button>
   )
 }
 
@@ -41,6 +40,27 @@ function LinkModal({ onConfirm, onClose }: { onConfirm: (url: string) => void, o
   )
 }
 
+// --- ÉTAPE 1 : FONCTION D'UPLOAD RÉUTILISABLE ---
+async function uploadFileToSupabase(file: File, userId: string): Promise<string | null> {
+  try {
+    const supabase = createClient()
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/${Date.now()}.${ext}`
+    
+    // Upload vers votre bucket 'images' existant
+    const { error } = await supabase.storage.from('images').upload(path, file)
+    if (error) throw error
+
+    // Récupération de l'URL publique
+    const { data } = supabase.storage.from('images').getPublicUrl(path)
+    return data.publicUrl
+  } catch (error) {
+    console.error("Erreur lors de l'upload Supabase:", error)
+    return null
+  }
+}
+
+// --- COMPOSANT PRINCIPAL ---
 export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, userId }: {
   page: Page, pages: Page[], onUpdate: (content: string) => void
   onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string
@@ -54,7 +74,74 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       StarterKit,
       Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer hover:text-blue-800' } }),
-      Image.configure({ HTMLAttributes: { class: 'max-w-full rounded-lg my-2' } }),
+      
+      // --- ÉTAPE 2 : CONFIGURATION DE L'EXTENSION IMAGE EXTEND ---
+      Image.extend({
+        // On conserve vos classes CSS appliquées à l'image
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            class: { default: 'max-w-full rounded-lg my-2' }
+          }
+        },
+        addProseMirrorPlugins() {
+          return [
+            new Plugin({
+              props: {
+                // Intercepter le Copier-Coller (Paste)
+                handlePaste(view, event) {
+                  const items = Array.from(event.clipboardData?.items || [])
+                  
+                  for (const item of items) {
+                    if (item.type.indexOf('image') === 0) {
+                      event.preventDefault()
+                      const file = item.getAsFile()
+                      
+                      if (file) {
+                        setUploading(true)
+                        uploadFileToSupabase(file, userId).then((url) => {
+                          if (url) {
+                            const node = view.state.schema.nodes.image.create({ src: url })
+                            const transaction = view.state.tr.replaceSelectionWith(node)
+                            view.dispatch(transaction)
+                          }
+                          setUploading(false)
+                        })
+                      }
+                      return true // L'événement a été géré
+                    }
+                  }
+                  return false
+                },
+                // Intercepter le Glisser-Déposer (Drop)
+                handleDrop(view, event) {
+                  const files = Array.from(event.dataTransfer?.files || [])
+                  const images = files.filter(file => /image/i.test(file.type))
+                  
+                  if (images.length > 0) {
+                    event.preventDefault()
+                    const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
+                    
+                    images.forEach((file) => {
+                      setUploading(true)
+                      uploadFileToSupabase(file, userId).then((url) => {
+                        if (url && coordinates) {
+                          const node = view.state.schema.nodes.image.create({ src: url })
+                          const transaction = view.state.tr.insert(coordinates.pos, node)
+                          view.dispatch(transaction)
+                        }
+                        setUploading(false)
+                      })
+                    })
+                    return true // L'événement a été géré
+                  }
+                  return false
+                }
+              }
+            })
+          ]
+        }
+      }),
       SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
     ],
     content: page.content || '',
@@ -88,18 +175,15 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     editor?.chain().focus().setLink({ href: url }).run()
   }
 
+  // Version nettoyée du gestionnaire de bouton classique d'image
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !editor) return
     setUploading(true)
     try {
-      const supabase = createClient()
-      const ext = file.name.split('.').pop()
-      const path = `${userId}/${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('images').upload(path, file)
-      if (!error) {
-        const { data } = supabase.storage.from('images').getPublicUrl(path)
-        editor.chain().focus().setImage({ src: data.publicUrl }).run()
+      const url = await uploadFileToSupabase(file, userId)
+      if (url) {
+        editor.chain().focus().setImage({ src: url }).run()
       }
     } finally {
       setUploading(false)
