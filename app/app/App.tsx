@@ -20,34 +20,15 @@ function IconPicker({ current, onChange, onClose }: { current: string, onChange:
     <div className="absolute top-full left-0 mt-1 bg-white border rounded-xl shadow-xl p-3 z-50 w-52">
       <div className="grid grid-cols-5 gap-1">
         {ICON_OPTIONS.map(icon => (
-          <button
-            key={icon}
-            onClick={() => { onChange(icon); onClose() }}
-            className={`w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-lg transition-colors ${current === icon ? 'bg-gray-200' : ''}`}
-          >
+          <button key={icon} onClick={() => { onChange(icon); onClose() }}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-lg transition-colors ${current === icon ? 'bg-gray-200' : ''}`}>
             {icon}
           </button>
         ))}
       </div>
-      <button
-        className="mt-2 w-full text-xs text-gray-400 hover:text-gray-600 text-center"
-        onClick={() => {
-          // Ouvre le picker natif du navigateur via input emoji
-          const input = document.createElement('input')
-          input.type = 'text'
-          input.style.position = 'fixed'
-          input.style.opacity = '0'
-          document.body.appendChild(input)
-          input.focus()
-          input.addEventListener('input', (e) => {
-            const val = (e.target as HTMLInputElement).value
-            if (val) { onChange(val); onClose() }
-            document.body.removeChild(input)
-          })
-        }}
-      >
-        Tous les emojis (Win: ⊞+. / Mac: ⌘+Ctrl+Espace)
-      </button>
+      <p className="mt-2 text-xs text-gray-400 text-center">
+        Tous les emojis : Mac ⌘+Ctrl+Espace · Win ⊞+.
+      </p>
     </div>
   )
 }
@@ -55,45 +36,33 @@ function IconPicker({ current, onChange, onClose }: { current: string, onChange:
 function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Page) => void }) {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
-
   const results = query.length > 1
     ? pages.filter(p =>
         (p.title || '').toLowerCase().includes(query.toLowerCase()) ||
         (p.content || '').toLowerCase().includes(query.toLowerCase())
       ).slice(0, 8)
     : []
-
   return (
     <div className="relative px-2 py-2 border-b border-gray-200">
       <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-1.5">
         <span className="text-gray-400 text-sm">🔍</span>
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
+        <input value={query} onChange={e => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Rechercher..."
-          className="flex-1 bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400"
-        />
-        {query && (
-          <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
-        )}
+          className="flex-1 bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400" />
+        {query && <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>}
       </div>
       {focused && results.length > 0 && (
         <div className="absolute left-2 right-2 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 overflow-hidden">
           {results.map(page => (
-            <button
-              key={page.id}
-              onClick={() => { onSelect(page); setQuery('') }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 border-b last:border-0"
-            >
+            <button key={page.id} onClick={() => { onSelect(page); setQuery('') }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 border-b last:border-0">
               <span>{page.icon || '📄'}</span>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-800 truncate">{page.title || 'Sans titre'}</p>
                 {(page.content || '').toLowerCase().includes(query.toLowerCase()) && (
-                  <p className="text-xs text-gray-400 truncate">
-                    {page.content.replace(/<[^>]+>/g, '').slice(0, 60)}...
-                  </p>
+                  <p className="text-xs text-gray-400 truncate">{page.content.replace(/<[^>]+>/g, '').slice(0, 60)}...</p>
                 )}
               </div>
             </button>
@@ -114,42 +83,30 @@ function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onUpdat
 ) {
   const children = pages.filter(p => p.parent_id === parentId)
   const [open, setOpen] = useState<Record<string, boolean>>({})
-
   if (!children.length) return null
-
   return (
     <div>
       {children.map(page => {
         const hasChildren = pages.some(p => p.parent_id === page.id)
         const isOpen = open[page.id]
         const isSelected = selectedId === page.id
-
         return (
           <div key={page.id}>
             <div
               className={`flex items-center gap-1 pr-2 py-0.5 rounded-md cursor-pointer group hover:bg-gray-200/60 transition-colors ${isSelected ? 'bg-gray-200' : ''}`}
               style={{ paddingLeft: `${depth * 14 + 6}px` }}
             >
-              <button
-                onClick={() => setOpen(o => ({ ...o, [page.id]: !o[page.id] }))}
-                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0 text-xs"
-              >
+              <button onClick={() => setOpen(o => ({ ...o, [page.id]: !o[page.id] }))}
+                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0 text-xs">
                 {hasChildren ? (isOpen ? '▾' : '▸') : ''}
               </button>
               <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
-              <span
-                onClick={() => onSelect(page)}
-                className="flex-1 text-sm truncate py-1 text-gray-700"
-              >
+              <span onClick={() => onSelect(page)} className="flex-1 text-sm truncate py-1 text-gray-700">
                 {page.title || 'Sans titre'}
               </span>
-              <button
-                onClick={() => onAdd(page.id)}
+              <button onClick={() => onAdd(page.id)}
                 className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-700 text-base leading-none flex-shrink-0 w-5 h-5 flex items-center justify-center"
-                title="Ajouter une sous-page"
-              >
-                +
-              </button>
+                title="Ajouter une sous-page">+</button>
             </div>
             {isOpen && (
               <PageTree pages={pages} parentId={page.id} depth={depth + 1} selectedId={selectedId} onSelect={onSelect} onAdd={onAdd} onUpdateIcon={onUpdateIcon} />
@@ -180,6 +137,25 @@ function Breadcrumb({ pages, selected, onSelect }: { pages: Page[], selected: Pa
           </button>
         </span>
       ))}
+    </div>
+  )
+}
+
+function SubpagesList({ subpages, onSelect }: { subpages: Page[], onSelect: (p: Page) => void }) {
+  if (!subpages.length) return null
+  return (
+    <div className="px-8 pb-3 border-b border-gray-100">
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">Sous-pages</p>
+      <div className="flex flex-col gap-0.5">
+        {subpages.map(sub => (
+          <button key={sub.id} onClick={() => onSelect(sub)}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-100 transition-colors text-sm text-gray-700 text-left group w-full">
+            <span className="text-base">{sub.icon || '📄'}</span>
+            <span className="flex-1 truncate">{sub.title || 'Sans titre'}</span>
+            <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs">→</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -248,6 +224,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     window.location.href = '/login'
   }
 
+  const subpages = selected ? pages.filter(p => p.parent_id === selected.id) : []
+
   return (
     <div className="flex w-full h-screen bg-white">
       {/* Sidebar */}
@@ -275,19 +253,12 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
             <Breadcrumb pages={pages} selected={selected} onSelect={setSelected} />
             <div className="px-8 pt-4 pb-2 flex items-start gap-3 relative">
               <div className="relative">
-                <button
-                  onClick={() => setShowIconPicker(v => !v)}
-                  className="text-4xl hover:opacity-70 transition-opacity leading-none"
-                  title="Changer l'icône"
-                >
+                <button onClick={() => setShowIconPicker(v => !v)}
+                  className="text-4xl hover:opacity-70 transition-opacity leading-none" title="Changer l'icône">
                   {selected.icon || '📄'}
                 </button>
                 {showIconPicker && (
-                  <IconPicker
-                    current={selected.icon || '📄'}
-                    onChange={(icon) => updateIcon(selected.id, icon)}
-                    onClose={() => setShowIconPicker(false)}
-                  />
+                  <IconPicker current={selected.icon || '📄'} onChange={(icon) => updateIcon(selected.id, icon)} onClose={() => setShowIconPicker(false)} />
                 )}
               </div>
               <div className="flex-1 flex items-center justify-between">
@@ -303,6 +274,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                 </div>
               </div>
             </div>
+            <SubpagesList subpages={subpages} onSelect={setSelected} />
             <Editor key={selected.id} page={selected} pages={pages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={setSelected} userId={userId} />
           </>
         ) : (
