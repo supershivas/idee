@@ -1,10 +1,16 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
 import ShareButton from './ShareButton'
 import ExportButton from './ExportButton'
 import HistoryButton from './HistoryButton'
+import {
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  type DragStartEvent, type DragEndEvent, type DragOverEvent
+} from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 export type Page = {
   id: string
@@ -81,84 +87,87 @@ function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Page) => 
   )
 }
 
-function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onUpdateIcon, onMove }:
-  { pages: Page[], parentId: string | null, depth: number, selectedId: string | null, onSelect: (p: Page) => void, onAdd: (parentId: string | null) => void, onUpdateIcon: (id: string, icon: string) => void, onMove: (draggedId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void }
-) {
-  const children = pages.filter(p => p.parent_id === parentId)
-  const [open, setOpen] = useState<Record<string, boolean>>({})
-  const [dragOver, setDragOver] = useState<{ id: string, position: 'before' | 'after' | 'inside' } | null>(null)
+function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition }: {
+  page: Page, pages: Page[], depth: number, selectedId: string | null,
+  onSelect: (p: Page) => void, onAdd: (id: string) => void,
+  onToggle: (id: string) => void, isOpen: boolean,
+  overId: string | null, overPosition: 'before' | 'after' | 'inside' | null
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  const hasChildren = pages.some(p => p.parent_id === page.id)
+  const isSelected = selectedId === page.id
+  const isOver = overId === page.id
 
-  if (!children.length && depth > 0) return null
+  return (
+    <div ref={setNodeRef} style={style}>
+      {isOver && overPosition === 'before' && (
+        <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
+      )}
+      <div
+        className={`flex items-center gap-1 pr-2 py-0.5 rounded-md cursor-pointer group transition-colors
+          ${isSelected ? 'bg-gray-200' : 'hover:bg-gray-200/60'}
+          ${isOver && overPosition === 'inside' ? 'bg-blue-50 ring-1 ring-blue-300' : ''}
+        `}
+        style={{ paddingLeft: `${depth * 14 + 6}px` }}
+      >
+        <button
+          {...attributes} {...listeners}
+          className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab active:cursor-grabbing"
+          title="Glisser pour déplacer"
+        >⠿</button>
+        <button
+          onClick={() => onToggle(page.id)}
+          className="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0 text-xs"
+        >
+          {hasChildren ? (isOpen ? '▾' : '▸') : ''}
+        </button>
+        <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
+        <span onClick={() => onSelect(page)} className="flex-1 text-sm truncate py-1 text-gray-700">
+          {page.title || 'Sans titre'}
+        </span>
+        <button
+          onClick={() => onAdd(page.id)}
+          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-700 text-base leading-none flex-shrink-0 w-5 h-5 flex items-center justify-center"
+          title="Ajouter une sous-page"
+        >+</button>
+      </div>
+      {isOver && overPosition === 'after' && (
+        <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
+      )}
+    </div>
+  )
+}
+
+function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition }: {
+  pages: Page[], parentId: string | null, depth: number, selectedId: string | null,
+  onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
+  onToggle: (id: string) => void, openMap: Record<string, boolean>,
+  overId: string | null, overPosition: 'before' | 'after' | 'inside' | null
+}) {
+  const children = pages
+    .filter(p => p.parent_id === parentId)
+    .sort((a, b) => a.position - b.position)
+
+  if (!children.length) return null
 
   return (
     <div>
-      {children.map(page => {
-        const hasChildren = pages.some(p => p.parent_id === page.id)
-        const isOpen = open[page.id]
-        const isSelected = selectedId === page.id
-        const isDragOver = dragOver?.id === page.id
-
-        return (
-          <div key={page.id}>
-            {/* Indicateur "before" */}
-            {isDragOver && dragOver?.position === 'before' && (
-              <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
-            )}
-
-            <div
-              draggable
-              onDragStart={e => { e.dataTransfer.setData('pageId', page.id); e.dataTransfer.effectAllowed = 'move' }}
-              onDragOver={e => {
-                e.preventDefault()
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                const y = e.clientY - rect.top
-                const ratio = y / rect.height
-                const position = ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside'
-                setDragOver({ id: page.id, position })
-              }}
-              onDragLeave={() => setDragOver(null)}
-              onDrop={e => {
-                e.preventDefault()
-                const draggedId = e.dataTransfer.getData('pageId')
-                if (draggedId && draggedId !== page.id) {
-                  onMove(draggedId, page.id, dragOver?.position || 'after')
-                }
-                setDragOver(null)
-              }}
-              className={`flex items-center gap-1 pr-2 py-0.5 rounded-md cursor-pointer group transition-colors
-                ${isSelected ? 'bg-gray-200' : 'hover:bg-gray-200/60'}
-                ${isDragOver && dragOver?.position === 'inside' ? 'bg-blue-50 ring-1 ring-blue-300' : ''}
-              `}
-              style={{ paddingLeft: `${depth * 14 + 6}px` }}
-            >
-              <button
-                onClick={() => setOpen(o => ({ ...o, [page.id]: !o[page.id] }))}
-                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0 text-xs"
-              >
-                {hasChildren ? (isOpen ? '▾' : '▸') : ''}
-              </button>
-              <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
-              <span onClick={() => onSelect(page)} className="flex-1 text-sm truncate py-1 text-gray-700">
-                {page.title || 'Sans titre'}
-              </span>
-              <button
-                onClick={() => onAdd(page.id)}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-700 text-base leading-none flex-shrink-0 w-5 h-5 flex items-center justify-center"
-                title="Ajouter une sous-page"
-              >+</button>
-            </div>
-
-            {/* Indicateur "after" */}
-            {isDragOver && dragOver?.position === 'after' && (
-              <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
-            )}
-
-            {isOpen && (
-              <PageTree pages={pages} parentId={page.id} depth={depth + 1} selectedId={selectedId} onSelect={onSelect} onAdd={onAdd} onUpdateIcon={onUpdateIcon} onMove={onMove} />
-            )}
-          </div>
-        )
-      })}
+      {children.map(page => (
+        <div key={page.id}>
+          <SortablePageItem
+            page={page} pages={pages} depth={depth} selectedId={selectedId}
+            onSelect={onSelect} onAdd={onAdd} onToggle={onToggle}
+            isOpen={!!openMap[page.id]} overId={overId} overPosition={overPosition}
+          />
+          {openMap[page.id] && (
+            <PageTree pages={pages} parentId={page.id} depth={depth + 1}
+              selectedId={selectedId} onSelect={onSelect} onAdd={onAdd}
+              onToggle={onToggle} openMap={openMap} overId={overId} overPosition={overPosition}
+            />
+          )}
+        </div>
+      ))}
     </div>
   )
 }
@@ -211,6 +220,17 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
+  const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
+  const lastSaveRef = useRef(0)
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  function toggleOpen(id: string) {
+    setOpenMap(o => ({ ...o, [id]: !o[id] }))
+  }
 
   async function addPage(parentId: string | null) {
     const supabase = createClient()
@@ -225,6 +245,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       setPages(prev => [...prev, data])
       setSelected(data)
       setSidebarOpen(false)
+      if (parentId) setOpenMap(o => ({ ...o, [parentId]: true }))
     }
   }
 
@@ -246,30 +267,23 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     await supabase.from('pages').update({ icon }).eq('id', id)
   }
 
-const lastSaveRef = { current: 0 }
-
-async function updateContent(content: string) {
-  if (!selected) return
-  const updated = { ...selected, content, updated_at: new Date().toISOString() }
-  setSelected(prev => prev ? { ...prev, content } : null)
-  setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
-  setSaving(true)
-  const supabase = createClient()
-  await supabase.from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
-
-  // Snapshot toutes les 2 minutes max
-  const now = Date.now()
-  if (now - lastSaveRef.current > 2 * 60 * 1000) {
-    lastSaveRef.current = now
-    await supabase.from('page_history').insert({
-      page_id: selected.id,
-      user_id: userId,
-      title: selected.title,
-      content,
-    })
+  async function updateContent(content: string) {
+    if (!selected) return
+    const updated = { ...selected, content, updated_at: new Date().toISOString() }
+    setSelected(prev => prev ? { ...prev, content } : null)
+    setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
+    setSaving(true)
+    const supabase = createClient()
+    await supabase.from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
+    const now = Date.now()
+    if (now - lastSaveRef.current > 2 * 60 * 1000) {
+      lastSaveRef.current = now
+      await supabase.from('page_history').insert({
+        page_id: selected.id, user_id: userId, title: selected.title, content,
+      })
+    }
+    setSaving(false)
   }
-  setSaving(false)
-}
 
   async function deletePage(id: string) {
     const supabase = createClient()
@@ -278,59 +292,84 @@ async function updateContent(content: string) {
     setPages(remaining)
     setSelected(remaining[0] || null)
   }
-async function movePage(draggedId: string, targetId: string, position: 'before' | 'after' | 'inside') {
-  const dragged = pages.find(p => p.id === draggedId)
-  const target = pages.find(p => p.id === targetId)
-  if (!dragged || !target) return
 
-  // Empêche de déplacer une page dans l'un de ses descendants
-  let check: Page | undefined = target
-  while (check) {
-    if (check.id === draggedId) return
-    check = pages.find(p => p.id === check!.parent_id)
-  }
-
-  let newParentId: string | null
-  if (position === 'inside') {
-    newParentId = targetId
-  } else {
-    newParentId = target.parent_id
-  }
-
-  // Recalcule les positions
-  const siblings = pages
-    .filter(p => p.parent_id === newParentId && p.id !== draggedId)
-    .sort((a, b) => a.position - b.position)
-
-  const targetIndex = siblings.findIndex(p => p.id === targetId)
-  const insertAt = position === 'before' ? targetIndex : targetIndex + 1
-
-  siblings.splice(position === 'inside' ? siblings.length : insertAt, 0, { ...dragged, parent_id: newParentId })
-
-  const updates = siblings.map((p, i) => ({ id: p.id, position: i, parent_id: newParentId }))
-
-  // Update local
-  setPages(prev => prev.map(p => {
-    const update = updates.find(u => u.id === p.id)
-    if (update) return { ...p, position: update.position, parent_id: update.parent_id as string | null }
-    return p
-  }))
-
-  // Update Supabase
-  const supabase = createClient()
-  await Promise.all(updates.map(u =>
-    supabase.from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)
-  ))
-}
   async function logout() {
     const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveDragId(event.active.id as string)
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const { over, active } = event
+    if (!over || over.id === active.id) { setOverId(null); return }
+    setOverId(over.id as string)
+    // Calcule la position via les données de l'événement
+    const overRect = event.over?.rect
+    if (overRect && event.activatorEvent) {
+      const clientY = (event.activatorEvent as PointerEvent).clientY +
+        ((event.delta?.y) || 0)
+      const ratio = (clientY - overRect.top) / overRect.height
+      setOverPosition(ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside')
+    }
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveDragId(null)
+    setOverId(null)
+    setOverPosition(null)
+
+    if (!over || active.id === over.id) return
+
+    const draggedId = active.id as string
+    const targetId = over.id as string
+    const position = overPosition || 'after'
+
+    const dragged = pages.find(p => p.id === draggedId)
+    const target = pages.find(p => p.id === targetId)
+    if (!dragged || !target) return
+
+    // Empêche de déplacer dans un descendant
+    let check: Page | undefined = target
+    while (check) {
+      if (check.id === draggedId) return
+      check = pages.find(p => p.id === check!.parent_id)
+    }
+
+    const newParentId = position === 'inside' ? targetId : target.parent_id
+
+    const siblings = pages
+      .filter(p => p.parent_id === newParentId && p.id !== draggedId)
+      .sort((a, b) => a.position - b.position)
+
+    const targetIndex = siblings.findIndex(p => p.id === targetId)
+    const insertAt = position === 'before' ? targetIndex : position === 'after' ? targetIndex + 1 : siblings.length
+    siblings.splice(insertAt, 0, { ...dragged, parent_id: newParentId })
+
+    const updates = siblings.map((p, i) => ({ id: p.id, position: i, parent_id: newParentId }))
+
+    setPages(prev => prev.map(p => {
+      const update = updates.find(u => u.id === p.id)
+      if (update) return { ...p, position: update.position, parent_id: update.parent_id as string | null }
+      return p
+    }))
+
+    if (position === 'inside') setOpenMap(o => ({ ...o, [targetId]: true }))
+
+    const supabase = createClient()
+    await Promise.all(updates.map(u =>
+      supabase.from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)
+    ))
+  }
+
+  const activePage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? pages.filter(p => p.parent_id === selected.id) : []
 
-  const sidebar = (
+  const sidebarContent = (
     <div className="w-60 bg-gray-50 flex flex-col h-full">
       <div className="px-4 py-3 flex items-center justify-between border-b border-gray-200">
         <span className="font-semibold text-gray-800 text-sm">Idée</span>
@@ -345,35 +384,39 @@ async function movePage(draggedId: string, targetId: string, position: 'before' 
         {pages.filter(p => p.parent_id === null).length === 0 && (
           <p className="text-xs text-gray-400 px-3 py-3">Clique sur + pour créer une page.</p>
         )}
-        <PageTree pages={pages} parentId={null} depth={0} selectedId={selected?.id || null}
-          onSelect={(p) => { setSelected(p); setSidebarOpen(false) }}
-          onAdd={addPage} onUpdateIcon={updateIcon} onMove={movePage} />
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+          <PageTree
+            pages={pages} parentId={null} depth={0} selectedId={selected?.id || null}
+            onSelect={(p) => { setSelected(p); setSidebarOpen(false) }}
+            onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
+            overId={overId} overPosition={overPosition}
+          />
+          <DragOverlay>
+            {activePage && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border rounded-lg shadow-lg text-sm opacity-90">
+                <span>⠿</span>
+                <span>{activePage.icon}</span>
+                <span className="truncate max-w-32">{activePage.title || 'Sans titre'}</span>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       </div>
     </div>
   )
 
   return (
     <div className="flex w-full h-screen bg-white overflow-hidden">
+      <div className="hidden md:flex border-r flex-shrink-0">{sidebarContent}</div>
 
-      {/* Sidebar desktop */}
-      <div className="hidden md:flex border-r flex-shrink-0">
-        {sidebar}
-      </div>
-
-      {/* Sidebar mobile — overlay */}
       {sidebarOpen && (
         <div className="md:hidden fixed inset-0 z-40 flex">
-          <div className="flex-shrink-0 border-r shadow-xl">
-            {sidebar}
-          </div>
+          <div className="flex-shrink-0 border-r shadow-xl">{sidebarContent}</div>
           <div className="flex-1 bg-black/30" onClick={() => setSidebarOpen(false)} />
         </div>
       )}
 
-      {/* Contenu */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-
-        {/* Header mobile */}
         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-100">
           <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-800 text-xl leading-none">☰</button>
           <span className="text-sm font-medium text-gray-700 truncate">{selected?.title || 'Idée'}</span>
@@ -400,18 +443,18 @@ async function movePage(draggedId: string, targetId: string, position: 'before' 
                   placeholder="Sans titre"
                 />
                 <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-  {saving && <span className="text-xs text-gray-400 hidden sm:inline">Sauvegarde...</span>}
-  <HistoryButton page={selected} onRestore={(title, content) => {
-    setSelected(prev => prev ? { ...prev, title, content } : null)
-    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
-  }} />
-  <ExportButton page={selected} />
-  <ShareButton page={selected as any} onUpdate={(updates) => {
-    setSelected(prev => prev ? { ...prev, ...updates } : null)
-    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
-  }} />
-  <button onClick={() => deletePage(selected.id)} className="text-sm text-red-400 hover:text-red-500 transition-colors">Supprimer</button>
-</div>
+                  {saving && <span className="text-xs text-gray-400 hidden sm:inline">Sauvegarde...</span>}
+                  <HistoryButton page={selected} onRestore={(title, content) => {
+                    setSelected(prev => prev ? { ...prev, title, content } : null)
+                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
+                  }} />
+                  <ExportButton page={selected} />
+                  <ShareButton page={selected as any} onUpdate={(updates) => {
+                    setSelected(prev => prev ? { ...prev, ...updates } : null)
+                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
+                  }} />
+                  <button onClick={() => deletePage(selected.id)} className="text-sm text-red-400 hover:text-red-500 transition-colors">Supprimer</button>
+                </div>
               </div>
             </div>
             <SubpagesList subpages={subpages} onSelect={setSelected} />
