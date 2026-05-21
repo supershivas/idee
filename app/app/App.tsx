@@ -5,6 +5,7 @@ import Editor from './Editor'
 import ShareButton from './ShareButton'
 import ExportButton from './ExportButton'
 import HistoryButton from './HistoryButton'
+import EmojiPicker from './EmojiPicker'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   type DragStartEvent, type DragEndEvent, type DragOverEvent
@@ -432,8 +433,14 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                   {selected.icon || '📄'}
                 </button>
                 {showIconPicker && (
-                  <IconPicker current={selected.icon || '📄'} onChange={(icon) => updateIcon(selected.id, icon)} onClose={() => setShowIconPicker(false)} />
-                )}
+  <EmojiPicker 
+    onSelect={(emoji) => {
+      updateIcon(selected.id, emoji)
+      setShowIconPicker(false)
+    }} 
+    onClose={() => setShowIconPicker(false)} 
+  />
+)}
               </div>
               <div className="flex-1 flex items-center justify-between min-w-0">
                 <input
