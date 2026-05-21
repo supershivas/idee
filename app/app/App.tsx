@@ -13,7 +13,6 @@ export type Page = {
   updated_at: string
 }
 
-const DEFAULT_ICONS = ['📄', '📝', '💡', '🗂️', '📌', '🔖', '⭐', '🚀', '🎯', '💬']
 const ICON_OPTIONS = ['📄', '📝', '💡', '🗂️', '📌', '🔖', '⭐', '🚀', '🎯', '💬', '🏠', '🔧', '📊', '🎨', '📚', '🌿', '🔍', '💼', '🎵', '🧪']
 
 function IconPicker({ current, onChange, onClose }: { current: string, onChange: (icon: string) => void, onClose: () => void }) {
@@ -30,6 +29,82 @@ function IconPicker({ current, onChange, onClose }: { current: string, onChange:
           </button>
         ))}
       </div>
+      <button
+        className="mt-2 w-full text-xs text-gray-400 hover:text-gray-600 text-center"
+        onClick={() => {
+          // Ouvre le picker natif du navigateur via input emoji
+          const input = document.createElement('input')
+          input.type = 'text'
+          input.style.position = 'fixed'
+          input.style.opacity = '0'
+          document.body.appendChild(input)
+          input.focus()
+          input.addEventListener('input', (e) => {
+            const val = (e.target as HTMLInputElement).value
+            if (val) { onChange(val); onClose() }
+            document.body.removeChild(input)
+          })
+        }}
+      >
+        Tous les emojis (Win: ⊞+. / Mac: ⌘+Ctrl+Espace)
+      </button>
+    </div>
+  )
+}
+
+function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Page) => void }) {
+  const [query, setQuery] = useState('')
+  const [focused, setFocused] = useState(false)
+
+  const results = query.length > 1
+    ? pages.filter(p =>
+        (p.title || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.content || '').toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 8)
+    : []
+
+  return (
+    <div className="relative px-2 py-2 border-b border-gray-200">
+      <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-1.5">
+        <span className="text-gray-400 text-sm">🔍</span>
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder="Rechercher..."
+          className="flex-1 bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400"
+        />
+        {query && (
+          <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+        )}
+      </div>
+      {focused && results.length > 0 && (
+        <div className="absolute left-2 right-2 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 overflow-hidden">
+          {results.map(page => (
+            <button
+              key={page.id}
+              onClick={() => { onSelect(page); setQuery('') }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 border-b last:border-0"
+            >
+              <span>{page.icon || '📄'}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{page.title || 'Sans titre'}</p>
+                {(page.content || '').toLowerCase().includes(query.toLowerCase()) && (
+                  <p className="text-xs text-gray-400 truncate">
+                    {page.content.replace(/<[^>]+>/g, '').slice(0, 60)}...
+                  </p>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {focused && query.length > 1 && results.length === 0 && (
+        <div className="absolute left-2 right-2 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 p-3">
+          <p className="text-sm text-gray-400 text-center">Aucun résultat</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -117,7 +192,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
 
   async function addPage(parentId: string | null) {
     const supabase = createClient()
-    const icon = DEFAULT_ICONS[Math.floor(Math.random() * DEFAULT_ICONS.length)]
+    const icons = ['📄', '📝', '💡', '🗂️', '📌', '🔖', '⭐', '🚀', '🎯', '💬']
+    const icon = icons[Math.floor(Math.random() * icons.length)]
     const { data } = await supabase
       .from('pages')
       .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon })
@@ -172,8 +248,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     window.location.href = '/login'
   }
 
-  const subpages = selected ? pages.filter(p => p.parent_id === selected.id) : []
-
   return (
     <div className="flex w-full h-screen bg-white">
       {/* Sidebar */}
@@ -185,6 +259,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
             <button onClick={logout} className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors text-sm" title="Se déconnecter">⎋</button>
           </div>
         </div>
+        <SearchBar pages={pages} onSelect={setSelected} />
         <div className="flex-1 overflow-y-auto sidebar-scroll py-2 px-2">
           {pages.filter(p => p.parent_id === null).length === 0 && (
             <p className="text-xs text-gray-400 px-3 py-3">Clique sur + pour créer une page.</p>
@@ -228,23 +303,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                 </div>
               </div>
             </div>
-
-            {subpages.length > 0 && (
-              <div className="px-8 pb-4 flex flex-wrap gap-2">
-                {subpages.map(sub => (
-                  <button
-                    key={sub.id}
-                    onClick={() => setSelected(sub)}
-                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-sm text-gray-700"
-                  >
-                    <span>{sub.icon || '📄'}</span>
-                    <span>{sub.title || 'Sans titre'}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <Editor key={selected.id} page={selected} pages={pages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={setSelected} />
+            <Editor key={selected.id} page={selected} pages={pages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={setSelected} userId={userId} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
