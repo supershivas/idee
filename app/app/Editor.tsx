@@ -177,7 +177,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       if (url) {
         editor.chain().focus().setImage({ src: url }).run()
       }
-    } {
+    } finally { // <-- CORRIGÉ ICI : 'finally' a été rajouté
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
