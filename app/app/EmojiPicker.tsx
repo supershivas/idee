@@ -12,7 +12,7 @@ export default function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: s
       import('@emoji-mart/react'),
       import('@emoji-mart/data'),
     ]).then(([pickerModule, dataModule]) => {
-      setPicker(() => pickerModule.Picker)
+      setPicker(() => pickerModule.default)
       setData(dataModule.default)
     })
   }, [])
