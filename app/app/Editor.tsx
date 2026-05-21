@@ -106,7 +106,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
                             const transaction = view.state.tr.replaceSelectionWith(node)
                             view.dispatch(transaction)
                           }
-                          setUploading(false)
+                          setUploading=false
                         })
                       }
                       return true
@@ -141,8 +141,8 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
       }),
 
-      // Configuration simplifiée et robuste des tableaux
-      Table.configure({ resizable: true }),
+      // Extensions de tableaux configurées de manière neutre pour éviter les crashs de style
+      Table,
       TableRow,
       TableCell,
 
