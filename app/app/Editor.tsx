@@ -132,7 +132,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <ToolBtn onClick={onAddSubpage} active={false} label="+ Sous-page" title="Créer une sous-page" />
       </div>
 
-      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-8 py-5 prose max-w-none" />
+      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-4 md:px-8 py-5 prose max-w-none" />
     </div>
   )
 }
