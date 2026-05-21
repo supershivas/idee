@@ -28,7 +28,7 @@ const PagePicker = forwardRef((props: { pages: Page[], onSelect: (page: Page) =>
           <button key={page.id} onClick={() => props.onSelect(page)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 text-sm">
             <span>{page.icon || '📄'}</span>
-            <span className="truncate">{page.title || 'Sans titre'}</span>
+            <span className="truncate text-gray-800">{page.title && page.title.trim() !== '' ? page.title : 'Sans titre'}</span>
           </button>
         ))}
       </div>
