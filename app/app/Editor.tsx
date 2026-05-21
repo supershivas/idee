@@ -85,7 +85,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   function insertLink(url: string) {
     setShowLinkModal(false)
     if (!url || url === 'https://') return
-    editor?.chain().focus().extendMarkToLink({ href: url }).setLink({ href: url }).run()
+    editor?.chain().focus().setLink({ href: url }).run()
   }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
