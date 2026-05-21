@@ -5,6 +5,10 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
+import Table from '@tiptap/extension-table'
+import TableHeader from '@tiptap/extension-table-header'
+import TableCell from '@tiptap/extension-table-cell'
+import TableRow from '@tiptap/extension-table-row'
 import { Plugin } from '@tiptap/pm/state'
 import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
@@ -12,8 +16,8 @@ import { createClient } from '@/lib/supabase/client'
 
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
   return (
-    <button 
-      onClick={onClick} 
+    <button
+      onClick={onClick}
       title={title}
       className={`px-2 py-1 rounded text-sm font-medium transition-colors ${active ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-600'}`}
     >
@@ -45,12 +49,49 @@ function LinkModal({ onConfirm, onClose }: { onConfirm: (url: string) => void, o
   )
 }
 
+// Menu contextuel pour les actions sur le tableau
+function TableMenu({ editor, onClose }: { editor: any, onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [onClose])
+
+  const actions = [
+    { label: '+ Colonne avant', fn: () => editor.chain().focus().addColumnBefore().run() },
+    { label: '+ Colonne après', fn: () => editor.chain().focus().addColumnAfter().run() },
+    { label: '+ Ligne avant', fn: () => editor.chain().focus().addRowBefore().run() },
+    { label: '+ Ligne après', fn: () => editor.chain().focus().addRowAfter().run() },
+    { label: '— Supprimer colonne', fn: () => editor.chain().focus().deleteColumn().run(), danger: true },
+    { label: '— Supprimer ligne', fn: () => editor.chain().focus().deleteRow().run(), danger: true },
+    { label: '🗑 Supprimer tableau', fn: () => editor.chain().focus().deleteTable().run(), danger: true },
+  ]
+
+  return (
+    <div ref={ref} className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 min-w-48 top-full left-0 mt-1">
+      {actions.map((a, i) => (
+        <button
+          key={i}
+          onClick={() => { a.fn(); onClose() }}
+          className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${a.danger ? 'text-red-500 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-100'}`}
+        >
+          {a.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 async function uploadFileToSupabase(file: File, userId: string): Promise<string | null> {
   try {
     const supabase = createClient()
     const ext = file.name.split('.').pop()
     const path = `${userId}/${Date.now()}.${ext}`
-    
+
     const { error } = await supabase.storage.from('images').upload(path, file)
     if (error) throw error
 
@@ -67,15 +108,23 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string
 }) {
   const [showLinkModal, setShowLinkModal] = useState(false)
+  const [showTableMenu, setShowTableMenu] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const tableMenuRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer hover:text-blue-800' } }),
-      
+
+      // Extensions tableau
+      Table.configure({ resizable: true }),
+      TableHeader,
+      TableCell,
+      TableRow,
+
       Image.extend({
         addAttributes() {
           return {
@@ -168,6 +217,10 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     editor?.chain().focus().setLink({ href: url }).run()
   }
 
+  function insertTable() {
+    editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+  }
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !editor) return
@@ -182,6 +235,8 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
+
+  const isInTable = editor?.isActive('table')
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -205,10 +260,78 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien externe" />
         <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Insérer une image" />
         <div className="w-px bg-gray-200 mx-1" />
+
+        {/* Bouton tableau avec menu contextuel */}
+        <div className="relative" ref={tableMenuRef}>
+          <ToolBtn
+            onClick={() => isInTable ? setShowTableMenu(v => !v) : insertTable()}
+            active={isInTable}
+            label="⊞ Tableau"
+            title={isInTable ? 'Options du tableau' : 'Insérer un tableau 3×3'}
+          />
+          {showTableMenu && isInTable && (
+            <TableMenu editor={editor} onClose={() => setShowTableMenu(false)} />
+          )}
+        </div>
+
+        <div className="w-px bg-gray-200 mx-1" />
         <ToolBtn onClick={onAddSubpage} active={false} label="+ Sous-page" title="Créer une sous-page" />
       </div>
 
       <EditorContent editor={editor} className="flex-1 overflow-y-auto px-4 md:px-8 py-5 prose max-w-none" />
+
+      <style>{`
+        /* Styles du tableau */
+        .ProseMirror table {
+          border-collapse: collapse;
+          table-layout: fixed;
+          width: 100%;
+          margin: 1rem 0;
+          overflow: hidden;
+        }
+        .ProseMirror table td,
+        .ProseMirror table th {
+          min-width: 1em;
+          border: 1px solid #d1d5db;
+          padding: 6px 10px;
+          vertical-align: top;
+          box-sizing: border-box;
+          position: relative;
+          font-size: 0.9em;
+        }
+        .ProseMirror table th {
+          background-color: #f9fafb;
+          font-weight: 600;
+          text-align: left;
+        }
+        .ProseMirror table .selectedCell:after {
+          z-index: 2;
+          position: absolute;
+          content: "";
+          left: 0;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          background: rgba(59, 130, 246, 0.08);
+          pointer-events: none;
+        }
+        .ProseMirror table .column-resize-handle {
+          position: absolute;
+          right: -2px;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background-color: #3b82f6;
+          cursor: col-resize;
+          z-index: 20;
+        }
+        .ProseMirror .tableWrapper {
+          overflow-x: auto;
+        }
+        .resize-cursor {
+          cursor: col-resize;
+        }
+      `}</style>
     </div>
   )
 }
