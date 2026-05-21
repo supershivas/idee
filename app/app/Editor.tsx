@@ -10,11 +10,10 @@ import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
 import { createClient } from '@/lib/supabase/client'
 
-// Imports des Tableaux (Dépendances validées)
+// Utilise uniquement les 3 extensions de base pour les tableaux
 import Table from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
-import TableHeader from '@tiptap/extension-table-header'
 
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
   return (
@@ -142,12 +141,11 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
       }),
 
-      // Configuration propre des Tableaux sans attributs conflictuels
+      // Le secret : on configure Table pour qu'il gère les en-têtes sans avoir besoin de l'import table-header
       Table.configure({
         resizable: false,
       }),
       TableRow,
-      TableHeader,
       TableCell,
 
       SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
@@ -173,7 +171,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       }
     }
     el.addEventListener('click', handler)
-    return () => el.removeForeground && el.removeEventListener('click', handler)
+    return () => el.removeEventListener('click', handler)
   }, [pages, onNavigate])
 
   function insertLink(url: string) {
@@ -222,7 +220,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <div className="w-px bg-gray-200 mx-1" />
         {!editor?.isActive('table') ? (
           <ToolBtn 
-            onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} 
+            onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: false }).run()} 
             active={false} 
             label="📊 +Tab" 
             title="Créer un tableau (3x3)" 
