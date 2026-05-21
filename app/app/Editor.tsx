@@ -10,10 +10,11 @@ import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
 import { createClient } from '@/lib/supabase/client'
 
-// Imports des Tableaux disponibles dans ton package.json
+// La suite complète et officielle des tableaux
 import Table from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
 
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
   return (
@@ -144,10 +145,8 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       Table.configure({
         resizable: true,
       }),
-      // SÉCURITÉ CRITIQUE : Force la ligne à n'accepter que des cellules standards, sans chercher de header manquants
-      TableRow.extend({
-        content: 'tableCell*',
-      }),
+      TableRow,
+      TableHeader,
       TableCell,
 
       SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
@@ -222,7 +221,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <div className="w-px bg-gray-200 mx-1" />
         {!editor?.isActive('table') ? (
           <ToolBtn 
-            onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: false }).run()} 
+            onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} 
             active={false} 
             label="📊 +Tab" 
             title="Créer un tableau (3x3)" 
