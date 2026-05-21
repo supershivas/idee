@@ -297,10 +297,14 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                   onChange={e => updateTitle(e.target.value)}
                   placeholder="Sans titre"
                 />
-                <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-                  {saving && <span className="text-xs text-gray-400">Sauvegarde...</span>}
-                  <button onClick={() => deletePage(selected.id)} className="text-sm text-red-400 hover:text-red-500 transition-colors">Supprimer</button>
-                </div>
+                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+  {saving && <span className="text-xs text-gray-400">Sauvegarde...</span>}
+  <ShareButton page={selected as any} onUpdate={(updates) => {
+    setSelected(prev => prev ? { ...prev, ...updates } : null)
+    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
+  }} />
+  <button onClick={() => deletePage(selected.id)} className="text-sm text-red-400 hover:text-red-500 transition-colors">Supprimer</button>
+</div>
               </div>
             </div>
             <SubpagesList subpages={subpages} onSelect={setSelected} />
