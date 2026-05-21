@@ -10,7 +10,7 @@ import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
 import { createClient } from '@/lib/supabase/client'
 
-// Utilise uniquement les 3 extensions de base pour les tableaux
+// Imports des Tableaux (Dépendances validées dans package.json)
 import Table from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
@@ -141,9 +141,9 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
       }),
 
-      // Le secret : on configure Table pour qu'il gère les en-têtes sans avoir besoin de l'import table-header
+      // Initialisation sécurisée des extensions de tableaux 
       Table.configure({
-        resizable: false,
+        resizable: true,
       }),
       TableRow,
       TableCell,
@@ -217,6 +217,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien externe" />
         <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Insérer une image" />
         
+        {/* BOUTON TABLEAU SÉCURISÉ AJOUTÉ ICI */}
         <div className="w-px bg-gray-200 mx-1" />
         {!editor?.isActive('table') ? (
           <ToolBtn 
