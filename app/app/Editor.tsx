@@ -10,7 +10,7 @@ import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
 import { createClient } from '@/lib/supabase/client'
 
-// --- NOVEAUX IMPORTS POUR LES TABLEAUX ---
+// Imports des Tableaux
 import Table from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
@@ -141,15 +141,10 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
       }),
 
-      // --- CONFIGURATION DES EXTENSIONS DE TABLEAUX ---
-      Table.configure({
-        resizable: true,
-        HTMLAttributes: { class: 'border-collapse table-auto w-full my-4 text-sm border border-gray-200' },
-      }),
+      // Configuration simplifiée et robuste des tableaux
+      Table.configure({ resizable: true }),
       TableRow,
-      TableCell.configure({
-        HTMLAttributes: { class: 'border border-gray-200 p-2 relative min-w-[100px] text-left align-top' },
-      }),
+      TableCell,
 
       SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
     ],
@@ -220,7 +215,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien externe" />
         <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Insérer une image" />
         
-        {/* --- DYNAMISME DES BOUTONS DE TABLEAUX --- */}
         <div className="w-px bg-gray-200 mx-1" />
         {!editor?.isActive('table') ? (
           <ToolBtn 
