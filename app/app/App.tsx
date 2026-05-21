@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
+import ShareButton from './ShareButton'
 
 export type Page = {
   id: string
