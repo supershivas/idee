@@ -347,7 +347,7 @@ async function movePage(draggedId: string, targetId: string, position: 'before' 
         )}
         <PageTree pages={pages} parentId={null} depth={0} selectedId={selected?.id || null}
           onSelect={(p) => { setSelected(p); setSidebarOpen(false) }}
-          onAdd={addPage} onUpdateIcon={updateIcon} />
+          onAdd={addPage} onUpdateIcon={updateIcon} onMove={movePage} />
       </div>
     </div>
   )
