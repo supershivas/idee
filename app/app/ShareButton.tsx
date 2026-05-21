@@ -61,9 +61,9 @@ export default function ShareButton({ page, onUpdate }: { page: Page & { is_shar
             <button
               onClick={toggleShare}
               disabled={loading}
-              className={`relative w-10 h-5 rounded-full transition-colors ${isShared ? 'bg-black' : 'bg-gray-200'}`}
+              className={`relative w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${isShared ? 'bg-black' : 'bg-gray-300'}`}
             >
-              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isShared ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full shadow transition-transform ${isShared ? 'translate-x-5 bg-white' : 'translate-x-0.5 bg-gray-400'}`} />
             </button>
           </div>
 
