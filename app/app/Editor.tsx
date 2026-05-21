@@ -106,7 +106,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
                             const transaction = view.state.tr.replaceSelectionWith(node)
                             view.dispatch(transaction)
                           }
-                          setUploading(false) // <-- CORRIGÉ ICI : Appel de fonction valide
+                          setUploading(false)
                         })
                       }
                       return true
@@ -141,7 +141,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
       }),
 
-      // Extensions de tableaux stables et fluides
+      // Extensions de tableaux stables
       Table,
       TableRow,
       TableCell,
@@ -235,4 +235,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <ToolBtn onClick={onAddSubpage} active={false} label="+ Sous-page" title="Créer une sous-page" />
       </div>
 
-      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-4 md:
+      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-4 md:px-8 py-5 prose max-w-none" />
+    </div>
+  )
+}
