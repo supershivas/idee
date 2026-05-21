@@ -112,7 +112,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       {showLinkModal && <LinkModal onConfirm={insertLink} onClose={() => setShowLinkModal(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
-      <div className="flex gap-0.5 px-8 py-2 border-t border-b border-gray-100 flex-wrap bg-gray-50/50">
+      <div className="editor-toolbar flex gap-0.5 px-4 md:px-8 py-2 border-t border-b border-gray-100 bg-gray-50/50 flex-nowrap">
         <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
