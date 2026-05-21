@@ -1,45 +1,32 @@
 'use client'
-import { Extension, ReactRenderer } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
 import Suggestion from '@tiptap/suggestion'
+import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import { forwardRef, useImperativeHandle, useState, useRef, useEffect } from 'react'
 import 'tippy.js/dist/tippy.css'
 import { Page } from './App'
 
-// ─── Page picker (sous-menu lier une page) ───────────────────────────────────
-
 const PagePicker = forwardRef((props: { pages: Page[], onSelect: (page: Page) => void, onClose: () => void }, ref) => {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-
   useEffect(() => { inputRef.current?.focus() }, [])
-
   const filtered = props.pages.filter(p =>
     (p.title || 'Sans titre').toLowerCase().includes(query.toLowerCase())
   )
-
   return (
     <div className="bg-white border rounded-lg shadow-xl overflow-hidden w-64 z-50">
       <div className="p-2 border-b">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={e => setQuery(e.target.value)}
+        <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
           placeholder="Rechercher une page..."
           className="w-full text-sm outline-none px-2 py-1"
-          onKeyDown={e => { if (e.key === 'Escape') props.onClose() }}
-        />
+          onKeyDown={e => { if (e.key === 'Escape') props.onClose() }} />
       </div>
       <div className="max-h-48 overflow-y-auto">
-        {filtered.length === 0 && (
-          <p className="text-xs text-gray-400 px-3 py-2">Aucune page trouvée</p>
-        )}
+        {filtered.length === 0 && <p className="text-xs text-gray-400 px-3 py-2">Aucune page trouvée</p>}
         {filtered.map(page => (
-          <button
-            key={page.id}
-            onClick={() => props.onSelect(page)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 text-sm"
-          >
+          <button key={page.id} onClick={() => props.onSelect(page)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 text-sm">
             <span>{page.icon || '📄'}</span>
             <span className="truncate">{page.title || 'Sans titre'}</span>
           </button>
@@ -50,11 +37,10 @@ const PagePicker = forwardRef((props: { pages: Page[], onSelect: (page: Page) =>
 })
 PagePicker.displayName = 'PagePicker'
 
-// ─── Commandes principales ────────────────────────────────────────────────────
-
-const getCommands = (onAddSubpage: () => void, onLinkPage: () => void) => [
-  { title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: '📄', action: (_editor) => onAddSubpage() },
-  { title: 'Lier une page', description: 'Insérer un lien vers une page', icon: '🔗', action: (_editor) => onLinkPage() },
+const getCommands = (onAddSubpage: () => void, onUploadImage: () => void) => [
+  { title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: '📄', action: () => onAddSubpage() },
+  { title: 'Lier une page', description: 'Insérer un lien vers une page', icon: '🔗', action: () => {} },
+  { title: 'Image', description: 'Uploader une image', icon: '🖼️', action: () => onUploadImage() },
   { title: 'Titre 1', description: 'Grand titre', icon: 'H1', action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
   { title: 'Titre 2', description: 'Titre moyen', icon: 'H2', action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
   { title: 'Titre 3', description: 'Petit titre', icon: 'H3', action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
@@ -65,27 +51,11 @@ const getCommands = (onAddSubpage: () => void, onLinkPage: () => void) => [
   { title: 'Séparateur', description: 'Ligne horizontale', icon: '—', action: (editor) => editor.chain().focus().setHorizontalRule().run() },
 ]
 
-// ─── Liste des commandes ──────────────────────────────────────────────────────
-
 const CommandList = forwardRef((props: any, ref) => {
   const [selected, setSelected] = useState(0)
   const [showPicker, setShowPicker] = useState(false)
-  const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null)
-  const pickerRef = useRef<any>(null)
-
-  function openPicker(anchor: HTMLElement) {
-    setPickerAnchor(anchor)
-    setShowPicker(true)
-  }
-
-  const commands = getCommands(
-    () => { props.command({ action: () => props.onAddSubpage(), title: '' }); },
-    () => {}
-  )
-
-  const filtered = commands.filter(c =>
-    c.title.toLowerCase().includes((props.query || '').toLowerCase())
-  )
+  const commands = getCommands(props.onAddSubpage || (() => {}), props.onUploadImage || (() => {}))
+  const filtered = commands.filter(c => c.title.toLowerCase().includes((props.query || '').toLowerCase()))
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }) => {
@@ -100,12 +70,7 @@ const CommandList = forwardRef((props: any, ref) => {
   function selectItem(index: number) {
     const item = filtered[index]
     if (!item) return
-    if (item.title === 'Lier une page') {
-      const btn = document.getElementById(`cmd-${index}`)
-      setPickerAnchor(btn)
-      setShowPicker(true)
-      return
-    }
+    if (item.title === 'Lier une page') { setShowPicker(true); return }
     props.command(item)
   }
 
@@ -130,12 +95,8 @@ const CommandList = forwardRef((props: any, ref) => {
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide px-1 mb-1">Commandes</p>
         </div>
         {filtered.map((item, index) => (
-          <button
-            id={`cmd-${index}`}
-            key={item.title}
-            onClick={() => selectItem(index)}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 transition-colors ${index === selected ? 'bg-gray-100' : ''}`}
-          >
+          <button id={`cmd-${index}`} key={item.title} onClick={() => selectItem(index)}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 transition-colors ${index === selected ? 'bg-gray-100' : ''}`}>
             <span className="w-7 h-7 flex items-center justify-center bg-gray-100 rounded text-sm font-mono font-bold text-gray-600 flex-shrink-0">{item.icon}</span>
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-800">{item.title}</p>
@@ -144,15 +105,9 @@ const CommandList = forwardRef((props: any, ref) => {
           </button>
         ))}
       </div>
-
       {showPicker && (
         <div className="absolute left-full top-0 ml-2 z-50">
-          <PagePicker
-            ref={pickerRef}
-            pages={props.pages || []}
-            onSelect={handlePageSelect}
-            onClose={() => setShowPicker(false)}
-          />
+          <PagePicker pages={props.pages || []} onSelect={handlePageSelect} onClose={() => setShowPicker(false)} />
         </div>
       )}
     </div>
@@ -160,13 +115,12 @@ const CommandList = forwardRef((props: any, ref) => {
 })
 CommandList.displayName = 'CommandList'
 
-// ─── Extension Tiptap ─────────────────────────────────────────────────────────
-
 export const SlashCommands = Extension.create({
   name: 'slashCommands',
   addOptions() {
     return {
       onAddSubpage: () => {},
+      onUploadImage: () => {},
       pages: [] as Page[],
       suggestion: {
         char: '/',
@@ -178,8 +132,7 @@ export const SlashCommands = Extension.create({
     }
   },
   addProseMirrorPlugins() {
-    const onAddSubpage = this.options.onAddSubpage
-    const pages = this.options.pages
+    const { onAddSubpage, onUploadImage, pages } = this.options
     return [Suggestion({
       editor: this.editor,
       ...this.options.suggestion,
@@ -187,22 +140,11 @@ export const SlashCommands = Extension.create({
         let component, popup
         return {
           onStart: props => {
-            component = new ReactRenderer(CommandList, {
-              props: { ...props, onAddSubpage, pages },
-              editor: props.editor,
-            })
-            popup = tippy('body', {
-              getReferenceClientRect: props.clientRect,
-              appendTo: () => document.body,
-              content: component.element,
-              showOnCreate: true,
-              interactive: true,
-              trigger: 'manual',
-              placement: 'bottom-start',
-            })
+            component = new ReactRenderer(CommandList, { props: { ...props, onAddSubpage, onUploadImage, pages }, editor: props.editor })
+            popup = tippy('body', { getReferenceClientRect: props.clientRect, appendTo: () => document.body, content: component.element, showOnCreate: true, interactive: true, trigger: 'manual', placement: 'bottom-start' })
           },
           onUpdate: props => {
-            component.updateProps({ ...props, onAddSubpage, pages })
+            component.updateProps({ ...props, onAddSubpage, onUploadImage, pages })
             popup[0].setProps({ getReferenceClientRect: props.clientRect })
           },
           onKeyDown: props => {
