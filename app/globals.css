@@ -42,6 +42,9 @@
   margin: 0.75rem 0;
   font-style: italic;
 }
+.prose a { color: #3b5bdb; text-decoration: underline; }
+.prose a:hover { color: #2244bb; }
+.prose img { max-width: 100%; border-radius: 8px; margin: 0.75rem 0; }
 
 /* Code inline */
 .prose code {
@@ -94,3 +97,10 @@
 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
 .sidebar-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+/* Toolbar éditeur — scroll horizontal sur mobile */
+.editor-toolbar {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.editor-toolbar::-webkit-scrollbar { display: none; }
