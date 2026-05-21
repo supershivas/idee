@@ -59,12 +59,12 @@ export default function ShareButton({ page, onUpdate }: { page: Page & { is_shar
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm text-gray-600">{isShared ? 'Activé' : 'Désactivé'}</span>
             <button
-              onClick={toggleShare}
-              disabled={loading}
-              className={`relative w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${isShared ? 'bg-black' : 'bg-gray-300'}`}
-            >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full shadow transition-transform ${isShared ? 'translate-x-5 bg-white' : 'translate-x-0.5 bg-gray-400'}`} />
-            </button>
+  onClick={toggleShare}
+  disabled={loading}
+  className={`relative inline-flex w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${isShared ? 'bg-black' : 'bg-gray-200'}`}
+>
+  <span className={`inline-block w-5 h-5 mt-0.5 rounded-full bg-white shadow transform transition-transform ${isShared ? 'translate-x-5' : 'translate-x-0.5'}`} />
+</button>
           </div>
 
           {isShared && shareUrl && (
