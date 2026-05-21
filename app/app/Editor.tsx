@@ -10,12 +10,6 @@ import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
 import { createClient } from '@/lib/supabase/client'
 
-// La suite complète et officielle des tableaux
-import Table from '@tiptap/extension-table'
-import TableRow from '@tiptap/extension-table-row'
-import TableCell from '@tiptap/extension-table-cell'
-import TableHeader from '@tiptap/extension-table-header'
-
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
   return (
     <button 
@@ -142,13 +136,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
       }),
 
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-
       SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
     ],
     content: page.content || '',
@@ -217,23 +204,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <div className="w-px bg-gray-200 mx-1" />
         <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien externe" />
         <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Insérer une image" />
-        
-        <div className="w-px bg-gray-200 mx-1" />
-        {!editor?.isActive('table') ? (
-          <ToolBtn 
-            onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} 
-            active={false} 
-            label="📊 +Tab" 
-            title="Créer un tableau (3x3)" 
-          />
-        ) : (
-          <>
-            <ToolBtn onClick={() => editor?.chain().focus().addColumnAfter().run()} active={false} label="+👉 col" title="Ajouter une colonne" />
-            <ToolBtn onClick={() => editor?.chain().focus().addRowAfter().run()} active={false} label="+👇 lig" title="Ajouter une ligne" />
-            <ToolBtn onClick={() => editor?.chain().focus().deleteTable().run()} active={false} label="🗑️ Tab" title="Supprimer le tableau" />
-          </>
-        )}
-
         <div className="w-px bg-gray-200 mx-1" />
         <ToolBtn onClick={onAddSubpage} active={false} label="+ Sous-page" title="Créer une sous-page" />
       </div>
