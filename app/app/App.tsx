@@ -81,38 +81,80 @@ function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Page) => 
   )
 }
 
-function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onUpdateIcon }:
-  { pages: Page[], parentId: string | null, depth: number, selectedId: string | null, onSelect: (p: Page) => void, onAdd: (parentId: string | null) => void, onUpdateIcon: (id: string, icon: string) => void }
+function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onUpdateIcon, onMove }:
+  { pages: Page[], parentId: string | null, depth: number, selectedId: string | null, onSelect: (p: Page) => void, onAdd: (parentId: string | null) => void, onUpdateIcon: (id: string, icon: string) => void, onMove: (draggedId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void }
 ) {
   const children = pages.filter(p => p.parent_id === parentId)
   const [open, setOpen] = useState<Record<string, boolean>>({})
-  if (!children.length) return null
+  const [dragOver, setDragOver] = useState<{ id: string, position: 'before' | 'after' | 'inside' } | null>(null)
+
+  if (!children.length && depth > 0) return null
+
   return (
     <div>
       {children.map(page => {
         const hasChildren = pages.some(p => p.parent_id === page.id)
         const isOpen = open[page.id]
         const isSelected = selectedId === page.id
+        const isDragOver = dragOver?.id === page.id
+
         return (
           <div key={page.id}>
+            {/* Indicateur "before" */}
+            {isDragOver && dragOver?.position === 'before' && (
+              <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
+            )}
+
             <div
-              className={`flex items-center gap-1 pr-2 py-0.5 rounded-md cursor-pointer group hover:bg-gray-200/60 transition-colors ${isSelected ? 'bg-gray-200' : ''}`}
+              draggable
+              onDragStart={e => { e.dataTransfer.setData('pageId', page.id); e.dataTransfer.effectAllowed = 'move' }}
+              onDragOver={e => {
+                e.preventDefault()
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                const y = e.clientY - rect.top
+                const ratio = y / rect.height
+                const position = ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside'
+                setDragOver({ id: page.id, position })
+              }}
+              onDragLeave={() => setDragOver(null)}
+              onDrop={e => {
+                e.preventDefault()
+                const draggedId = e.dataTransfer.getData('pageId')
+                if (draggedId && draggedId !== page.id) {
+                  onMove(draggedId, page.id, dragOver?.position || 'after')
+                }
+                setDragOver(null)
+              }}
+              className={`flex items-center gap-1 pr-2 py-0.5 rounded-md cursor-pointer group transition-colors
+                ${isSelected ? 'bg-gray-200' : 'hover:bg-gray-200/60'}
+                ${isDragOver && dragOver?.position === 'inside' ? 'bg-blue-50 ring-1 ring-blue-300' : ''}
+              `}
               style={{ paddingLeft: `${depth * 14 + 6}px` }}
             >
-              <button onClick={() => setOpen(o => ({ ...o, [page.id]: !o[page.id] }))}
-                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0 text-xs">
+              <button
+                onClick={() => setOpen(o => ({ ...o, [page.id]: !o[page.id] }))}
+                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0 text-xs"
+              >
                 {hasChildren ? (isOpen ? '▾' : '▸') : ''}
               </button>
               <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
               <span onClick={() => onSelect(page)} className="flex-1 text-sm truncate py-1 text-gray-700">
                 {page.title || 'Sans titre'}
               </span>
-              <button onClick={() => onAdd(page.id)}
+              <button
+                onClick={() => onAdd(page.id)}
                 className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-700 text-base leading-none flex-shrink-0 w-5 h-5 flex items-center justify-center"
-                title="Ajouter une sous-page">+</button>
+                title="Ajouter une sous-page"
+              >+</button>
             </div>
+
+            {/* Indicateur "after" */}
+            {isDragOver && dragOver?.position === 'after' && (
+              <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
+            )}
+
             {isOpen && (
-              <PageTree pages={pages} parentId={page.id} depth={depth + 1} selectedId={selectedId} onSelect={onSelect} onAdd={onAdd} onUpdateIcon={onUpdateIcon} />
+              <PageTree pages={pages} parentId={page.id} depth={depth + 1} selectedId={selectedId} onSelect={onSelect} onAdd={onAdd} onUpdateIcon={onUpdateIcon} onMove={onMove} />
             )}
           </div>
         )
