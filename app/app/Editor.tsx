@@ -10,6 +10,11 @@ import { SlashCommands } from './SlashCommands'
 import { Page } from './App'
 import { createClient } from '@/lib/supabase/client'
 
+// --- NOVEAUX IMPORTS POUR LES TABLEAUX ---
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableCell from '@tiptap/extension-table-cell'
+
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
   return (
     <button 
@@ -45,7 +50,6 @@ function LinkModal({ onConfirm, onClose }: { onConfirm: (url: string) => void, o
   )
 }
 
-// Fonction d'upload partagée
 async function uploadFileToSupabase(file: File, userId: string): Promise<string | null> {
   try {
     const supabase = createClient()
@@ -136,6 +140,17 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
           ]
         }
       }),
+
+      // --- CONFIGURATION DES EXTENSIONS DE TABLEAUX ---
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: { class: 'border-collapse table-auto w-full my-4 text-sm border border-gray-200' },
+      }),
+      TableRow,
+      TableCell.configure({
+        HTMLAttributes: { class: 'border border-gray-200 p-2 relative min-w-[100px] text-left align-top' },
+      }),
+
       SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
     ],
     content: page.content || '',
@@ -177,7 +192,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       if (url) {
         editor.chain().focus().setImage({ src: url }).run()
       }
-    } finally { // <-- CORRIGÉ ICI : 'finally' a été rajouté
+    } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
@@ -188,7 +203,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       {showLinkModal && <LinkModal onConfirm={insertLink} onClose={() => setShowLinkModal(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
-      <div className="editor-toolbar flex gap-0.5 px-4 md:px-8 py-2 border-t border-b border-gray-100 bg-gray-50/50 flex-nowrap">
+      <div className="editor-toolbar flex gap-0.5 px-4 md:px-8 py-2 border-t border-b border-gray-100 bg-gray-50/50 flex-nowrap overflow-x-auto">
         <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
@@ -204,6 +219,24 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <div className="w-px bg-gray-200 mx-1" />
         <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien externe" />
         <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Insérer une image" />
+        
+        {/* --- DYNAMISME DES BOUTONS DE TABLEAUX --- */}
+        <div className="w-px bg-gray-200 mx-1" />
+        {!editor?.isActive('table') ? (
+          <ToolBtn 
+            onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} 
+            active={false} 
+            label="📊 +Tab" 
+            title="Créer un tableau (3x3)" 
+          />
+        ) : (
+          <>
+            <ToolBtn onClick={() => editor?.chain().focus().addColumnAfter().run()} active={false} label="+👉 col" title="Ajouter une colonne" />
+            <ToolBtn onClick={() => editor?.chain().focus().addRowAfter().run()} active={false} label="+👇 lig" title="Ajouter une ligne" />
+            <ToolBtn onClick={() => editor?.chain().focus().deleteTable().run()} active={false} label="🗑️ Tab" title="Supprimer le tableau" />
+          </>
+        )}
+
         <div className="w-px bg-gray-200 mx-1" />
         <ToolBtn onClick={onAddSubpage} active={false} label="+ Sous-page" title="Créer une sous-page" />
       </div>
