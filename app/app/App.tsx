@@ -223,9 +223,10 @@ function SortableSubpageCard({ page, onSelect }: { page: Page, onSelect: (p: Pag
 // Liste de sous-pages avec drag & drop horizontal
 function SubpagesList({ subpages, onSelect, onReorder }: {
   subpages: Page[], onSelect: (p: Page) => void,
-  onReorder: (activeId: string, overId: string) => void
+  onReorder: (activeId: string, overId: string, position: 'before' | 'after') => void
 }) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [overPos, setOverPos] = useState<'before' | 'after'>('after')
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   if (!subpages.length) return null
@@ -237,17 +238,27 @@ function SubpagesList({ subpages, onSelect, onReorder }: {
     setActiveId(event.active.id as string)
   }
 
+  function handleDragOver(event: DragOverEvent) {
+    const { over, active } = event
+    if (!over || over.id === active.id) return
+    const overRect = event.over?.rect
+    if (overRect && event.activatorEvent) {
+      const clientX = (event.activatorEvent as PointerEvent).clientX + ((event.delta?.x) || 0)
+      setOverPos((clientX - overRect.left) / overRect.width < 0.5 ? 'before' : 'after')
+    }
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveId(null)
     if (!over || active.id === over.id) return
-    onReorder(active.id as string, over.id as string)
+    onReorder(active.id as string, over.id as string, overPos)
   }
 
   return (
     <div className="px-4 md:px-8 pb-3 border-b border-gray-100">
       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Sous-pages</p>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
         <SortableContext items={sorted.map(p => p.id)} strategy={horizontalListSortingStrategy}>
           <div className="flex flex-wrap gap-2">
             {sorted.map(sub => (
@@ -422,8 +433,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   }
 
   // Réordonne les sous-pages depuis les cartes (glissement horizontal)
-  async function handleSubpageReorder(activeId: string, overId: string) {
-    await reorderSiblings(activeId, overId, 'after')
+  async function handleSubpageReorder(activeId: string, overId: string, position: 'before' | 'after') {
+    await reorderSiblings(activeId, overId, position)
   }
 
   const activePage = pages.find(p => p.id === activeDragId)
