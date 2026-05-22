@@ -1,6 +1,6 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
@@ -49,52 +49,13 @@ function LinkModal({ onConfirm, onClose }: { onConfirm: (url: string) => void, o
   )
 }
 
-// Menu contextuel pour les actions sur le tableau
-function TableMenu({ editor, onClose }: { editor: any, onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [onClose])
-
-  const actions = [
-    { label: '+ Colonne avant', fn: () => editor.chain().focus().addColumnBefore().run() },
-    { label: '+ Colonne après', fn: () => editor.chain().focus().addColumnAfter().run() },
-    { label: '+ Ligne avant', fn: () => editor.chain().focus().addRowBefore().run() },
-    { label: '+ Ligne après', fn: () => editor.chain().focus().addRowAfter().run() },
-    { label: '— Supprimer colonne', fn: () => editor.chain().focus().deleteColumn().run(), danger: true },
-    { label: '— Supprimer ligne', fn: () => editor.chain().focus().deleteRow().run(), danger: true },
-    { label: '🗑 Supprimer tableau', fn: () => editor.chain().focus().deleteTable().run(), danger: true },
-  ]
-
-  return (
-    <div ref={ref} className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 min-w-48 top-full left-0 mt-1">
-      {actions.map((a, i) => (
-        <button
-          key={i}
-          onClick={() => { a.fn(); onClose() }}
-          className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${a.danger ? 'text-red-500 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-100'}`}
-        >
-          {a.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 async function uploadFileToSupabase(file: File, userId: string): Promise<string | null> {
   try {
     const supabase = createClient()
     const ext = file.name.split('.').pop()
     const path = `${userId}/${Date.now()}.${ext}`
-
     const { error } = await supabase.storage.from('images').upload(path, file)
     if (error) throw error
-
     const { data } = supabase.storage.from('images').getPublicUrl(path)
     return data.publicUrl
   } catch (error) {
@@ -108,10 +69,8 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string
 }) {
   const [showLinkModal, setShowLinkModal] = useState(false)
-  const [showTableMenu, setShowTableMenu] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const tableMenuRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
     extensions: [
@@ -119,7 +78,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer hover:text-blue-800' } }),
 
-      // Extensions tableau
       Table.configure({ resizable: true }),
       TableHeader,
       TableCell,
@@ -127,10 +85,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
 
       Image.extend({
         addAttributes() {
-          return {
-            ...this.parent?.(),
-            class: { default: 'max-w-full rounded-lg my-2' }
-          }
+          return { ...this.parent?.(), class: { default: 'max-w-full rounded-lg my-2' } }
         },
         addProseMirrorPlugins() {
           return [
@@ -147,8 +102,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
                         uploadFileToSupabase(file, userId).then((url) => {
                           if (url) {
                             const node = view.state.schema.nodes.image.create({ src: url })
-                            const transaction = view.state.tr.replaceSelectionWith(node)
-                            view.dispatch(transaction)
+                            view.dispatch(view.state.tr.replaceSelectionWith(node))
                           }
                           setUploading(false)
                         })
@@ -160,17 +114,16 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
                 },
                 handleDrop(view, event) {
                   const files = Array.from(event.dataTransfer?.files || [])
-                  const images = files.filter(file => /image/i.test(file.type))
+                  const images = files.filter(f => /image/i.test(f.type))
                   if (images.length > 0) {
                     event.preventDefault()
-                    const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
-                    images.forEach((file) => {
+                    const coords = view.posAtCoords({ left: event.clientX, top: event.clientY })
+                    images.forEach(file => {
                       setUploading(true)
-                      uploadFileToSupabase(file, userId).then((url) => {
-                        if (url && coordinates) {
+                      uploadFileToSupabase(file, userId).then(url => {
+                        if (url && coords) {
                           const node = view.state.schema.nodes.image.create({ src: url })
-                          const transaction = view.state.tr.insert(coordinates.pos, node)
-                          view.dispatch(transaction)
+                          view.dispatch(view.state.tr.insert(coords.pos, node))
                         }
                         setUploading(false)
                       })
@@ -217,81 +170,126 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     editor?.chain().focus().setLink({ href: url }).run()
   }
 
-  function insertTable() {
-    editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-  }
-
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !editor) return
     setUploading(true)
     try {
       const url = await uploadFileToSupabase(file, userId)
-      if (url) {
-        editor.chain().focus().setImage({ src: url }).run()
-      }
+      if (url) editor.chain().focus().setImage({ src: url }).run()
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
-  const isInTable = editor?.isActive('table')
+  // Séparateur visuel toolbar
+  const Sep = () => <div className="w-px bg-gray-200 mx-1 self-stretch" />
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {showLinkModal && <LinkModal onConfirm={insertLink} onClose={() => setShowLinkModal(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
-      <div className="editor-toolbar flex gap-0.5 px-4 md:px-8 py-2 border-t border-b border-gray-100 bg-gray-50/50 flex-nowrap overflow-x-auto">
+      {/* Toolbar fixe */}
+      <div className="editor-toolbar flex items-center gap-0.5 px-4 py-2 border-t border-b border-gray-100 bg-gray-50/50 flex-nowrap overflow-x-auto">
         <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
-        <div className="w-px bg-gray-200 mx-1" />
+        <Sep />
         <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
-        <div className="w-px bg-gray-200 mx-1" />
+        <Sep />
         <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="• Liste" title="Liste à puces" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1. Liste" title="Liste numérotée" />
-        <div className="w-px bg-gray-200 mx-1" />
+        <Sep />
         <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
         <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Code" />
-        <div className="w-px bg-gray-200 mx-1" />
+        <Sep />
         <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien externe" />
         <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Insérer une image" />
-        <div className="w-px bg-gray-200 mx-1" />
-
-        {/* Bouton tableau avec menu contextuel */}
-        <div className="relative" ref={tableMenuRef}>
-          <ToolBtn
-            onClick={() => isInTable ? setShowTableMenu(v => !v) : insertTable()}
-            active={isInTable}
-            label="⊞ Tableau"
-            title={isInTable ? 'Options du tableau' : 'Insérer un tableau 3×3'}
-          />
-          {showTableMenu && isInTable && (
-            <TableMenu editor={editor} onClose={() => setShowTableMenu(false)} />
-          )}
-        </div>
-
-        <div className="w-px bg-gray-200 mx-1" />
+        <Sep />
+        <ToolBtn
+          onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          active={editor?.isActive('table')}
+          label="⊞ Tableau"
+          title="Insérer un tableau 3×3"
+        />
+        <Sep />
         <ToolBtn onClick={onAddSubpage} active={false} label="+ Sous-page" title="Créer une sous-page" />
       </div>
 
-      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-4 md:px-8 py-5 prose max-w-none" />
+      {/* Floating toolbar tableau — apparaît automatiquement quand le curseur est dans un tableau */}
+      {editor && (
+        <BubbleMenu
+          editor={editor}
+          shouldShow={({ editor }) => editor.isActive('table')}
+          tippyOptions={{ placement: 'top', offset: [0, 8] }}
+        >
+          <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl shadow-lg px-2 py-1.5">
+            <span className="text-xs text-gray-400 mr-1 font-medium">Tableau</span>
+            <div className="w-px bg-gray-200 self-stretch mx-1" />
+            <button
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+              className="px-2 py-1 text-xs rounded hover:bg-gray-100 text-gray-600 font-medium"
+              title="Colonne avant"
+            >← Col</button>
+            <button
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              className="px-2 py-1 text-xs rounded hover:bg-gray-100 text-gray-600 font-medium"
+              title="Colonne après"
+            >Col →</button>
+            <button
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              className="px-2 py-1 text-xs rounded hover:bg-gray-100 text-gray-600 font-medium"
+              title="Ligne avant"
+            >↑ Ligne</button>
+            <button
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              className="px-2 py-1 text-xs rounded hover:bg-gray-100 text-gray-600 font-medium"
+              title="Ligne après"
+            >Ligne ↓</button>
+            <div className="w-px bg-gray-200 self-stretch mx-1" />
+            <button
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+              className="px-2 py-1 text-xs rounded hover:bg-red-50 text-red-400 font-medium"
+              title="Supprimer la colonne"
+            >− Col</button>
+            <button
+              onClick={() => editor.chain().focus().deleteRow().run()}
+              className="px-2 py-1 text-xs rounded hover:bg-red-50 text-red-400 font-medium"
+              title="Supprimer la ligne"
+            >− Ligne</button>
+            <div className="w-px bg-gray-200 self-stretch mx-1" />
+            <button
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              className="px-2 py-1 text-xs rounded hover:bg-red-50 text-red-500 font-medium"
+              title="Supprimer le tableau"
+            >🗑</button>
+          </div>
+        </BubbleMenu>
+      )}
+
+      {/* Zone d'édition — centrée, largeur max 720px */}
+      <div className="flex-1 overflow-y-auto">
+        <EditorContent
+          editor={editor}
+          className="prose max-w-none mx-auto py-8 px-6"
+          style={{ maxWidth: '720px' }}
+        />
+      </div>
 
       <style>{`
-        /* Styles du tableau */
+        /* Tableau */
         .ProseMirror table {
           border-collapse: collapse;
           table-layout: fixed;
           width: 100%;
           margin: 1rem 0;
-          overflow: hidden;
         }
         .ProseMirror table td,
         .ProseMirror table th {
-          min-width: 1em;
+          min-width: 2em;
           border: 1px solid #d1d5db;
           padding: 6px 10px;
           vertical-align: top;
@@ -304,22 +302,20 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
           font-weight: 600;
           text-align: left;
         }
+        .ProseMirror table tr:hover td {
+          background-color: #fafafa;
+        }
         .ProseMirror table .selectedCell:after {
           z-index: 2;
           position: absolute;
           content: "";
-          left: 0;
-          right: 0;
-          top: 0;
-          bottom: 0;
+          left: 0; right: 0; top: 0; bottom: 0;
           background: rgba(59, 130, 246, 0.08);
           pointer-events: none;
         }
         .ProseMirror table .column-resize-handle {
           position: absolute;
-          right: -2px;
-          top: 0;
-          bottom: 0;
+          right: -2px; top: 0; bottom: 0;
           width: 4px;
           background-color: #3b82f6;
           cursor: col-resize;
@@ -327,9 +323,26 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
         .ProseMirror .tableWrapper {
           overflow-x: auto;
+          margin: 1rem 0;
         }
-        .resize-cursor {
-          cursor: col-resize;
+        .resize-cursor { cursor: col-resize; }
+
+        /* Images */
+        .ProseMirror img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 8px;
+          margin: 0.5rem 0;
+          display: block;
+        }
+
+        /* Placeholder */
+        .ProseMirror p.is-editor-empty:first-child::before {
+          color: #adb5bd;
+          content: attr(data-placeholder);
+          float: left;
+          height: 0;
+          pointer-events: none;
         }
       `}</style>
     </div>
