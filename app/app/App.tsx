@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
 import ShareButton from './ShareButton'
@@ -10,7 +10,10 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   type DragStartEvent, type DragEndEvent, type DragOverEvent
 } from '@dnd-kit/core'
-import { useSortable } from '@dnd-kit/sortable'
+import {
+  SortableContext, useSortable, verticalListSortingStrategy,
+  horizontalListSortingStrategy
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
 export type Page = {
@@ -102,9 +105,7 @@ function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onT
 
   return (
     <div ref={setNodeRef} style={style}>
-      {isOver && overPosition === 'before' && (
-        <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
-      )}
+      {isOver && overPosition === 'before' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
       <div
         className={`flex items-center gap-1 pr-2 py-0.5 rounded-md cursor-pointer group transition-colors
           ${isSelected ? 'bg-gray-200' : 'hover:bg-gray-200/60'}
@@ -133,9 +134,7 @@ function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onT
           title="Ajouter une sous-page"
         >+</button>
       </div>
-      {isOver && overPosition === 'after' && (
-        <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />
-      )}
+      {isOver && overPosition === 'after' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
     </div>
   )
 }
@@ -196,21 +195,75 @@ function Breadcrumb({ pages, selected, onSelect }: { pages: Page[], selected: Pa
   )
 }
 
-function SubpagesList({ subpages, onSelect }: { subpages: Page[], onSelect: (p: Page) => void }) {
+// Carte de sous-page sortable (dans la liste en haut de page)
+function SortableSubpageCard({ page, onSelect }: { page: Page, onSelect: (p: Page) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex-shrink-0">
+      <div className={`flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 group transition-shadow hover:shadow-sm ${isDragging ? 'shadow-md' : ''}`}>
+        {/* Poignée de drag */}
+        <button
+          {...attributes} {...listeners}
+          className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 text-sm leading-none"
+          title="Glisser pour réorganiser"
+        >⠿</button>
+        {/* Contenu cliquable */}
+        <button onClick={() => onSelect(page)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
+          <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
+          <span className="text-sm text-gray-700 truncate max-w-32">{page.title || 'Sans titre'}</span>
+          <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs flex-shrink-0">→</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Liste de sous-pages avec drag & drop horizontal
+function SubpagesList({ subpages, onSelect, onReorder }: {
+  subpages: Page[], onSelect: (p: Page) => void,
+  onReorder: (activeId: string, overId: string) => void
+}) {
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
   if (!subpages.length) return null
+
+  const sorted = [...subpages].sort((a, b) => a.position - b.position)
+  const activePage = sorted.find(p => p.id === activeId)
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveId(null)
+    if (!over || active.id === over.id) return
+    onReorder(active.id as string, over.id as string)
+  }
+
   return (
     <div className="px-4 md:px-8 pb-3 border-b border-gray-100">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">Sous-pages</p>
-      <div className="flex flex-col gap-0.5">
-        {subpages.map(sub => (
-          <button key={sub.id} onClick={() => onSelect(sub)}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-100 transition-colors text-sm text-gray-700 text-left group w-full">
-            <span className="text-base">{sub.icon || '📄'}</span>
-            <span className="flex-1 truncate">{sub.title || 'Sans titre'}</span>
-            <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs">→</span>
-          </button>
-        ))}
-      </div>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Sous-pages</p>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <SortableContext items={sorted.map(p => p.id)} strategy={horizontalListSortingStrategy}>
+          <div className="flex flex-wrap gap-2">
+            {sorted.map(sub => (
+              <SortableSubpageCard key={sub.id} page={sub} onSelect={onSelect} />
+            ))}
+          </div>
+        </SortableContext>
+        <DragOverlay>
+          {activePage && (
+            <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 shadow-xl opacity-90">
+              <span className="text-base">{activePage.icon || '📄'}</span>
+              <span className="text-sm text-gray-700 truncate max-w-32">{activePage.title || 'Sans titre'}</span>
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
     </div>
   )
 }
@@ -300,51 +353,26 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     window.location.href = '/login'
   }
 
-  function handleDragStart(event: DragStartEvent) {
-    setActiveDragId(event.active.id as string)
-  }
-
-  function handleDragOver(event: DragOverEvent) {
-    const { over, active } = event
-    if (!over || over.id === active.id) { setOverId(null); return }
-    setOverId(over.id as string)
-    // Calcule la position via les données de l'événement
-    const overRect = event.over?.rect
-    if (overRect && event.activatorEvent) {
-      const clientY = (event.activatorEvent as PointerEvent).clientY +
-        ((event.delta?.y) || 0)
-      const ratio = (clientY - overRect.top) / overRect.height
-      setOverPosition(ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside')
-    }
-  }
-
-  async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    setActiveDragId(null)
-    setOverId(null)
-    setOverPosition(null)
-
-    if (!over || active.id === over.id) return
-
-    const draggedId = active.id as string
-    const targetId = over.id as string
-    const position = overPosition || 'after'
-
-    const dragged = pages.find(p => p.id === draggedId)
+  // Réordonne les pages dans un même parent — utilisé par la sidebar ET les cartes
+  const reorderSiblings = useCallback(async (
+    activeId: string,
+    targetId: string,
+    position: 'before' | 'after' | 'inside'
+  ) => {
+    const dragged = pages.find(p => p.id === activeId)
     const target = pages.find(p => p.id === targetId)
     if (!dragged || !target) return
 
     // Empêche de déplacer dans un descendant
     let check: Page | undefined = target
     while (check) {
-      if (check.id === draggedId) return
+      if (check.id === activeId) return
       check = pages.find(p => p.id === check!.parent_id)
     }
 
     const newParentId = position === 'inside' ? targetId : target.parent_id
-
     const siblings = pages
-      .filter(p => p.parent_id === newParentId && p.id !== draggedId)
+      .filter(p => p.parent_id === newParentId && p.id !== activeId)
       .sort((a, b) => a.position - b.position)
 
     const targetIndex = siblings.findIndex(p => p.id === targetId)
@@ -365,10 +393,41 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     await Promise.all(updates.map(u =>
       supabase.from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)
     ))
+  }, [pages])
+
+  // Drag sidebar
+  function handleDragStart(event: DragStartEvent) {
+    setActiveDragId(event.active.id as string)
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const { over, active } = event
+    if (!over || over.id === active.id) { setOverId(null); return }
+    setOverId(over.id as string)
+    const overRect = event.over?.rect
+    if (overRect && event.activatorEvent) {
+      const clientY = (event.activatorEvent as PointerEvent).clientY + ((event.delta?.y) || 0)
+      const ratio = (clientY - overRect.top) / overRect.height
+      setOverPosition(ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside')
+    }
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveDragId(null)
+    setOverId(null)
+    setOverPosition(null)
+    if (!over || active.id === over.id) return
+    await reorderSiblings(active.id as string, over.id as string, overPosition || 'after')
+  }
+
+  // Réordonne les sous-pages depuis les cartes (glissement horizontal)
+  async function handleSubpageReorder(activeId: string, overId: string) {
+    await reorderSiblings(activeId, overId, 'after')
   }
 
   const activePage = pages.find(p => p.id === activeDragId)
-  const subpages = selected ? pages.filter(p => p.parent_id === selected.id) : []
+  const subpages = selected ? pages.filter(p => p.parent_id === selected.id).sort((a, b) => a.position - b.position) : []
 
   const sidebarContent = (
     <div className="w-60 bg-gray-50 flex flex-col h-full">
@@ -433,14 +492,11 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                   {selected.icon || '📄'}
                 </button>
                 {showIconPicker && (
-  <EmojiPicker 
-    onSelect={(emoji) => {
-      updateIcon(selected.id, emoji)
-      setShowIconPicker(false)
-    }} 
-    onClose={() => setShowIconPicker(false)} 
-  />
-)}
+                  <EmojiPicker
+                    onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }}
+                    onClose={() => setShowIconPicker(false)}
+                  />
+                )}
               </div>
               <div className="flex-1 flex items-center justify-between min-w-0">
                 <input
@@ -464,7 +520,14 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                 </div>
               </div>
             </div>
-            <SubpagesList subpages={subpages} onSelect={setSelected} />
+
+            {/* Sous-pages avec drag & drop */}
+            <SubpagesList
+              subpages={subpages}
+              onSelect={setSelected}
+              onReorder={handleSubpageReorder}
+            />
+
             <Editor key={selected.id} page={selected} pages={pages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={setSelected} userId={userId} />
           </>
         ) : (
