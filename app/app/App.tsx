@@ -246,7 +246,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         {selected ? (
           <>
             <Breadcrumb pages={activePages} selected={selected} onSelect={setSelected} />
-            <div className="px-4 md:px-8 pt-5 pb-2">
+            <div className="px-4 md:px-8 pt-5 pb-2" style={{ maxWidth: '720px' }}>
               <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
