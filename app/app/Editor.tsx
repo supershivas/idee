@@ -268,9 +268,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
 
       {/* Zone d'édition */}
       <div className="flex-1 overflow-y-auto">
-        <div className="relative mx-auto" style={{ maxWidth: '720px' }}>
-          <EditorContent editor={editor} className="prose max-w-none py-6 px-4 md:px-8 md:py-8" />
-        </div>
+        <EditorContent editor={editor} className="prose max-w-none py-6 px-4 md:px-8 md:py-8 mx-auto" style={{ maxWidth: '720px' }} />
       </div>
 
       {/* Toolbar — sticky, remonte au-dessus du clavier iOS via keyboardOffset */}
