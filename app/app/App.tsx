@@ -68,10 +68,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       })
     }
   }, [selected?.id]) // se déclenche uniquement quand l'id change
-          const next = { ...prev }
-          ancestorIds.forEach(id => { next[id] = true })
-          return next
-        })
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
