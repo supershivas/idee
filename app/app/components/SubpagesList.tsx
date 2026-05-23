@@ -84,7 +84,7 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
   )
 
   return (
-    <div className="px-4 md:px-8 pb-3 border-b border-gray-100">
+    <div className="px-4 md:px-8 pb-3 border-b border-gray-100" style={{ maxWidth: '720px' }}>
       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Sous-pages</p>
       {isMobile ? list : (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
