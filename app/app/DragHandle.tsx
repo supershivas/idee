@@ -62,43 +62,40 @@ function TurnIntoMenu({ x, y, editor, onClose }: { x: number, y: number, editor:
 
 // ─── Bouton flottant ──────────────────────────────────────────────────────────
 function DragButton({ view, editor }: { view: EditorView, editor: any }) {
-  // Position en coordonnées viewport (fixed)
   const [pos, setPos] = useState<{ top: number, left: number } | null>(null)
   const [menu, setMenu] = useState<{ x: number, y: number } | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
-  const hoveredNode = useRef<HTMLElement | null>(null)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function clearHide() {
+    if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null }
+  }
+  function scheduleHide() {
+    clearHide()
+    hideTimer.current = setTimeout(() => { if (!menu) setPos(null) }, 150)
+  }
 
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
       if (menu) return
+      clearHide()
 
-      // Nœud de premier niveau dans ProseMirror
       const target = e.target as HTMLElement
       const pmNode = target.closest('.ProseMirror > *') as HTMLElement | null
-      if (!pmNode) { setPos(null); hoveredNode.current = null; return }
+      if (!pmNode) { scheduleHide(); return }
 
-      hoveredNode.current = pmNode
       const rect = pmNode.getBoundingClientRect()
-
-      // Aligne sur la première ligne de texte : on prend le top du nœud
-      // et on ajoute la moitié de la line-height réelle de la première ligne
       const style = window.getComputedStyle(pmNode)
       const lineH = parseFloat(style.lineHeight) || 24
-      const btnSize = 20
+      const btnSize = 24
 
       setPos({
         top: rect.top + (lineH / 2) - (btnSize / 2),
-        // Juste à gauche du texte, collé au padding de l'éditeur
-        left: rect.left - btnSize - 4,
+        left: rect.left - btnSize - 6,
       })
     }
 
-    function onMouseLeave(e: MouseEvent) {
-      // Ne cache pas si on survole le bouton lui-même
-      const related = e.relatedTarget as HTMLElement
-      if (btnRef.current?.contains(related)) return
-      if (!menu) { setPos(null); hoveredNode.current = null }
-    }
+    function onMouseLeave() { scheduleHide() }
 
     const dom = view.dom
     dom.addEventListener('mousemove', onMouseMove)
@@ -106,6 +103,7 @@ function DragButton({ view, editor }: { view: EditorView, editor: any }) {
     return () => {
       dom.removeEventListener('mousemove', onMouseMove)
       dom.removeEventListener('mouseleave', onMouseLeave)
+      clearHide()
     }
   }, [view, menu])
 
@@ -117,12 +115,6 @@ function DragButton({ view, editor }: { view: EditorView, editor: any }) {
     setMenu({ x: rect.right + 6, y: rect.top })
   }
 
-  function handleMouseLeaveBtn(e: React.MouseEvent) {
-    const related = e.relatedTarget as HTMLElement
-    if (view.dom.contains(related)) return
-    if (!menu) setPos(null)
-  }
-
   if (!pos) return null
 
   return (
@@ -131,15 +123,16 @@ function DragButton({ view, editor }: { view: EditorView, editor: any }) {
         ref={btnRef}
         onMouseDown={e => e.preventDefault()}
         onClick={handleClick}
-        onMouseLeave={handleMouseLeaveBtn}
-        className="flex items-center justify-center rounded hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-colors cursor-pointer select-none"
+        onMouseEnter={clearHide}
+        onMouseLeave={scheduleHide}
+        className="flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer select-none"
         style={{
           position: 'fixed',
           top: pos.top,
           left: pos.left,
-          width: 20,
-          height: 20,
-          fontSize: 13,
+          width: 24,
+          height: 24,
+          fontSize: 16,
           lineHeight: 1,
           zIndex: 100,
           pointerEvents: 'auto',
