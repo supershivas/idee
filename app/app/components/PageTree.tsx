@@ -127,7 +127,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
                   : '●'}
               </button>
               {showColors && (
-                <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-2 z-50 flex gap-1.5 flex-wrap w-36">
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-2 z-[100] flex gap-1.5 flex-wrap w-36">
                   {PAGE_COLORS.map(c => (
                     <button key={c.value} onClick={() => { onColorChange(page.id, c.value); setShowColors(false) }}
                       title={c.name}
