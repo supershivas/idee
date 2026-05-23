@@ -88,23 +88,29 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
   })
 
-  // Persiste la page sélectionnée + ouvre ses ancêtres dans la sidebar
-  // Sélectionne une page, persiste, et expand ses enfants + ancêtres immédiatement
-  function selectPage(page: Page | null) {
+  const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
     if (!page) return
     try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
-    const ancestorIds = getAncestorIds(pages, page.id)
-    const hasChildren = pages.some(p => p.parent_id === page.id && !p.deleted_at)
-    const toOpen = hasChildren ? [page.id, ...ancestorIds] : ancestorIds
-    if (toOpen.length > 0) {
-      setOpenMap(prev => {
-        const next = { ...prev }
-        toOpen.forEach(id => { next[id] = true })
-        return next
-      })
-    }
-  }
+    setOpenMap(prev => {
+      const current = pages.find(p => p.id === page.id) || initialPages.find(p => p.id === page.id)
+      if (!current) return prev
+      const toOpen: string[] = []
+      // Ouvre la page elle-même si elle a des enfants
+      const hasChildren = [...pages, ...initialPages].some(p => p.parent_id === page.id && !p.deleted_at)
+      if (hasChildren) toOpen.push(page.id)
+      // Ouvre tous les ancêtres
+      let c = current
+      while (c?.parent_id) {
+        toOpen.push(c.parent_id)
+        c = [...pages, ...initialPages].find(p => p.id === c!.parent_id) as Page
+      }
+      if (toOpen.length === 0) return prev
+      const next = { ...prev }
+      toOpen.forEach(id => { next[id] = true })
+      return next
+    })
+  }, [pages, userId])
 
   // Restaure l'expand au chargement pour la page persistée
   useEffect(() => {
