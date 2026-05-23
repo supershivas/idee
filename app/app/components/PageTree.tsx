@@ -201,7 +201,7 @@ export function Breadcrumb({ pages, selected, onSelect }: {
   const ancestors = crumbs.slice(0, -1)
   if (ancestors.length === 0) return null
   return (
-    <div className="hidden md:flex items-center gap-1 text-sm text-gray-400 px-4 md:px-8 py-1.5 overflow-x-auto">
+    <div className="hidden md:flex items-center gap-1 text-sm text-gray-400 px-4 md:px-8 py-1.5 overflow-x-auto" style={{ maxWidth: '720px' }}>
       {ancestors.map((crumb, i) => (
         <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
           {i > 0 && <span className="text-gray-300">/</span>}
