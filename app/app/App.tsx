@@ -513,6 +513,37 @@ function ActionsMenu({ onDelete, children }: { onDelete: () => void, children: R
   )
 }
 
+// ─── Confirmation corbeille ───────────────────────────────────────────────────
+function ConfirmTrashModal({ page, onConfirm, onCancel }: {
+  page: Page, onConfirm: () => void, onCancel: () => void
+}) {
+  const hasChildren = false // passé depuis App si besoin
+  return (
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onCancel}>
+      <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-xl p-5 w-full md:w-80 md:mx-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-3xl">{page.icon || '📄'}</span>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">{page.title || 'Sans titre'}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Cette page sera restaurable depuis la corbeille pendant 30 jours.</p>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <button onClick={onCancel}
+            className="flex-1 py-2.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors">
+            Annuler
+          </button>
+          <button onClick={onConfirm}
+            className="flex-1 py-2.5 text-sm text-white bg-red-500 hover:bg-red-600 rounded-xl font-medium transition-colors">
+            Mettre à la corbeille
+          </button>
+        </div>
+        <div className="md:hidden" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+      </div>
+    </div>
+  )
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App({ initialPages, userId }: { initialPages: Page[], userId: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
@@ -521,6 +552,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showDrawer, setShowDrawer] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
@@ -783,10 +815,10 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                     setSelected(prev => prev ? { ...prev, ...updates } : null)
                     setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
                   }} />
-                  <button onClick={() => deletePage(selected.id)} className="text-sm text-red-400 hover:text-red-500 px-2">Supprimer</button>
+                  <button onClick={() => setConfirmDeleteId(selected.id)} className="text-sm text-red-400 hover:text-red-500 px-2">Supprimer</button>
                 </div>
                 <div className="md:hidden flex-shrink-0 pt-1">
-                  <ActionsMenu onDelete={() => deletePage(selected.id)}>
+                  <ActionsMenu onDelete={() => setConfirmDeleteId(selected.id)}>
                     <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ExportButton page={selected} /></div>
                     <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100">
                       <ShareButton page={selected as any} onUpdate={(updates) => {
@@ -821,6 +853,18 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
           </div>
         )}
       </div>
+
+      {confirmDeleteId && (() => {
+        const page = pages.find(p => p.id === confirmDeleteId)
+        if (!page) return null
+        return (
+          <ConfirmTrashModal
+            page={page}
+            onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }}
+            onCancel={() => setConfirmDeleteId(null)}
+          />
+        )
+      })()}
 
       <MobileBottomNav pages={activePages} selected={selected} onSelect={setSelected} onAdd={() => addPage(null)} onShowAll={() => setShowDrawer(true)} />
     </div>
