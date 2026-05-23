@@ -56,18 +56,37 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   })
 
   // Persiste la page sélectionnée + ouvre ses ancêtres dans la sidebar
-  useEffect(() => {
-    if (!selected) return
-    try { localStorage.setItem(lastPageKey(userId), selected.id) } catch {}
-    const ancestorIds = getAncestorIds(pages, selected.id)
-    if (ancestorIds.length > 0) {
+  // Sélectionne une page, persiste, et expand ses enfants + ancêtres immédiatement
+  function selectPage(page: Page | null) {
+    setSelected(page)
+    if (!page) return
+    try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
+    const ancestorIds = getAncestorIds(pages, page.id)
+    const hasChildren = pages.some(p => p.parent_id === page.id && !p.deleted_at)
+    const toOpen = hasChildren ? [page.id, ...ancestorIds] : ancestorIds
+    if (toOpen.length > 0) {
       setOpenMap(prev => {
         const next = { ...prev }
-        ancestorIds.forEach(id => { next[id] = true })
+        toOpen.forEach(id => { next[id] = true })
         return next
       })
     }
-  }, [selected?.id]) // se déclenche uniquement quand l'id change
+  }
+
+  // Restaure l'expand au chargement pour la page persistée
+  useEffect(() => {
+    if (!selected) return
+    const ancestorIds = getAncestorIds(initialPages, selected.id)
+    const hasChildren = initialPages.some(p => p.parent_id === selected.id && !p.deleted_at)
+    const toOpen = hasChildren ? [selected.id, ...ancestorIds] : ancestorIds
+    if (toOpen.length > 0) {
+      setOpenMap(prev => {
+        const next = { ...prev }
+        toOpen.forEach(id => { next[id] = true })
+        return next
+      })
+    }
+  }, []) // une seule fois au mount // se déclenche uniquement quand l'id change
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -80,7 +99,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     const { data } = await supabase.from('pages')
       .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon })
       .select().single()
-    if (data) { setPages(prev => [...prev, data]); setSelected(data); setShowDrawer(false); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
+    if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowDrawer(false); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
   }
 
   async function updateTitle(value: string) {
@@ -205,12 +224,12 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
             <button onClick={logout} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400">⎋</button>
           </div>
         </div>
-        <SearchBar pages={activePages} onSelect={setSelected} />
+        <SearchBar pages={activePages} onSelect={selectPage} />
         <div className="flex-1 overflow-y-auto py-2 px-2">
           {activePages.filter(p => p.parent_id === null).length === 0 && <p className="text-xs text-gray-400 px-3 py-3">Clique sur + pour créer une page.</p>}
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
-              onSelect={setSelected} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
+              onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
               overId={overId} overPosition={overPosition} isMobile={false}
               onRename={renamePage} onColorChange={updateColor} />
             <DragOverlay>
@@ -220,7 +239,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         </div>
       </div>
 
-      {showDrawer && <MobilePageDrawer pages={activePages} trashedCount={trashedPages.length} selected={selected} onSelect={setSelected} onAdd={addPage} onClose={() => setShowDrawer(false)} onShowTrash={() => { setShowDrawer(false); setShowTrash(true) }} openMap={openMap} onToggle={toggleOpen} overId={overId} overPosition={overPosition} sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} activePage={activeDragPage} onRename={renamePage} onColorChange={updateColor} />}
+      {showDrawer && <MobilePageDrawer pages={activePages} trashedCount={trashedPages.length} selected={selected} onSelect={selectPage} onAdd={addPage} onClose={() => setShowDrawer(false)} onShowTrash={() => { setShowDrawer(false); setShowTrash(true) }} openMap={openMap} onToggle={toggleOpen} overId={overId} overPosition={overPosition} sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} activePage={activeDragPage} onRename={renamePage} onColorChange={updateColor} />}
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
 
       {/* Contenu */}
@@ -228,7 +247,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         style={{ paddingBottom: isMobile ? '56px' : '0' }}>
         {selected ? (
           <>
-            <Breadcrumb pages={activePages} selected={selected} onSelect={setSelected} />
+            <Breadcrumb pages={activePages} selected={selected} onSelect={selectPage} />
             <div className="px-4 md:px-8 pt-5 pb-2" style={{ maxWidth: '720px' }}>
               <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
@@ -253,8 +272,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
               </div>
               {saving && isMobile && <p className="text-xs text-gray-400 mt-1">Sauvegarde…</p>}
             </div>
-            <SubpagesList subpages={subpages} onSelect={setSelected} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} />
-            <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={setSelected} userId={userId} isMobile={isMobile} />
+            <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} />
+            <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
@@ -268,7 +287,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       </div>
 
       {confirmDeleteId && (() => { const page = pages.find(p => p.id === confirmDeleteId); if (!page) return null; return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} /> })()}
-      <MobileBottomNav pages={activePages} selected={selected} onSelect={setSelected} onAdd={() => addPage(null)} onShowAll={() => setShowDrawer(true)} />
+      <MobileBottomNav pages={activePages} selected={selected} onSelect={selectPage} onAdd={() => addPage(null)} onShowAll={() => setShowDrawer(true)} />
     </div>
   )
 }
