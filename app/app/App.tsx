@@ -23,6 +23,7 @@ export type Page = {
   icon: string
   position: number
   updated_at: string
+  deleted_at?: string | null
 }
 
 function useIsMobile() {
@@ -63,9 +64,7 @@ function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Page) => 
             <button key={page.id} onClick={() => { onSelect(page); setQuery('') }}
               className="w-full flex items-center gap-2 px-3 py-3 text-left hover:bg-gray-50 border-b last:border-0">
               <span>{page.icon || '📄'}</span>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{page.title || 'Sans titre'}</p>
-              </div>
+              <p className="text-sm font-medium text-gray-800 truncate">{page.title || 'Sans titre'}</p>
             </button>
           ))}
         </div>
@@ -75,6 +74,127 @@ function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Page) => 
           <p className="text-sm text-gray-400 text-center">Aucun résultat</p>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Corbeille ────────────────────────────────────────────────────────────────
+function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }: {
+  trashedPages: Page[]
+  onRestore: (id: string) => void
+  onDeleteForever: (id: string) => void
+  onClose: () => void
+}) {
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+
+  const sorted = [...trashedPages].sort((a, b) =>
+    new Date(b.deleted_at!).getTime() - new Date(a.deleted_at!).getTime()
+  )
+
+  function daysLeft(deletedAt: string) {
+    const diff = 30 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000)
+    return Math.max(0, diff)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col w-full md:w-[480px]"
+        style={{ maxHeight: '80vh' }}>
+        {/* Handle mobile */}
+        <div className="md:hidden w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 flex-shrink-0" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h2 className="font-semibold text-gray-900 text-base">Corbeille</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Suppression définitive après 30 jours</p>
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 text-lg">✕</button>
+        </div>
+
+        {/* Liste */}
+        <div className="flex-1 overflow-y-auto">
+          {sorted.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+              <span className="text-4xl mb-3">🗑️</span>
+              <p className="text-sm">La corbeille est vide</p>
+            </div>
+          ) : (
+            sorted.map(page => (
+              <div key={page.id} className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <span className="text-2xl flex-shrink-0 opacity-60">{page.icon || '📄'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">{page.title || 'Sans titre'}</p>
+                  <p className="text-xs text-gray-400">
+                    {daysLeft(page.deleted_at!) > 0
+                      ? `Suppression dans ${daysLeft(page.deleted_at!)} jour${daysLeft(page.deleted_at!) > 1 ? 's' : ''}`
+                      : 'Suppression imminente'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* Restaurer */}
+                  <button
+                    onClick={() => onRestore(page.id)}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Restaurer">
+                    Restaurer
+                  </button>
+                  {/* Supprimer définitivement */}
+                  {confirmId === page.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => { onDeleteForever(page.id); setConfirmId(null) }}
+                        className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
+                        Confirmer
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(null)}
+                        className="px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 rounded-lg">
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmId(page.id)}
+                      className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Supprimer définitivement">
+                      🗑
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer — vider tout */}
+        {sorted.length > 0 && (
+          <div className="px-5 py-3 border-t border-gray-100 flex-shrink-0">
+            {confirmId === 'all' ? (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">Vider définitivement ?</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setConfirmId(null)} className="px-3 py-1.5 text-sm text-gray-500">Annuler</button>
+                  <button
+                    onClick={() => { sorted.forEach(p => onDeleteForever(p.id)); setConfirmId(null) }}
+                    className="px-3 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600">
+                    Tout supprimer
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmId('all')}
+                className="text-sm text-red-400 hover:text-red-600 transition-colors">
+                Vider la corbeille
+              </button>
+            )}
+          </div>
+        )}
+        <div className="md:hidden" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+      </div>
     </div>
   )
 }
@@ -107,7 +227,7 @@ function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onT
             className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab active:cursor-grabbing">⠿</button>
         )}
         <button onClick={() => onToggle(page.id)}
-          className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0 text-xs">
+          className="w-5 h-5 flex items-center justify-center text-gray-400 flex-shrink-0 text-xs">
           {hasChildren ? (isOpen ? '▾' : '▸') : ''}
         </button>
         <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
@@ -115,8 +235,7 @@ function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onT
           {page.title || 'Sans titre'}
         </span>
         <button onClick={() => onAdd(page.id)}
-          className={`${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} text-gray-400 hover:text-gray-700 text-base flex-shrink-0 w-9 h-9 flex items-center justify-center`}
-          title="Ajouter une sous-page">+</button>
+          className={`${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} text-gray-400 hover:text-gray-700 flex-shrink-0 w-9 h-9 flex items-center justify-center text-base`}>+</button>
       </div>
       {isOver && overPosition === 'after' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
     </div>
@@ -130,7 +249,7 @@ function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggl
   overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
   isMobile: boolean
 }) {
-  const children = pages.filter(p => p.parent_id === parentId).sort((a, b) => a.position - b.position)
+  const children = pages.filter(p => p.parent_id === parentId && !p.deleted_at).sort((a, b) => a.position - b.position)
   if (!children.length) return null
   return (
     <div>
@@ -150,7 +269,7 @@ function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggl
   )
 }
 
-// ─── Breadcrumb — desktop seulement, sans la page courante ───────────────────
+// ─── Breadcrumb desktop ───────────────────────────────────────────────────────
 function Breadcrumb({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
   if (!selected) return null
   const crumbs: Page[] = []
@@ -159,7 +278,6 @@ function Breadcrumb({ pages, selected, onSelect }: { pages: Page[], selected: Pa
     crumbs.unshift(current)
     current = pages.find(p => p.id === current!.parent_id)
   }
-  // On retire la page courante : inutile de la répéter
   const ancestors = crumbs.slice(0, -1)
   if (ancestors.length === 0) return null
   return (
@@ -185,26 +303,18 @@ function SortableSubpageCard({ page, onSelect, isMobile, onMoveLeft, onMoveRight
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
-
   return (
     <div ref={setNodeRef} style={style} className="flex-shrink-0">
       <div className={`flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 group transition-shadow hover:shadow-sm ${isDragging ? 'shadow-md' : ''}`}
         style={{ minHeight: '44px' }}>
-        {!isMobile && (
-          <button {...attributes} {...listeners}
-            className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 text-sm">⠿</button>
-        )}
-        {isMobile && !isFirst && (
-          <button onClick={onMoveLeft} className="text-gray-400 hover:text-gray-700 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">←</button>
-        )}
+        {!isMobile && <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 text-sm">⠿</button>}
+        {isMobile && !isFirst && <button onClick={onMoveLeft} className="text-gray-400 hover:text-gray-700 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">←</button>}
         {isMobile && isFirst && <div className="w-7" />}
         <button onClick={() => onSelect(page)} className="flex items-center gap-2 min-w-0 flex-1 text-left py-2">
           <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
           <span className="text-sm text-gray-700 truncate max-w-[120px]">{page.title || 'Sans titre'}</span>
         </button>
-        {isMobile && !isLast && (
-          <button onClick={onMoveRight} className="text-gray-400 hover:text-gray-700 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">→</button>
-        )}
+        {isMobile && !isLast && <button onClick={onMoveRight} className="text-gray-400 hover:text-gray-700 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">→</button>}
         {isMobile && isLast && <div className="w-7" />}
         {!isMobile && <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs flex-shrink-0">→</span>}
       </div>
@@ -220,7 +330,6 @@ function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [overPos, setOverPos] = useState<'before' | 'after'>('after')
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
-
   if (!subpages.length) return null
   const sorted = [...subpages].sort((a, b) => a.position - b.position)
   const activePage = sorted.find(p => p.id === activeId)
@@ -240,7 +349,6 @@ function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
     if (!over || active.id === over.id) return
     onReorder(active.id as string, over.id as string, overPos)
   }
-
   function moveItem(id: string, dir: 'left' | 'right') {
     const idx = sorted.findIndex(p => p.id === id)
     if (dir === 'left' && idx > 0) onReorder(id, sorted[idx - 1].id, 'before')
@@ -264,9 +372,7 @@ function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Sous-pages</p>
       {isMobile ? list : (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-          <SortableContext items={sorted.map(p => p.id)} strategy={horizontalListSortingStrategy}>
-            {list}
-          </SortableContext>
+          <SortableContext items={sorted.map(p => p.id)} strategy={horizontalListSortingStrategy}>{list}</SortableContext>
           <DragOverlay>
             {activePage && (
               <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-3 py-2.5 shadow-xl opacity-90">
@@ -282,13 +388,18 @@ function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
 }
 
 // ─── Bottom nav mobile ────────────────────────────────────────────────────────
-function MobileBottomNav({ pages, selected, onSelect, onAdd, onShowAll, saving }: {
+function getAncestorIds(pages: Page[], page: Page): string[] {
+  const ids: string[] = []
+  let current: Page | undefined = pages.find(p => p.id === page.parent_id)
+  while (current) { ids.push(current.id); current = pages.find(p => p.id === current!.parent_id) }
+  return ids
+}
+
+function MobileBottomNav({ pages, selected, onSelect, onAdd, onShowAll }: {
   pages: Page[], selected: Page | null,
-  onSelect: (p: Page) => void, onAdd: () => void,
-  onShowAll: () => void, saving: boolean
+  onSelect: (p: Page) => void, onAdd: () => void, onShowAll: () => void
 }) {
-  // Pages racines seulement, limitées à 3 pour la nav
-  const rootPages = pages.filter(p => p.parent_id === null).sort((a, b) => a.position - b.position)
+  const rootPages = pages.filter(p => p.parent_id === null && !p.deleted_at).sort((a, b) => a.position - b.position)
   const navPages = rootPages.slice(0, 3)
   const hasMore = rootPages.length > 3
 
@@ -296,40 +407,24 @@ function MobileBottomNav({ pages, selected, onSelect, onAdd, onShowAll, saving }
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-stretch">
-        {/* Pages racines */}
         {navPages.map(page => (
-          <button
-            key={page.id}
-            onClick={() => onSelect(page)}
+          <button key={page.id} onClick={() => onSelect(page)}
             className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors min-w-0
               ${selected?.id === page.id || (selected && getAncestorIds(pages, selected).includes(page.id))
                 ? 'text-gray-900' : 'text-gray-400'}`}
-            style={{ minHeight: '56px' }}
-          >
+            style={{ minHeight: '56px' }}>
             <span className="text-xl leading-none">{page.icon || '📄'}</span>
-            <span className="text-[10px] truncate w-full text-center px-1 leading-tight">
-              {page.title || 'Sans titre'}
-            </span>
+            {page.title && <span className="text-[10px] truncate w-full text-center px-1 leading-tight">{page.title}</span>}
           </button>
         ))}
-
-        {/* Bouton "toutes les pages" si plus de 3 */}
         {hasMore && (
-          <button onClick={onShowAll}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-gray-400"
-            style={{ minHeight: '56px' }}>
+          <button onClick={onShowAll} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-gray-400" style={{ minHeight: '56px' }}>
             <span className="text-xl leading-none">☰</span>
             <span className="text-[10px]">Pages</span>
           </button>
         )}
-
-        {/* Séparateur */}
         <div className="w-px bg-gray-100 my-2" />
-
-        {/* Nouvelle page */}
-        <button onClick={onAdd}
-          className="flex-none flex flex-col items-center justify-center gap-0.5 px-4 py-2 text-gray-400 hover:text-gray-700"
-          style={{ minHeight: '56px' }}>
+        <button onClick={onAdd} className="flex-none flex flex-col items-center justify-center gap-0.5 px-4 py-2 text-gray-400 hover:text-gray-700" style={{ minHeight: '56px' }}>
           <span className="text-xl leading-none">＋</span>
           <span className="text-[10px]">Nouveau</span>
         </button>
@@ -338,21 +433,12 @@ function MobileBottomNav({ pages, selected, onSelect, onAdd, onShowAll, saving }
   )
 }
 
-function getAncestorIds(pages: Page[], page: Page): string[] {
-  const ids: string[] = []
-  let current: Page | undefined = pages.find(p => p.id === page.parent_id)
-  while (current) {
-    ids.push(current.id)
-    current = pages.find(p => p.id === current!.parent_id)
-  }
-  return ids
-}
-
-// ─── Drawer "toutes les pages" mobile ────────────────────────────────────────
-function MobilePageDrawer({ pages, selected, onSelect, onAdd, onClose, openMap, onToggle, overId, overPosition, sensors, onDragStart, onDragOver, onDragEnd, activePage }: {
-  pages: Page[], selected: Page | null,
+// ─── Drawer mobile ────────────────────────────────────────────────────────────
+function MobilePageDrawer({ pages, trashedCount, selected, onSelect, onAdd, onClose, onShowTrash, openMap, onToggle, overId, overPosition, sensors, onDragStart, onDragOver, onDragEnd, activePage }: {
+  pages: Page[], trashedCount: number, selected: Page | null,
   onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
-  onClose: () => void, openMap: Record<string, boolean>, onToggle: (id: string) => void,
+  onClose: () => void, onShowTrash: () => void,
+  openMap: Record<string, boolean>, onToggle: (id: string) => void,
   overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
   sensors: any, onDragStart: any, onDragOver: any, onDragEnd: any, activePage: Page | undefined
 }) {
@@ -360,19 +446,23 @@ function MobilePageDrawer({ pages, selected, onSelect, onAdd, onClose, openMap, 
     <div className="fixed inset-0 z-40 flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-t-2xl shadow-2xl flex flex-col" style={{ maxHeight: '80vh' }}>
-        {/* Handle */}
         <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
           <span className="font-semibold text-gray-800">Pages</span>
-          <button onClick={() => onAdd(null)}
-            className="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 text-xl">+</button>
+          <div className="flex items-center gap-2">
+            <button onClick={onShowTrash}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-gray-100 relative">
+              🗑 Corbeille
+              {trashedCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 text-white text-[10px] rounded-full flex items-center justify-center">{trashedCount}</span>
+              )}
+            </button>
+            <button onClick={() => onAdd(null)} className="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 text-xl">+</button>
+          </div>
         </div>
-        {/* Search */}
         <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0">
           <SearchBar pages={pages} onSelect={(p) => { onSelect(p); onClose() }} />
         </div>
-        {/* Liste */}
         <div className="flex-1 overflow-y-auto py-2 px-2">
           <DndContext sensors={sensors} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
             <PageTree pages={pages} parentId={null} depth={0} selectedId={selected?.id || null}
@@ -409,15 +499,14 @@ function ActionsMenu({ onDelete, children }: { onDelete: () => void, children: R
   }, [open])
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(v => !v)}
-        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-lg"
-        title="Plus d'actions">···</button>
+      <button onClick={() => setOpen(v => !v)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-lg">···</button>
       {open && (
         <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 min-w-48 overflow-hidden">
           {children}
           <div className="border-t border-gray-100" />
-          <button onClick={() => { onDelete(); setOpen(false) }}
-            className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50">Supprimer la page</button>
+          <button onClick={() => { onDelete(); setOpen(false) }} className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50">
+            Mettre à la corbeille
+          </button>
         </div>
       )}
     </div>
@@ -431,6 +520,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showDrawer, setShowDrawer] = useState(false)
+  const [showTrash, setShowTrash] = useState(false)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
@@ -439,6 +529,11 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const isMobile = useIsMobile()
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  // Pages actives (non supprimées)
+  const activePages = pages.filter(p => !p.deleted_at)
+  // Pages en corbeille
+  const trashedPages = pages.filter(p => !!p.deleted_at)
 
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
 
@@ -492,12 +587,37 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     setSaving(false)
   }
 
+  // Soft delete — met deleted_at à maintenant
   async function deletePage(id: string) {
+    const deletedAt = new Date().toISOString()
+    setPages(prev => prev.map(p =>
+      p.id === id || p.parent_id === id ? { ...p, deleted_at: deletedAt } : p
+    ))
+    if (selected?.id === id) {
+      const next = activePages.find(p => p.id !== id && p.parent_id !== id)
+      setSelected(next || null)
+    }
+    const supabase = createClient()
+    // Soft delete récursif (page + sous-pages directes)
+    await supabase.from('pages').update({ deleted_at: deletedAt }).eq('id', id)
+    const children = pages.filter(p => p.parent_id === id)
+    if (children.length > 0) {
+      await supabase.from('pages').update({ deleted_at: deletedAt }).in('id', children.map(c => c.id))
+    }
+  }
+
+  // Restaurer depuis la corbeille
+  async function restorePage(id: string) {
+    setPages(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } : p))
+    const supabase = createClient()
+    await supabase.from('pages').update({ deleted_at: null }).eq('id', id)
+  }
+
+  // Suppression définitive
+  async function deleteForever(id: string) {
+    setPages(prev => prev.filter(p => p.id !== id))
     const supabase = createClient()
     await supabase.from('pages').delete().eq('id', id)
-    const remaining = pages.filter(p => p.id !== id && p.parent_id !== id)
-    setPages(remaining)
-    setSelected(remaining[0] || null)
   }
 
   async function logout() {
@@ -518,7 +638,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       check = pages.find(p => p.id === check!.parent_id)
     }
     const newParentId = position === 'inside' ? targetId : target.parent_id
-    const siblings = pages.filter(p => p.parent_id === newParentId && p.id !== activeId).sort((a, b) => a.position - b.position)
+    const siblings = pages.filter(p => p.parent_id === newParentId && p.id !== activeId && !p.deleted_at).sort((a, b) => a.position - b.position)
     const targetIndex = siblings.findIndex(p => p.id === targetId)
     const insertAt = position === 'before' ? targetIndex : position === 'after' ? targetIndex + 1 : siblings.length
     siblings.splice(insertAt, 0, { ...dragged, parent_id: newParentId })
@@ -554,33 +674,40 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     await reorderSiblings(activeId, overId, position)
   }
 
-  const activePage = pages.find(p => p.id === activeDragId)
-  const subpages = selected ? pages.filter(p => p.parent_id === selected.id).sort((a, b) => a.position - b.position) : []
+  const activeDragPage = pages.find(p => p.id === activeDragId)
+  const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
 
-  // Sidebar desktop
   const desktopSidebar = (
     <div className="hidden md:flex flex-col border-r flex-shrink-0 bg-gray-50" style={{ width: '240px' }}>
       <div className="px-4 flex items-center justify-between border-b border-gray-200" style={{ minHeight: '52px' }}>
         <span className="font-semibold text-gray-800 text-sm">Idée</span>
         <div className="flex items-center gap-1">
-          <button onClick={() => addPage(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-500 text-xl" title="Nouvelle page">+</button>
-          <button onClick={logout} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400" title="Se déconnecter">⎋</button>
+          <button onClick={() => addPage(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-500 text-xl">+</button>
+          <button onClick={() => setShowTrash(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 relative"
+            title="Corbeille">
+            🗑
+            {trashedPages.length > 0 && (
+              <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">{trashedPages.length}</span>
+            )}
+          </button>
+          <button onClick={logout} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400">⎋</button>
         </div>
       </div>
-      <SearchBar pages={pages} onSelect={setSelected} />
+      <SearchBar pages={activePages} onSelect={setSelected} />
       <div className="flex-1 overflow-y-auto py-2 px-2">
-        {pages.filter(p => p.parent_id === null).length === 0 && (
+        {activePages.filter(p => p.parent_id === null).length === 0 && (
           <p className="text-xs text-gray-400 px-3 py-3">Clique sur + pour créer une page.</p>
         )}
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-          <PageTree pages={pages} parentId={null} depth={0} selectedId={selected?.id || null}
+          <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
             onSelect={setSelected} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
             overId={overId} overPosition={overPosition} isMobile={false} />
           <DragOverlay>
-            {activePage && (
+            {activeDragPage && (
               <div className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-lg text-sm opacity-90">
-                <span>⠿</span><span>{activePage.icon}</span>
-                <span className="truncate max-w-32">{activePage.title || 'Sans titre'}</span>
+                <span>{activeDragPage.icon}</span>
+                <span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span>
               </div>
             )}
           </DragOverlay>
@@ -593,33 +720,36 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     <div className="flex w-full h-screen bg-white overflow-hidden">
       {desktopSidebar}
 
-      {/* Drawer mobile (bottom sheet) */}
       {showDrawer && (
         <MobilePageDrawer
-          pages={pages} selected={selected}
+          pages={activePages} trashedCount={trashedPages.length} selected={selected}
           onSelect={setSelected} onAdd={addPage}
           onClose={() => setShowDrawer(false)}
+          onShowTrash={() => { setShowDrawer(false); setShowTrash(true) }}
           openMap={openMap} onToggle={toggleOpen}
           overId={overId} overPosition={overPosition}
           sensors={sensors} onDragStart={handleDragStart}
           onDragOver={handleDragOver} onDragEnd={handleDragEnd}
-          activePage={activePage}
+          activePage={activeDragPage}
         />
       )}
 
-      {/* Contenu principal */}
+      {showTrash && (
+        <TrashPanel
+          trashedPages={trashedPages}
+          onRestore={restorePage}
+          onDeleteForever={deleteForever}
+          onClose={() => setShowTrash(false)}
+        />
+      )}
+
       <div className="flex-1 flex flex-col overflow-hidden min-w-0"
         style={{ paddingBottom: isMobile ? '56px' : '0' }}>
-
         {selected ? (
           <>
-            {/* Breadcrumb — desktop uniquement, sans la page courante */}
-            <Breadcrumb pages={pages} selected={selected} onSelect={setSelected} />
-
-            {/* Header : icône + titre + actions (une seule fois) */}
+            <Breadcrumb pages={activePages} selected={selected} onSelect={setSelected} />
             <div className="px-4 md:px-8 pt-5 pb-2">
               <div className="flex items-start gap-3">
-                {/* Icône */}
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setShowIconPicker(v => !v)}
                     className="text-4xl hover:opacity-70 transition-opacity"
@@ -635,8 +765,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                     </div>
                   )}
                 </div>
-
-                {/* Titre */}
                 <input
                   className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1"
                   style={{ minHeight: '44px' }}
@@ -644,8 +772,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                   onChange={e => updateTitle(e.target.value)}
                   placeholder="Sans titre"
                 />
-
-                {/* Actions desktop */}
                 <div className="hidden md:flex items-center gap-1 flex-shrink-0 pt-1">
                   {saving && <span className="text-xs text-gray-400">Sauvegarde...</span>}
                   <HistoryButton page={selected} onRestore={(title, content) => {
@@ -659,13 +785,9 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                   }} />
                   <button onClick={() => deletePage(selected.id)} className="text-sm text-red-400 hover:text-red-500 px-2">Supprimer</button>
                 </div>
-
-                {/* Actions mobile — menu ··· */}
                 <div className="md:hidden flex-shrink-0 pt-1">
                   <ActionsMenu onDelete={() => deletePage(selected.id)}>
-                    <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100">
-                      <ExportButton page={selected} />
-                    </div>
+                    <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ExportButton page={selected} /></div>
                     <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100">
                       <ShareButton page={selected as any} onUpdate={(updates) => {
                         setSelected(prev => prev ? { ...prev, ...updates } : null)
@@ -681,13 +803,11 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                   </ActionsMenu>
                 </div>
               </div>
-              {/* Indicateur sauvegarde mobile */}
               {saving && isMobile && <p className="text-xs text-gray-400 mt-1">Sauvegarde…</p>}
             </div>
 
             <SubpagesList subpages={subpages} onSelect={setSelected} onReorder={handleSubpageReorder} isMobile={isMobile} />
-
-            <Editor key={selected.id} page={selected} pages={pages}
+            <Editor key={selected.id} page={selected} pages={activePages}
               onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)}
               onNavigate={setSelected} userId={userId} isMobile={isMobile} />
           </>
@@ -702,12 +822,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         )}
       </div>
 
-      {/* Bottom nav mobile */}
-      <MobileBottomNav
-        pages={pages} selected={selected}
-        onSelect={setSelected} onAdd={() => addPage(null)}
-        onShowAll={() => setShowDrawer(true)} saving={saving}
-      />
+      <MobileBottomNav pages={activePages} selected={selected} onSelect={setSelected} onAdd={() => addPage(null)} onShowAll={() => setShowDrawer(true)} />
     </div>
   )
 }
