@@ -16,6 +16,39 @@ import { SubpagesList } from './components/SubpagesList'
 import { MobileBottomNav, MobilePageDrawer } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 
+// Breadcrumb inline (ancêtres uniquement, sans la page courante)
+function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
+  if (!selected) return null
+  const crumbs: Page[] = []
+  let current: Page | undefined = selected
+  while (current) { crumbs.unshift(current); current = pages.find(p => p.id === current!.parent_id) }
+  const ancestors = crumbs.slice(0, -1)
+  if (ancestors.length === 0) return <div className="flex-1 min-w-0" />
+  return (
+    <div className="flex items-center gap-1 text-xs text-gray-400 flex-1 min-w-0 overflow-x-auto">
+      {ancestors.map((crumb, i) => (
+        <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
+          {i > 0 && <span className="text-gray-200">/</span>}
+          <button onClick={() => onSelect(crumb)} className="hover:text-gray-600 transition-colors flex items-center gap-1 py-1">
+            <span>{crumb.icon || '📄'}</span>
+            <span className="whitespace-nowrap">{crumb.title || 'Sans titre'}</span>
+          </button>
+        </span>
+      ))}
+      <span className="text-gray-200 flex-shrink-0">/</span>
+    </div>
+  )
+}
+
+// Wrapper discret pour les boutons d'action (rend le bouton enfant plus petit)
+function PageActionBtn({ children, title, onClick }: { children: React.ReactNode, title: string, onClick: () => void }) {
+  return (
+    <div className="[&_button]:!text-xs [&_button]:!text-gray-300 [&_button]:hover:!text-gray-600 [&_button]:!px-1.5 [&_button]:!py-1 [&_button]:!rounded [&_button]:hover:!bg-gray-100 [&_button]:transition-colors" title={title}>
+      {children}
+    </div>
+  )
+}
+
 export type { Page }
 
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
@@ -247,30 +280,44 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         style={{ paddingBottom: isMobile ? '56px' : '0' }}>
         {selected ? (
           <>
-            <Breadcrumb pages={activePages} selected={selected} onSelect={selectPage} />
-            <div className="px-4 md:px-8 pt-5 pb-2" style={{ maxWidth: '720px' }}>
+            {/* Topbar : breadcrumb + actions au même niveau */}
+            <div className="hidden md:flex items-center justify-between border-b border-gray-100 px-4 md:px-8" style={{ minHeight: '40px' }}>
+              {/* Breadcrumb */}
+              <BreadcrumbInline pages={activePages} selected={selected} onSelect={selectPage} />
+              {/* Actions discrètes */}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                {/* Indicateur sauvegarde */}
+                <span className={`w-5 h-5 flex items-center justify-center text-xs transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`} title="Sauvegarde...">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                </span>
+                <PageActionBtn onClick={() => {}} title="Historique"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></PageActionBtn>
+                <PageActionBtn onClick={() => {}} title="Exporter"><ExportButton page={selected} /></PageActionBtn>
+                <PageActionBtn onClick={() => {}} title="Partager"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></PageActionBtn>
+                <button onClick={() => setConfirmDeleteId(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors text-sm" title="Supprimer">🗑</button>
+              </div>
+            </div>
+
+            {/* Header mobile : icône save + menu ··· */}
+            <div className="md:hidden flex items-center justify-end gap-1 px-4 pt-2">
+              <span className={`w-5 h-5 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              </span>
+              <ActionsMenu onDelete={() => setConfirmDeleteId(selected.id)}>
+                <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ExportButton page={selected} /></div>
+                <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></div>
+                <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></div>
+              </ActionsMenu>
+            </div>
+
+            {/* Icône + Titre */}
+            <div className="px-4 md:px-8 pt-4 pb-2" style={{ maxWidth: '720px' }}>
               <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
                   {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
                 </div>
                 <input className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
-                <div className="hidden md:flex items-center gap-1 flex-shrink-0 pt-1">
-                  {saving && <span className="text-xs text-gray-400">Sauvegarde...</span>}
-                  <HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} />
-                  <ExportButton page={selected} />
-                  <ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} />
-                  <button onClick={() => setConfirmDeleteId(selected.id)} className="text-sm text-red-400 hover:text-red-500 px-2">Supprimer</button>
-                </div>
-                <div className="md:hidden flex-shrink-0 pt-1">
-                  <ActionsMenu onDelete={() => setConfirmDeleteId(selected.id)}>
-                    <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ExportButton page={selected} /></div>
-                    <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></div>
-                    <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></div>
-                  </ActionsMenu>
-                </div>
               </div>
-              {saving && isMobile && <p className="text-xs text-gray-400 mt-1">Sauvegarde…</p>}
             </div>
             <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} />
             <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
