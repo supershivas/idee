@@ -11,6 +11,7 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableRow from '@tiptap/extension-table-row'
 import { Plugin } from '@tiptap/pm/state'
 import { SlashCommands } from './SlashCommands'
+import { DragHandleExtension } from './DragHandle'
 import { Page } from './types'
 import { useKeyboardOffset } from './hooks'
 import { createClient } from '@/lib/supabase/client'
@@ -149,6 +150,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
       }),
       SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
+      ...(!isMobile ? [DragHandleExtension] : []),
     ],
     content: page.content || '',
     onUpdate: ({ editor }) => onUpdate(editor.getHTML()),
@@ -266,7 +268,9 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
 
       {/* Zone d'édition */}
       <div className="flex-1 overflow-y-auto">
-        <EditorContent editor={editor} className="prose max-w-none py-6 px-4 md:px-8 md:py-8" style={{ maxWidth: '720px' }} />
+        <div className="relative mx-auto" style={{ maxWidth: '720px' }}>
+          <EditorContent editor={editor} className="prose max-w-none py-6 px-4 md:px-8 md:py-8" />
+        </div>
       </div>
 
       {/* Toolbar — sticky, remonte au-dessus du clavier iOS via keyboardOffset */}
