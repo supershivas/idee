@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
 import ShareButton from './ShareButton'
@@ -18,9 +18,21 @@ import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 
 export type { Page }
 
+const LAST_PAGE_KEY = `idee_last_page_${typeof window !== 'undefined' ? window.location.pathname : ''}`
+
+// Remonte tous les ancêtres d'une page pour les ouvrir dans la sidebar
+function getAncestorIds(pages: Page[], pageId: string): string[] {
+  const ids: string[] = []
+  let current = pages.find(p => p.id === pageId)
+  while (current?.parent_id) {
+    ids.push(current.parent_id)
+    current = pages.find(p => p.id === current!.parent_id)
+  }
+  return ids
+}
+
 export default function App({ initialPages, userId }: { initialPages: Page[], userId: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
-  const [selected, setSelected] = useState<Page | null>(null)
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showDrawer, setShowDrawer] = useState(false)
@@ -33,9 +45,48 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const lastSaveRef = useRef(0)
   const isMobile = useIsMobile()
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const activePages = pages.filter(p => !p.deleted_at)
   const trashedPages = pages.filter(p => !!p.deleted_at)
+
+  // Restaure la dernière page ouverte au chargement
+  const [selected, setSelectedRaw] = useState<Page | null>(() => {
+    if (typeof window === 'undefined') return null
+    const lastId = localStorage.getItem(LAST_PAGE_KEY)
+    return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
+  })
+
+  // Wrapper setSelected qui persiste + expand les ancêtres
+  function setSelected(page: Page | null) {
+    setSelectedRaw(page)
+    if (!page) return
+    // Persiste l'id
+    try { localStorage.setItem(LAST_PAGE_KEY, page.id) } catch {}
+    // Ouvre tous les ancêtres dans la sidebar
+    const ancestorIds = getAncestorIds(pages, page.id)
+    if (ancestorIds.length > 0) {
+      setOpenMap(prev => {
+        const next = { ...prev }
+        ancestorIds.forEach(id => { next[id] = true })
+        return next
+      })
+    }
+  }
+
+  // Si la page sélectionnée au chargement a des ancêtres, les ouvrir
+  useEffect(() => {
+    if (selected) {
+      const ancestorIds = getAncestorIds(initialPages, selected.id)
+      if (ancestorIds.length > 0) {
+        setOpenMap(prev => {
+          const next = { ...prev }
+          ancestorIds.forEach(id => { next[id] = true })
+          return next
+        })
+      }
+    }
+  }, []) // une seule fois au mount
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
 
