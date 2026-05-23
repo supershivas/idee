@@ -18,7 +18,7 @@ import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 
 export type { Page }
 
-const LAST_PAGE_KEY = `idee_last_page_${typeof window !== 'undefined' ? window.location.pathname : ''}`
+const lastPageKey = (userId: string) => `idee_last_page_${userId}`
 
 // Remonte tous les ancêtres d'une page pour les ouvrir dans la sidebar
 function getAncestorIds(pages: Page[], pageId: string): string[] {
@@ -51,14 +51,14 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   // Restaure la dernière page ouverte au chargement
   const [selected, setSelected] = useState<Page | null>(() => {
     if (typeof window === 'undefined') return null
-    const lastId = localStorage.getItem(LAST_PAGE_KEY)
+    const lastId = localStorage.getItem(lastPageKey(userId))
     return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
   })
 
   // Persiste la page sélectionnée + ouvre ses ancêtres dans la sidebar
   useEffect(() => {
     if (!selected) return
-    try { localStorage.setItem(LAST_PAGE_KEY, selected.id) } catch {}
+    try { localStorage.setItem(lastPageKey(userId), selected.id) } catch {}
     const ancestorIds = getAncestorIds(pages, selected.id)
     if (ancestorIds.length > 0) {
       setOpenMap(prev => {
