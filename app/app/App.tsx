@@ -49,20 +49,17 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   // Restaure la dernière page ouverte au chargement
-  const [selected, setSelectedRaw] = useState<Page | null>(() => {
+  const [selected, setSelected] = useState<Page | null>(() => {
     if (typeof window === 'undefined') return null
     const lastId = localStorage.getItem(LAST_PAGE_KEY)
     return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
   })
 
-  // Wrapper setSelected qui persiste + expand les ancêtres
-  function setSelected(page: Page | null) {
-    setSelectedRaw(page)
-    if (!page) return
-    // Persiste l'id
-    try { localStorage.setItem(LAST_PAGE_KEY, page.id) } catch {}
-    // Ouvre tous les ancêtres dans la sidebar
-    const ancestorIds = getAncestorIds(pages, page.id)
+  // Persiste la page sélectionnée + ouvre ses ancêtres dans la sidebar
+  useEffect(() => {
+    if (!selected) return
+    try { localStorage.setItem(LAST_PAGE_KEY, selected.id) } catch {}
+    const ancestorIds = getAncestorIds(pages, selected.id)
     if (ancestorIds.length > 0) {
       setOpenMap(prev => {
         const next = { ...prev }
@@ -70,22 +67,11 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         return next
       })
     }
-  }
-
-  // Si la page sélectionnée au chargement a des ancêtres, les ouvrir
-  useEffect(() => {
-    if (selected) {
-      const ancestorIds = getAncestorIds(initialPages, selected.id)
-      if (ancestorIds.length > 0) {
-        setOpenMap(prev => {
+  }, [selected?.id]) // se déclenche uniquement quand l'id change
           const next = { ...prev }
           ancestorIds.forEach(id => { next[id] = true })
           return next
         })
-      }
-    }
-  }, []) // une seule fois au mount
-
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
