@@ -213,7 +213,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       <ToolBtn
         onClick={() => editor?.isActive('table') ? setShowTableSheet(true) : editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
         active={editor?.isActive('table')} label="⊞" title="Tableau" />
-      <ToolBtn onClick={onAddSubpage} active={false} label="＋" title="Sous-page" />
     </>
   )
 
@@ -236,8 +235,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞ Tableau" title="Tableau 3×3" />
-      <Sep />
-      <ToolBtn onClick={onAddSubpage} active={false} label="+ Sous-page" title="Créer une sous-page" />
     </>
   )
 
