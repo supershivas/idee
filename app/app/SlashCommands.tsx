@@ -48,24 +48,22 @@ type Command = {
 }
 
 const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Command[] => [
-  // Texte
   {
     title: 'Texte', description: 'Paragraphe normal', icon: '¶', keywords: ['p', 'texte', 'paragraphe'],
     action: e => e.chain().focus().setParagraph().run()
   },
   {
     title: 'Titre 1', description: 'Grand titre', icon: 'H1', keywords: ['h1', 'titre', 'heading'],
-    action: e => e.chain().focus().toggleHeading({ level: 1 }).run()
+    action: e => e.chain().focus().setHeading({ level: 1 }).run()
   },
   {
     title: 'Titre 2', description: 'Titre moyen', icon: 'H2', keywords: ['h2', 'titre', 'heading'],
-    action: e => e.chain().focus().toggleHeading({ level: 2 }).run()
+    action: e => e.chain().focus().setHeading({ level: 2 }).run()
   },
   {
     title: 'Titre 3', description: 'Petit titre', icon: 'H3', keywords: ['h3', 'titre', 'heading'],
-    action: e => e.chain().focus().toggleHeading({ level: 3 }).run()
+    action: e => e.chain().focus().setHeading({ level: 3 }).run()
   },
-  // Listes
   {
     title: 'Liste à puces', description: 'Liste simple', icon: '•', keywords: ['liste', 'ul', 'bullet'],
     action: e => e.chain().focus().toggleBulletList().run()
@@ -74,7 +72,6 @@ const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Comma
     title: 'Liste numérotée', description: 'Liste avec numéros', icon: '1.', keywords: ['liste', 'ol', 'numéro'],
     action: e => e.chain().focus().toggleOrderedList().run()
   },
-  // Blocs
   {
     title: 'Citation', description: 'Bloc de citation', icon: '❝', keywords: ['quote', 'citation', 'blockquote'],
     action: e => e.chain().focus().toggleBlockquote().run()
@@ -91,18 +88,20 @@ const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Comma
     title: 'Séparateur', description: 'Ligne horizontale', icon: '—', keywords: ['hr', 'divider', 'ligne'],
     action: e => e.chain().focus().setHorizontalRule().run()
   },
-  // Médias & liens
   {
     title: 'Image', description: 'Uploader une image', icon: '🖼️', keywords: ['image', 'photo', 'upload'],
     action: () => onUploadImage()
   },
   {
-    title: 'Lier une page', description: 'Insérer un lien vers une page', icon: '🔗', keywords: ['lien', 'page', 'link'],
-    action: () => {} // géré spécialement dans CommandList
+    title: 'Lien vers une page', description: 'Lien cliquable vers une page', icon: '🔗', keywords: ['lien', 'page', 'link'],
+    action: () => {} // géré spécialement — ouvre PagePicker pour lien inline
   },
-  // Sous-page
   {
-    title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: '📄', keywords: ['page', 'sous', 'enfant', 'child'],
+    title: 'Bloc sous-page', description: 'Insérer une sous-page en bloc', icon: '📄', keywords: ['page', 'sous', 'bloc', 'embed'],
+    action: () => {} // géré spécialement — ouvre PagePicker pour bloc subpage
+  },
+  {
+    title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: '＋', keywords: ['page', 'nouveau', 'créer', 'enfant'],
     action: () => onAddSubpage()
   },
 ]
@@ -122,7 +121,7 @@ function groupCommands(filtered: Command[]): Group[] {
     if (['Texte', 'Titre 1', 'Titre 2', 'Titre 3'].includes(cmd.title)) groups['Texte'].push(cmd)
     else if (['Liste à puces', 'Liste numérotée'].includes(cmd.title)) groups['Listes'].push(cmd)
     else if (['Citation', 'Code', 'Tableau', 'Séparateur'].includes(cmd.title)) groups['Blocs'].push(cmd)
-    else if (['Image', 'Lier une page'].includes(cmd.title)) groups['Médias'].push(cmd)
+    else if (['Image', 'Lien vers une page'].includes(cmd.title)) groups['Médias'].push(cmd)
     else groups['Pages'].push(cmd)
   }
   return Object.entries(groups).filter(([, cmds]) => cmds.length > 0).map(([label, commands]) => ({ label, commands }))
@@ -130,7 +129,7 @@ function groupCommands(filtered: Command[]): Group[] {
 
 const CommandList = forwardRef((props: any, ref) => {
   const [selected, setSelected] = useState(0)
-  const [showPicker, setShowPicker] = useState(false)
+  const [showPicker, setShowPicker] = useState<'link' | 'subpage' | null>(null)
   const allCommands = getCommands(props.onAddSubpage || (() => {}), props.onUploadImage || (() => {}))
   const query = (props.query || '').toLowerCase()
 
@@ -153,20 +152,34 @@ const CommandList = forwardRef((props: any, ref) => {
   }))
 
   function selectItem(item: Command) {
-    if (item.title === 'Lier une page') { setShowPicker(true); return }
+    if (item.title === 'Lien vers une page') { setShowPicker('link'); return }
+    if (item.title === 'Bloc sous-page') { setShowPicker('subpage'); return }
     props.command(item)
   }
 
   function handlePageSelect(page: Page) {
-    setShowPicker(false)
-    props.command({
-      title: '',
-      action: (editor: any) => {
-        editor.chain().focus().insertContent(
-          `<a class="page-link" data-page-id="${page.id}" href="#${page.id}">${page.icon || '📄'} ${page.title || 'Sans titre'}</a> `
-        ).run()
-      }
-    })
+    if (showPicker === 'subpage') {
+      setShowPicker(null)
+      props.command({
+        title: '',
+        action: (editor: any) => {
+          editor.chain().focus().insertContent({
+            type: 'subpage',
+            attrs: { 'data-page-id': page.id },
+          }).run()
+        }
+      })
+    } else {
+      setShowPicker(null)
+      props.command({
+        title: '',
+        action: (editor: any) => {
+          editor.chain().focus().insertContent(
+            `<a class="page-link" data-page-id="${page.id}" href="#${page.id}">${page.icon || '📄'} ${page.title || 'Sans titre'}</a> `
+          ).run()
+        }
+      })
+    }
   }
 
   if (!flatFiltered.length) return null
@@ -202,7 +215,11 @@ const CommandList = forwardRef((props: any, ref) => {
 
       {showPicker && (
         <div className="absolute left-full top-0 ml-2 z-50">
-          <PagePicker pages={props.pages || []} onSelect={handlePageSelect} onClose={() => setShowPicker(false)} />
+          <PagePicker
+            pages={props.pages || []}
+            onSelect={handlePageSelect}
+            onClose={() => setShowPicker(null)}
+          />
         </div>
       )}
     </div>
