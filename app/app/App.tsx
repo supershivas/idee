@@ -92,21 +92,32 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     setSelected(page)
     if (!page) return
     try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
-    setOpenMap(prev => {
-      const current = pages.find(p => p.id === page.id) || initialPages.find(p => p.id === page.id)
-      if (!current) return prev
+    setOpenMap(() => {
+      const allPages = [...pages, ...initialPages]
+      const current = allPages.find(p => p.id === page.id)
+      if (!current) return {}
+
       const toOpen: string[] = []
       // Ouvre la page elle-même si elle a des enfants
-      const hasChildren = [...pages, ...initialPages].some(p => p.parent_id === page.id && !p.deleted_at)
+      const hasChildren = allPages.some(p => p.parent_id === page.id && !p.deleted_at)
       if (hasChildren) toOpen.push(page.id)
       // Ouvre tous les ancêtres
       let c = current
       while (c?.parent_id) {
         toOpen.push(c.parent_id)
-        c = [...pages, ...initialPages].find(p => p.id === c!.parent_id) as Page
+        c = allPages.find(p => p.id === c!.parent_id) as Page
       }
-      if (toOpen.length === 0) return prev
-      const next = { ...prev }
+
+      // Si c'est une page racine (pas de parent) → reset complet, on repart de zéro
+      // Si c'est une sous-page → on conserve l'openMap existant et on ajoute
+      if (!current.parent_id) {
+        const next: Record<string, boolean> = {}
+        toOpen.forEach(id => { next[id] = true })
+        return next
+      }
+
+      // Sous-page : on garde ce qui est ouvert et on ajoute les ancêtres
+      const next: Record<string, boolean> = {}
       toOpen.forEach(id => { next[id] = true })
       return next
     })
@@ -315,8 +326,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
               </ActionsMenu>
             </div>
 
-            {/* Icône + Titre */}
-            <div className="px-4 md:px-8 pt-4 pb-2" style={{ maxWidth: '720px' }}>
+            {/* Icône + Titre + bouton sous-page */}
+            <div className="px-4 md:px-8 pt-4 pb-1 group/header" style={{ maxWidth: '720px' }}>
               <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
@@ -324,6 +335,14 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                 </div>
                 <input className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
               </div>
+              {/* Bouton ajouter sous-page — discret, visible au hover du header */}
+              <button
+                onClick={() => addPage(selected.id)}
+                className="mt-1 ml-[52px] flex items-center gap-1.5 text-xs text-gray-300 hover:text-gray-500 transition-colors opacity-0 group-hover/header:opacity-100"
+              >
+                <span className="text-sm">+</span>
+                <span>Ajouter une sous-page</span>
+              </button>
             </div>
             <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} />
             <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
