@@ -15,21 +15,14 @@ function SortableSubpageCard({ page, onSelect, isMobile, onMoveLeft, onMoveRight
     <div ref={setNodeRef} style={style} className="flex-shrink-0">
       <div className={`flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 group transition-shadow hover:shadow-sm ${isDragging ? 'shadow-md' : ''}`}
         style={{ minHeight: '44px' }}>
-        {!isMobile && (
-          <button {...attributes} {...listeners}
-            className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 text-sm">⠿</button>
-        )}
-        {isMobile && !isFirst && (
-          <button onClick={onMoveLeft} className="text-gray-400 hover:text-gray-700 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">←</button>
-        )}
+        {!isMobile && <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 text-sm">⠿</button>}
+        {isMobile && !isFirst && <button onClick={onMoveLeft} className="text-gray-400 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">←</button>}
         {isMobile && isFirst && <div className="w-7" />}
         <button onClick={() => onSelect(page)} className="flex items-center gap-2 min-w-0 flex-1 text-left py-2">
           <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
           <span className="text-sm text-gray-700 truncate max-w-[120px]">{page.title || 'Sans titre'}</span>
         </button>
-        {isMobile && !isLast && (
-          <button onClick={onMoveRight} className="text-gray-400 hover:text-gray-700 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">→</button>
-        )}
+        {isMobile && !isLast && <button onClick={onMoveRight} className="text-gray-400 w-7 h-7 flex items-center justify-center text-xs flex-shrink-0">→</button>}
         {isMobile && isLast && <div className="w-7" />}
         {!isMobile && <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs flex-shrink-0">→</span>}
       </div>
@@ -37,16 +30,16 @@ function SortableSubpageCard({ page, onSelect, isMobile, onMoveLeft, onMoveRight
   )
 }
 
-export function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
+export function SubpagesList({ subpages, onSelect, onReorder, isMobile, onAddSubpage }: {
   subpages: Page[], onSelect: (p: Page) => void,
   onReorder: (activeId: string, overId: string, position: 'before' | 'after') => void,
-  isMobile: boolean
+  isMobile: boolean,
+  onAddSubpage: () => void,
 }) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [overPos, setOverPos] = useState<'before' | 'after'>('after')
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
-  if (!subpages.length) return null
   const sorted = [...subpages].sort((a, b) => a.position - b.position)
   const activePage = sorted.find(p => p.id === activeId)
 
@@ -71,6 +64,28 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
     if (dir === 'right' && idx < sorted.length - 1) onReorder(id, sorted[idx + 1].id, 'after')
   }
 
+  // Bouton + partagé
+  const addBtn = (
+    <button
+      onClick={onAddSubpage}
+      className="flex-shrink-0 flex items-center gap-2 border border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 rounded-xl px-3 text-gray-400 hover:text-gray-600 transition-colors"
+      style={{ minHeight: '44px' }}
+    >
+      <span className="text-base leading-none">+</span>
+      <span className="text-sm whitespace-nowrap">Sous-page</span>
+    </button>
+  )
+
+  // Pas de sous-pages : carte seule, bien visible, alignée à gauche
+  if (sorted.length === 0) {
+    return (
+      <div className="px-4 md:px-8 pb-4" style={{ maxWidth: '720px' }}>
+        {addBtn}
+      </div>
+    )
+  }
+
+  // Sous-pages existantes : scroll horizontal + bouton + en fin de liste
   const list = (
     <div className="overflow-x-auto pb-1">
       <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
@@ -79,13 +94,13 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile }: {
             onMoveLeft={() => moveItem(sub.id, 'left')} onMoveRight={() => moveItem(sub.id, 'right')}
             isFirst={i === 0} isLast={i === sorted.length - 1} />
         ))}
+        {addBtn}
       </div>
     </div>
   )
 
   return (
     <div className="px-4 md:px-8 pb-3 border-b border-gray-100" style={{ maxWidth: '720px' }}>
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Sous-pages</p>
       {isMobile ? list : (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
           <SortableContext items={sorted.map(p => p.id)} strategy={horizontalListSortingStrategy}>{list}</SortableContext>
