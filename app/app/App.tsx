@@ -12,7 +12,6 @@ import { useIsMobile } from './hooks'
 import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
 import { PageTree, Breadcrumb } from './components/PageTree'
-import { SubpagesList } from './components/SubpagesList'
 import { MobileBottomNav, MobilePageDrawer } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 
@@ -257,7 +256,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   }
 
   const activeDragPage = pages.find(p => p.id === activeDragId)
-  const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
 
   return (
     <div className="flex w-full h-screen bg-white overflow-hidden">
@@ -336,7 +334,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                 <input className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
               </div>
             </div>
-            <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
             <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
           </>
         ) : (
