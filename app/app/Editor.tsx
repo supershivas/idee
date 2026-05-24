@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -12,6 +12,8 @@ import TableRow from '@tiptap/extension-table-row'
 import { Plugin } from '@tiptap/pm/state'
 import { SlashCommands } from './SlashCommands'
 import { DragHandleExtension } from './DragHandle'
+import { createSubpageExtension, insertSubpageBlock } from './SubpageNode'
+import { Backlinks } from './Backlinks'
 import { Page } from './types'
 import { useKeyboardOffset } from './hooks'
 import { createClient } from '@/lib/supabase/client'
@@ -97,9 +99,14 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const [showTableSheet, setShowTableSheet] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Fix clavier iOS : décale la toolbar au-dessus du clavier via visualViewport
   const keyboardOffset = useKeyboardOffset()
+
+  // Extension subpage recréée quand pages ou onNavigate change
+  const subpageExtension = useMemo(
+    () => createSubpageExtension(pages, onNavigate),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pages.map(p => p.id + p.title + p.icon).join(',')]
+  )
 
   const editor = useEditor({
     extensions: [
@@ -108,6 +115,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer hover:text-blue-800' } }),
       Table.configure({ resizable: !isMobile }),
       TableHeader, TableCell, TableRow,
+      subpageExtension,
       Image.extend({
         addAttributes() { return { ...this.parent?.(), class: { default: 'max-w-full rounded-lg my-2' } } },
         addProseMirrorPlugins() {
@@ -149,7 +157,14 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
           })]
         }
       }),
-      SlashCommands.configure({ onAddSubpage, pages, onUploadImage: () => fileInputRef.current?.click() }),
+      SlashCommands.configure({
+        onAddSubpage,
+        pages,
+        onUploadImage: () => fileInputRef.current?.click(),
+        onInsertSubpage: (pageId: string) => {
+          if (editor) insertSubpageBlock(editor, pageId)
+        },
+      }),
       ...(!isMobile ? [DragHandleExtension] : []),
     ],
     content: page.content || '',
@@ -157,23 +172,10 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   })
 
   useEffect(() => {
-    if (editor) editor.commands.setContent(page.content || '')
-  }, [page.id])
-
-  useEffect(() => {
-    const el = document.querySelector('.ProseMirror')
-    if (!el) return
-    const handler = (e: Event) => {
-      const target = (e.target as HTMLElement).closest('.page-link') as HTMLElement
-      if (target) {
-        e.preventDefault()
-        const linked = pages.find(p => p.id === target.getAttribute('data-page-id'))
-        if (linked) onNavigate(linked)
-      }
+    if (editor && editor.getHTML() !== (page.content || '')) {
+      editor.commands.setContent(page.content || '', false)
     }
-    el.addEventListener('click', handler)
-    return () => el.removeEventListener('click', handler)
-  }, [pages, onNavigate])
+  }, [page.id])
 
   function insertLink(url: string) {
     setShowLinkModal(false)
@@ -263,21 +265,20 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         </BubbleMenu>
       )}
 
-      {/* Zone d'édition */}
+      {/* Zone d'édition + backlinks */}
       <div className="flex-1 overflow-y-auto">
-        <EditorContent editor={editor} className="prose max-w-none py-6 px-4 md:px-8 md:py-8" style={{ maxWidth: '720px' }} />
+        <EditorContent
+          editor={editor}
+          className="prose max-w-none py-6 px-4 md:px-8 md:py-8"
+          style={{ maxWidth: '720px' }}
+        />
+        <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
       </div>
 
-      {/* Toolbar — sticky, remonte au-dessus du clavier iOS via keyboardOffset */}
+      {/* Toolbar sticky */}
       <div
         className="editor-toolbar flex items-center gap-0.5 px-2 border-t border-gray-100 bg-white flex-nowrap overflow-x-auto"
-        style={{
-          minHeight: '48px',
-          position: 'sticky',
-          bottom: isMobile ? keyboardOffset : 0,
-          zIndex: 10,
-          transition: 'bottom 0.2s ease',
-        }}
+        style={{ minHeight: '48px', position: 'sticky', bottom: isMobile ? keyboardOffset : 0, zIndex: 10, transition: 'bottom 0.2s ease' }}
       >
         {isMobile ? toolbarMobile : toolbarDesktop}
       </div>
