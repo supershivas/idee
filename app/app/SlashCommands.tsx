@@ -172,32 +172,23 @@ const CommandList = forwardRef((props: any, ref) => {
     } else {
       // Lien inline vers une page
       setShowPicker(null)
+      const text = `${page.icon || '📄'} ${page.title || 'Sans titre'}`
       props.command({
         title: '',
         action: (editor: any) => {
-          const text = `${page.icon || '📄'} ${page.title || 'Sans titre'}`
+          // À ce stade le range du slash a déjà été supprimé par props.command
+          // On insère le texte, on sélectionne, on applique le lien
           const { from } = editor.state.selection
+          editor.chain().focus().insertContent(text).run()
+          const to = editor.state.selection.from
           editor
             .chain()
-            .focus()
-            .insertContentAt(from, {
-              type: 'text',
-              text,
-              marks: [{
-                type: 'link',
-                attrs: {
-                  href: `#${page.id}`,
-                  class: 'page-link',
-                  'data-page-id': page.id,
-                  target: null,
-                  rel: null,
-                },
-              }],
-            })
+            .setTextSelection({ from, to })
+            .setLink({ href: `#${page.id}`, 'data-page-id': page.id, class: 'page-link', target: null, rel: null })
+            .setTextSelection(to)
             .run()
-          // Déplace le curseur après le lien et sort du mark
-          const newPos = editor.state.selection.from
-          editor.chain().setTextSelection(newPos).unsetLink().insertContent(' ').run()
+          // Insère un espace hors du lien
+          editor.commands.insertContent(' ')
         }
       })
     }
