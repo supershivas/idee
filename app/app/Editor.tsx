@@ -183,6 +183,36 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     editor?.chain().focus().setLink({ href: url }).run()
   }
 
+  // Handler pour les liens page-link — click + touchend pour mobile
+  useEffect(() => {
+    const el = document.querySelector('.ProseMirror')
+    if (!el) return
+
+    function handleNav(target: HTMLElement) {
+      const link = target.closest('.page-link') as HTMLElement | null
+      if (!link) return
+      const pageId = link.getAttribute('data-page-id')
+      const linked = pages.find(p => p.id === pageId)
+      if (linked) onNavigate(linked)
+    }
+
+    function onClick(e: Event) {
+      e.preventDefault()
+      handleNav(e.target as HTMLElement)
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      handleNav(e.target as HTMLElement)
+    }
+
+    el.addEventListener('click', onClick)
+    el.addEventListener('touchend', onTouchEnd)
+    return () => {
+      el.removeEventListener('click', onClick)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [pages, onNavigate])
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !editor) return
