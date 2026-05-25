@@ -77,7 +77,7 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile, onAddSub
 
   // Sous-pages existantes : grille 2 colonnes + bouton + en fin
   const list = (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
       {sorted.map((sub) => (
         <SortableSubpageCard key={sub.id} page={sub} onSelect={onSelect} isMobile={isMobile} />
       ))}
