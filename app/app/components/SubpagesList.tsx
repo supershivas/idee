@@ -79,15 +79,15 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile, onAddSub
   // Pas de sous-pages : carte seule, bien visible, alignée à gauche
   if (sorted.length === 0) {
     return (
-      <div className="px-4 md:px-8 pb-4" style={{ maxWidth: '720px' }}>
-        {addBtn}
+      <div className="px-4 md:px-8 pb-4">
+        <div style={{ maxWidth: '720px' }}>{addBtn}</div>
       </div>
     )
   }
 
   // Sous-pages existantes : scroll horizontal + bouton + en fin de liste
   const list = (
-    <div className="overflow-x-auto pb-1">
+    <div className="overflow-x-auto pb-1 -mx-4 md:-mx-8 px-4 md:px-8">
       <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
         {sorted.map((sub, i) => (
           <SortableSubpageCard key={sub.id} page={sub} onSelect={onSelect} isMobile={isMobile}
@@ -100,7 +100,7 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile, onAddSub
   )
 
   return (
-    <div className="px-4 md:px-8 pb-3 border-b border-gray-100" style={{ maxWidth: '720px' }}>
+    <div className="px-4 md:px-8 pb-3 border-b border-gray-100">
       {isMobile ? list : (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
           <SortableContext items={sorted.map(p => p.id)} strategy={horizontalListSortingStrategy}>{list}</SortableContext>
