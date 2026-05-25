@@ -47,9 +47,13 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile, onAddSub
   function handleDragOver(e: DragOverEvent) {
     if (!e.over || e.over.id === e.active.id) return
     const r = e.over?.rect
-    if (r && e.activatorEvent) {
-      const cx = (e.activatorEvent as PointerEvent).clientX + ((e.delta?.x) || 0)
-      setOverPos((cx - r.left) / r.width < 0.5 ? 'before' : 'after')
+    if (r) {
+      // Utilise le centre de la zone active draguée pour déterminer before/after
+      const activeRect = e.active.rect.current.translated
+      if (activeRect) {
+        const activeCenterX = activeRect.left + activeRect.width / 2
+        setOverPos(activeCenterX < r.left + r.width / 2 ? 'before' : 'after')
+      }
     }
   }
   function handleDragEnd(e: DragEndEvent) {
