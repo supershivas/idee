@@ -229,11 +229,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     const siblings = pages.filter(p => p.parent_id === newParentId && p.id !== activeId && !p.deleted_at).sort((a, b) => a.position - b.position)
     const targetIndex = siblings.findIndex(p => p.id === targetId)
     const insertAt = position === 'before' ? targetIndex : position === 'after' ? targetIndex + 1 : siblings.length
-    console.log('REORDER', {
-      dragged: dragged.title, target: target.title, position,
-      siblingTitles: siblings.map(s => s.title),
-      targetIndex, insertAt
-    })
     siblings.splice(insertAt, 0, { ...dragged, parent_id: newParentId })
     const updates = siblings.map((p, i) => ({ id: p.id, position: i, parent_id: newParentId }))
     setPages(prev => prev.map(p => { const u = updates.find(u => u.id === p.id); return u ? { ...p, position: u.position, parent_id: u.parent_id as string | null } : p }))
