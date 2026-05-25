@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useSortable, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
@@ -37,38 +37,25 @@ export function SubpagesList({ subpages, onSelect, onReorder, isMobile, onAddSub
   onAddSubpage: () => void,
 }) {
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [overPos, setOverPos] = useState<'before' | 'after'>('after')
-  const overPosRef = useRef<'before' | 'after'>('after')
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const sorted = [...subpages].sort((a, b) => a.position - b.position)
   const activePage = sorted.find(p => p.id === activeId)
 
-  function handleDragStart(e: DragStartEvent) {
-    setActiveId(e.active.id as string)
-    overPosRef.current = 'after' // reset
-  }
-
-  function handleDragOver(e: DragOverEvent) {
-    if (!e.over || e.over.id === e.active.id) return
-    const r = e.over?.rect
-    if (r) {
-      const activeRect = e.active.rect.current.translated
-      if (activeRect) {
-        const activeCenterX = activeRect.left + activeRect.width / 2
-        const pos = activeCenterX < r.left + r.width / 2 ? 'before' : 'after'
-        overPosRef.current = pos
-        setOverPos(pos)
-      }
-    }
-  }
+  function handleDragStart(e: DragStartEvent) { setActiveId(e.active.id as string) }
+  function handleDragOver(e: DragOverEvent) { } // pas besoin
 
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e
     setActiveId(null)
     if (!over || active.id === over.id) return
-    // Utilise la ref, pas le state, pour avoir la valeur la plus récente
-    onReorder(active.id as string, over.id as string, overPosRef.current)
+
+    const activeIndex = sorted.findIndex(p => p.id === active.id)
+    const overIndex = sorted.findIndex(p => p.id === over.id)
+
+    // Si on déplace vers la droite → after, vers la gauche → before
+    const position = activeIndex < overIndex ? 'after' : 'before'
+    onReorder(active.id as string, over.id as string, position)
   }
   function moveItem(id: string, dir: 'left' | 'right') {
     const idx = sorted.findIndex(p => p.id === id)
