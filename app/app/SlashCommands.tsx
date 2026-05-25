@@ -170,13 +170,35 @@ const CommandList = forwardRef((props: any, ref) => {
         }
       })
     } else {
+      // Lien inline : insère le texte puis applique setLink avec data-page-id
       setShowPicker(null)
       props.command({
         title: '',
         action: (editor: any) => {
-          editor.chain().focus().insertContent(
-            `<a class="page-link" data-page-id="${page.id}" href="#${page.id}">${page.icon || '📄'} ${page.title || 'Sans titre'}</a> `
-          ).run()
+          const text = `${page.icon || '📄'} ${page.title || 'Sans titre'}`
+          editor
+            .chain()
+            .focus()
+            .insertContent(text)
+            .setTextSelection({
+              from: editor.state.selection.from - text.length,
+              to: editor.state.selection.from,
+            })
+            .setLink({
+              href: `#${page.id}`,
+              class: 'page-link',
+            })
+            .insertContent(' ')
+            .run()
+          // Stocker aussi data-page-id via un mark HTML custom
+          // On injecte directement dans le DOM après coup
+          setTimeout(() => {
+            const links = editor.view.dom.querySelectorAll(`a[href="#${page.id}"]`)
+            links.forEach((l: HTMLElement) => {
+              l.setAttribute('data-page-id', page.id)
+              l.classList.add('page-link')
+            })
+          }, 0)
         }
       })
     }
