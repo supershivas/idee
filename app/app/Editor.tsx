@@ -112,7 +112,19 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
-      Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer hover:text-blue-800' } }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: { class: null }, // on gère la class manuellement
+        protocols: ['https', 'http', '#'],
+      }).extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            'data-page-id': { default: null },
+            class: { default: null },
+          }
+        },
+      }),
       Table.configure({ resizable: !isMobile }),
       TableHeader, TableCell, TableRow,
       subpageExtension,
@@ -185,20 +197,23 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
 
   // Handler pour les liens page-link — click + touchend pour mobile
   useEffect(() => {
-    const el = document.querySelector('.ProseMirror')
-    if (!el) return
+    if (!editor) return
+    const el = editor.view.dom
 
     function handleNav(target: HTMLElement) {
-      const link = target.closest('.page-link') as HTMLElement | null
+      const link = target.closest('[data-page-id]') as HTMLElement | null
       if (!link) return
       const pageId = link.getAttribute('data-page-id')
       const linked = pages.find(p => p.id === pageId)
       if (linked) onNavigate(linked)
     }
 
-    function onClick(e: Event) {
-      e.preventDefault()
-      handleNav(e.target as HTMLElement)
+    function onClick(e: MouseEvent) {
+      const target = e.target as HTMLElement
+      if (target.closest('[data-page-id]')) {
+        e.preventDefault()
+        handleNav(target)
+      }
     }
 
     function onTouchEnd(e: TouchEvent) {
@@ -211,7 +226,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       el.removeEventListener('click', onClick)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [pages, onNavigate])
+  }, [editor, pages, onNavigate])
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -323,7 +338,10 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
         .resize-cursor { cursor: col-resize; }
         .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5rem 0; display: block; }
-        .ProseMirror p.is-editor-empty:first-child::before { color: #adb5bd; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+        .ProseMirror a { color: #2563eb; text-decoration: underline; cursor: pointer; }
+        .ProseMirror a:hover { color: #1d4ed8; }
+        .ProseMirror a.page-link { color: #2563eb; text-decoration: underline; cursor: pointer; font-weight: 500; }
+        .ProseMirror a.page-link:hover { color: #1d4ed8; background: #eff6ff; border-radius: 3px; }
         @media (max-width: 767px) { .ProseMirror { font-size: 16px; line-height: 1.7; } .ProseMirror p { margin: 0.6em 0; } }
       `}</style>
     </div>
