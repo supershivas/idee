@@ -7,15 +7,11 @@ export function Backlinks({ currentPage, pages, onNavigate }: {
   pages: Page[]
   onNavigate: (p: Page) => void
 }) {
-  // Trouve toutes les pages qui mentionnent la page courante
-  // via un lien page-link ou un bloc subpage
   const backlinks = useMemo(() => {
     return pages.filter(p => {
-      if (p.id === currentPage.id) return false
+      if (p.id === currentPage.id || p.deleted_at) return false
       if (!p.content) return false
-      return (
-        p.content.includes(`data-page-id="${currentPage.id}"`)
-      )
+      return p.content.includes(`data-page-id="${currentPage.id}"`)
     })
   }, [pages, currentPage.id])
 
@@ -28,15 +24,10 @@ export function Backlinks({ currentPage, pages, onNavigate }: {
       </p>
       <div className="flex flex-col gap-1">
         {backlinks.map(page => (
-          <button
-            key={page.id}
-            onClick={() => onNavigate(page)}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left group w-fit"
-          >
+          <button key={page.id} onClick={() => onNavigate(page)}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left group w-fit">
             <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
-            <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
-              {page.title || 'Sans titre'}
-            </span>
+            <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">{page.title || 'Sans titre'}</span>
             <span className="text-gray-300 group-hover:text-gray-500 text-xs opacity-0 group-hover:opacity-100 transition-all">↗</span>
           </button>
         ))}
