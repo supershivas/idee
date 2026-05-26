@@ -3,7 +3,6 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { Page } from './types'
 
-// ─── Rendu du bloc sous-page ──────────────────────────────────────────────────
 function SubpageView({ node, pages, onNavigate }: {
   node: any, pages: Page[], onNavigate: (p: Page) => void
 }) {
@@ -13,7 +12,7 @@ function SubpageView({ node, pages, onNavigate }: {
   if (!page) {
     return (
       <NodeViewWrapper contentEditable={false}>
-        <div className="flex items-center gap-2 px-3 py-2 my-1 rounded-lg border border-dashed border-gray-200 text-gray-400 text-sm select-none">
+        <div className="flex items-center gap-2 px-3 py-2 my-1 rounded-xl border border-dashed border-gray-200 text-gray-400 text-sm select-none">
           <span>📄</span>
           <span className="italic">Page introuvable</span>
         </div>
@@ -23,21 +22,20 @@ function SubpageView({ node, pages, onNavigate }: {
 
   return (
     <NodeViewWrapper contentEditable={false}>
+      {/* Même style que les cartes SortableSubpageCard */}
       <button
         onClick={() => onNavigate(page)}
-        className="w-full flex items-center gap-3 px-3 py-2.5 my-1 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all group text-left select-none"
+        className="w-full flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 hover:shadow-sm hover:border-gray-300 transition-all group text-left select-none my-1"
+        style={{ minHeight: '44px' }}
       >
-        <span className="text-xl flex-shrink-0">{page.icon || '📄'}</span>
-        <span className="flex-1 text-sm font-medium text-gray-800 truncate">
-          {page.title || 'Sans titre'}
-        </span>
-        <span className="text-gray-300 group-hover:text-gray-500 transition-colors text-xs flex-shrink-0">→</span>
+        <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
+        <span className="flex-1 text-sm text-gray-700 truncate">{page.title || 'Sans titre'}</span>
+        <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs flex-shrink-0 transition-opacity">→</span>
       </button>
     </NodeViewWrapper>
   )
 }
 
-// ─── Extension ────────────────────────────────────────────────────────────────
 export function createSubpageExtension(pages: Page[], onNavigate: (p: Page) => void) {
   return Node.create({
     name: 'subpage',
@@ -47,9 +45,7 @@ export function createSubpageExtension(pages: Page[], onNavigate: (p: Page) => v
     draggable: true,
 
     addAttributes() {
-      return {
-        'data-page-id': { default: null },
-      }
+      return { 'data-page-id': { default: null } }
     },
 
     parseHTML() {
@@ -68,7 +64,6 @@ export function createSubpageExtension(pages: Page[], onNavigate: (p: Page) => v
   })
 }
 
-// Helper pour insérer un bloc sous-page dans l'éditeur
 export function insertSubpageBlock(editor: any, pageId: string) {
   editor.chain().focus().insertContent({
     type: 'subpage',
