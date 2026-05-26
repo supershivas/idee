@@ -291,7 +291,67 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       {showTableSheet && isMobile && <TableBottomSheet editor={editor} onClose={() => setShowTableSheet(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
-      {/* BubbleMenu tableau — desktop uniquement */}
+      {/* BubbleMenu sélection de texte */}
+      {editor && (
+        <BubbleMenu
+          editor={editor}
+          shouldShow={({ editor, state }) => {
+            const { selection } = state
+            const { empty } = selection
+            // Afficher uniquement si du texte est sélectionné et pas dans un tableau
+            return !empty && !editor.isActive('table')
+          }}
+          tippyOptions={{ placement: 'top', offset: [0, 8], animation: 'fade' }}
+        >
+          <div className="flex items-center gap-0.5 bg-gray-900 rounded-xl shadow-xl px-1.5 py-1.5">
+            {/* Styles de base */}
+            <button
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('bold') ? 'bg-white text-gray-900' : 'text-white hover:bg-gray-700'}`}
+            >B</button>
+            <button
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              className={`px-2 py-1 text-xs italic rounded-lg transition-colors ${editor.isActive('italic') ? 'bg-white text-gray-900' : 'text-white hover:bg-gray-700'}`}
+            >I</button>
+            <button
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('strike') ? 'bg-white text-gray-900' : 'text-white hover:bg-gray-700'}`}
+            ><s>S</s></button>
+            <button
+              onClick={() => editor.chain().focus().toggleCode().run()}
+              className={`px-2 py-1 text-xs font-mono rounded-lg transition-colors ${editor.isActive('code') ? 'bg-white text-gray-900' : 'text-white hover:bg-gray-700'}`}
+            >`·`</button>
+            {/* Séparateur */}
+            <div className="w-px bg-gray-600 self-stretch mx-0.5" />
+            {/* Titres */}
+            <button
+              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+              className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-white text-gray-900' : 'text-white hover:bg-gray-700'}`}
+            >H1</button>
+            <button
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-white text-gray-900' : 'text-white hover:bg-gray-700'}`}
+            >H2</button>
+            {/* Séparateur */}
+            <div className="w-px bg-gray-600 self-stretch mx-0.5" />
+            {/* Lien */}
+            <button
+              onClick={() => {
+                if (editor.isActive('link')) {
+                  editor.chain().focus().unsetLink().run()
+                } else {
+                  const url = window.prompt('URL du lien :')
+                  if (url) editor.chain().focus().setLink({ href: url }).run()
+                }
+              }}
+              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('link') ? 'bg-white text-gray-900' : 'text-white hover:bg-gray-700'}`}
+              title={editor.isActive('link') ? 'Retirer le lien' : 'Ajouter un lien'}
+            >🔗</button>
+          </div>
+        </BubbleMenu>
+      )}
+
+      {/* BubbleMenu tableau */}
       {editor && !isMobile && (
         <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('table')} tippyOptions={{ placement: 'top', offset: [0, 8] }}>
           <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl shadow-lg px-2 py-1.5">
