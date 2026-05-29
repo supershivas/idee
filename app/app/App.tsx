@@ -68,11 +68,6 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const [showJournal, setShowJournal] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const { theme, setTheme } = useTheme()
-
-  // Titre dynamique
-  useEffect(() => {
-    document.title = selected ? `Idée · ${selected.title || 'Sans titre'}` : 'Idée'
-  }, [selected?.title, selected?.id])
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
@@ -117,8 +112,12 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     const lastId = localStorage.getItem(lastPageKey(userId))
     return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
   })
-  const selectPage = useCallback((page: Page | null) => {
-    setSelected(page)
+  // Titre dynamique
+  useEffect(() => {
+    document.title = selected ? `Idée · ${selected.title || 'Sans titre'}` : 'Idée'
+  }, [selected?.title, selected?.id])
+
+  const selectPage = useCallback((page: Page | null) => {    setSelected(page)
     if (!page) return
     try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
     setOpenMap(() => {
