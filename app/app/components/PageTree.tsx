@@ -117,15 +117,6 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
         {/* Actions hover */}
         {!renaming && (
           <div className={`flex items-center gap-0.5 flex-shrink-0 ${isMobile ? '' : 'opacity-0 group-hover:opacity-100'}`}>
-            {/* Favori */}
-            <button
-              onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
-              className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-xs"
-              title={page.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              style={{ color: page.favorite ? '#f59e0b' : '#9ca3af' }}
-            >
-              {page.favorite ? '★' : '☆'}
-            </button>
             {/* Color picker */}
             <div className="relative" ref={colorRef}>
               <button
