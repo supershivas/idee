@@ -5,7 +5,7 @@ import { FavoritesSection } from './PageTree'
 
 // ─── MobileHomeView ───────────────────────────────────────────────────────────
 // Vue liste plein écran : favoris + toutes les pages + barre bas
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -13,6 +13,8 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   onShowTrash: () => void
   trashedCount: number
   onToggleFavorite: (id: string) => void
+  onShowJournal: () => void
+  journalCount: number
 }) {
   const [search, setSearch] = useState('')
 
@@ -61,6 +63,18 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
 
         {!search && (
           <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Pages</p>
+        )}
+
+        {/* Journal */}
+        {!search && (
+          <div
+            onClick={onShowJournal}
+            className="flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors hover:bg-gray-50 active:bg-gray-100"
+          >
+            <span className="text-xl flex-shrink-0">📓</span>
+            <span className="flex-1 text-sm text-gray-800">Journal</span>
+            <span className="text-xs text-gray-400">{journalCount > 0 ? journalCount : ''}</span>
+          </div>
         )}
 
         {allFiltered.length === 0 && (
