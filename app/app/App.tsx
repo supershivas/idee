@@ -60,7 +60,7 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   }
   return ids
 }
-export default function App({ initialPages, userId }: { initialPages: Page[], userId: string }) {
+export default function App({ initialPages, userId, userEmail }: { initialPages: Page[], userId: string, userEmail?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
@@ -359,7 +359,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         </div>
       )}
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
       {/* Contenu desktop — journal liste */}
       {!isMobile && showJournal && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
