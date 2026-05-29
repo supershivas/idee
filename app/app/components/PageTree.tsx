@@ -14,7 +14,7 @@ function ColorDot({ color, onSelect }: { color: string, onSelect: () => void }) 
 }
 
 // ─── SortablePageItem ─────────────────────────────────────────────────────────
-export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition, isMobile, onRename, onColorChange }: {
+export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition, isMobile, onRename, onColorChange, onToggleFavorite }: {
   page: Page, pages: Page[], depth: number, selectedId: string | null,
   onSelect: (p: Page) => void, onAdd: (id: string) => void,
   onToggle: (id: string) => void, isOpen: boolean,
@@ -22,6 +22,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
   isMobile: boolean,
   onRename: (id: string, title: string) => void,
   onColorChange: (id: string, color: string) => void,
+  onToggleFavorite: (id: string) => void,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
@@ -116,6 +117,15 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
         {/* Actions hover */}
         {!renaming && (
           <div className={`flex items-center gap-0.5 flex-shrink-0 ${isMobile ? '' : 'opacity-0 group-hover:opacity-100'}`}>
+            {/* Favori */}
+            <button
+              onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
+              className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-xs"
+              title={page.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              style={{ color: page.favorite ? '#f59e0b' : '#9ca3af' }}
+            >
+              {page.favorite ? '★' : '☆'}
+            </button>
             {/* Color picker */}
             <div className="relative" ref={colorRef}>
               <button
@@ -151,7 +161,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
 }
 
 // ─── PageTree ─────────────────────────────────────────────────────────────────
-export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onColorChange }: {
+export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onColorChange, onToggleFavorite }: {
   pages: Page[], parentId: string | null, depth: number, selectedId: string | null,
   onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
   onToggle: (id: string) => void, openMap: Record<string, boolean>,
@@ -159,6 +169,7 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
   isMobile: boolean,
   onRename: (id: string, title: string) => void,
   onColorChange: (id: string, color: string) => void,
+  onToggleFavorite: (id: string) => void,
 }) {
   const children = pages
     .filter(p => p.parent_id === parentId && !p.deleted_at)
@@ -174,15 +185,55 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
             onSelect={onSelect} onAdd={onAdd} onToggle={onToggle}
             isOpen={!!openMap[page.id]} overId={overId} overPosition={overPosition}
             isMobile={isMobile} onRename={onRename} onColorChange={onColorChange}
+            onToggleFavorite={onToggleFavorite}
           />
           {openMap[page.id] && (
             <PageTree pages={pages} parentId={page.id} depth={depth + 1}
               selectedId={selectedId} onSelect={onSelect} onAdd={onAdd}
               onToggle={onToggle} openMap={openMap} overId={overId} overPosition={overPosition}
-              isMobile={isMobile} onRename={onRename} onColorChange={onColorChange} />
+              isMobile={isMobile} onRename={onRename} onColorChange={onColorChange}
+              onToggleFavorite={onToggleFavorite} />
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── FavoritesSection ─────────────────────────────────────────────────────────
+export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite }: {
+  pages: Page[]
+  selectedId: string | null
+  onSelect: (p: Page) => void
+  onToggleFavorite: (id: string) => void
+}) {
+  const favorites = pages.filter(p => p.favorite && !p.deleted_at)
+  if (!favorites.length) return null
+
+  return (
+    <div className="mb-1">
+      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider select-none">
+        Favoris
+      </div>
+      {favorites.map(page => (
+        <div
+          key={page.id}
+          onClick={() => onSelect(page)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
+            ${selectedId === page.id ? 'bg-gray-200' : 'hover:bg-gray-200/60'}`}
+          style={{ minHeight: '30px' }}
+        >
+          <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
+          <span className="flex-1 truncate text-gray-700 text-sm">{page.title || 'Sans titre'}</span>
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 text-xs flex-shrink-0 transition-opacity"
+            style={{ color: '#f59e0b' }}
+            title="Retirer des favoris"
+          >★</button>
+        </div>
+      ))}
+      <div className="mx-2 mt-1.5 mb-0.5 border-t border-gray-200" />
     </div>
   )
 }
