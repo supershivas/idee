@@ -1,6 +1,43 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation' // 1. ON IMPORTE LE ROUTEUR DE NEXT.JS
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  
+  const router = useRouter() // 2. ON INITIALISE LE ROUTEUR
+
+  async function handleLogin() {
+    setLoading(true)
+    setError('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    
+    if (error) {
+      setError('Email ou mot de passe incorrect')
+      setLoading(false)
+    } else {
+      // 3. LE VRAI FIX : ON REMPLACE window.location.href
+      router.push('/app')
+      router.refresh() // Oblige le Middleware à relire les tout nouveaux cookies
+    }
+  }
+
+  // ... (Garde ta fonction handleSignup exactement comme avant)
+  async function handleSignup() {
+    // ...
+  }
+
+  return (
+    // ... (Garde ton code HTML exactement comme avant)
+  )
+}'use client'
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
