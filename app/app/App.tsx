@@ -179,7 +179,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
     const icon = icons[Math.floor(Math.random() * icons.length)]
     const { data } = await supabase.from('pages')
-      .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon })
+      .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
       .select().single()
     if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
   }
