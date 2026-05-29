@@ -13,7 +13,7 @@ import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
 import { PageTree, Breadcrumb, FavoritesSection } from './components/PageTree'
 import { SubpagesList } from './components/SubpagesList'
-import { MobileBottomNav, MobilePageDrawer } from './components/MobileNav'
+import { MobileHomeView, MobileTopBar } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 
 // Breadcrumb inline (ancêtres uniquement, sans la page courante)
@@ -68,7 +68,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const [showDrawer, setShowDrawer] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
@@ -328,21 +327,31 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         </div>
       </div>
 
-      {showDrawer && <MobilePageDrawer pages={activePages} trashedCount={trashedPages.length} selected={selected} onSelect={selectPage} onAdd={addPage} onClose={() => setShowDrawer(false)} onShowTrash={() => { setShowDrawer(false); setShowTrash(true) }} openMap={openMap} onToggle={toggleOpen} overId={overId} overPosition={overPosition} sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} activePage={activeDragPage} onRename={renamePage} onColorChange={updateColor} onToggleFavorite={toggleFavorite} />}
+      {/* Mobile : vue liste ou vue page */}
+      {isMobile && !selected && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <MobileHomeView
+            pages={activePages}
+            selectedId={null}
+            onSelect={selectPage}
+            onAdd={() => addPage(null)}
+            onShowTrash={() => setShowTrash(true)}
+            trashedCount={trashedPages.length}
+            onToggleFavorite={toggleFavorite}
+          />
+        </div>
+      )}
+
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
 
       {/* Contenu */}
-      <div className={`flex-1 flex flex-col overflow-hidden min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}
-        style={{ paddingBottom: isMobile ? '56px' : '0' }}>
+      <div className={`${isMobile && !selected ? 'hidden' : ''} flex-1 flex flex-col overflow-hidden min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
         {selected ? (
           <>
-            {/* Topbar : breadcrumb + actions au même niveau */}
+            {/* Topbar desktop */}
             <div className="hidden md:flex items-center justify-between border-b border-gray-100 px-4 md:px-8" style={{ minHeight: '40px' }}>
-              {/* Breadcrumb */}
               <BreadcrumbInline pages={activePages} selected={selected} onSelect={selectPage} />
-              {/* Actions discrètes */}
               <div className="flex items-center gap-0.5 flex-shrink-0">
-                {/* Indicateur sauvegarde */}
                 <span className={`w-5 h-5 flex items-center justify-center text-xs transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`} title="Sauvegarde...">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                 </span>
@@ -353,17 +362,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
               </div>
             </div>
 
-            {/* Header mobile : icône save + menu ··· */}
-            <div className="md:hidden flex items-center justify-end gap-1 px-4 pt-2">
-              <span className={`w-5 h-5 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              </span>
-              <ActionsMenu onDelete={() => setConfirmDeleteId(selected.id)}>
-                <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ExportButton page={selected} /></div>
-                <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></div>
-                <div className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></div>
-              </ActionsMenu>
-            </div>
+            {/* Topbar mobile : ← Pages + saving */}
+            <MobileTopBar onBack={() => setSelected(null)} saving={saving} />
 
             {/* Icône + Titre */}
             <div className="px-4 md:px-8 pt-4 pb-2">
@@ -389,7 +389,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
             <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="hidden md:flex flex-1 items-center justify-center">
             <div className="text-center text-gray-400">
               <p className="text-4xl mb-3">💡</p>
               <p className="text-lg font-medium mb-1 text-gray-500">Aucune page sélectionnée</p>
@@ -400,7 +400,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       </div>
 
       {confirmDeleteId && (() => { const page = pages.find(p => p.id === confirmDeleteId); if (!page) return null; return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} /> })()}
-      <MobileBottomNav pages={activePages} selected={selected} onSelect={selectPage} onAdd={() => addPage(null)} onShowAll={() => setShowDrawer(true)} />
     </div>
   )
 }
