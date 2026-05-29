@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import type { Page } from './types'
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
@@ -35,4 +37,18 @@ export function useKeyboardOffset() {
   }, [])
 
   return offset
+}
+
+export function useToggleFavorite(
+  pages: Page[],
+  setPages: React.Dispatch<React.SetStateAction<Page[]>>
+) {
+  return useCallback(async (id: string) => {
+    const page = pages.find(p => p.id === id)
+    if (!page) return
+    const newVal = !page.favorite
+    // Optimistic update
+    setPages(prev => prev.map(p => p.id === id ? { ...p, favorite: newVal } : p))
+    await createClient().from('pages').update({ favorite: newVal }).eq('id', id)
+  }, [pages, setPages])
 }
