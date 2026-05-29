@@ -178,7 +178,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     const { data } = await supabase.from('pages')
       .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon })
       .select().single()
-    if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowDrawer(false); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
+    if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
   }
 
   async function updateTitle(value: string) {
