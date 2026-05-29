@@ -79,6 +79,35 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
 
+  const SIDEBAR_MIN = 180
+  const SIDEBAR_MAX = 400
+  const SIDEBAR_DEFAULT = 240
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window === 'undefined') return SIDEBAR_DEFAULT
+    return parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10)
+  })
+  const isResizing = useRef(false)
+
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault()
+    isResizing.current = true
+    const startX = e.clientX
+    const startW = sidebarWidth
+    function onMove(ev: MouseEvent) {
+      if (!isResizing.current) return
+      const newW = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startW + ev.clientX - startX))
+      setSidebarWidth(newW)
+    }
+    function onUp() {
+      isResizing.current = false
+      setSidebarWidth(w => { localStorage.setItem('sidebar_width', String(w)); return w })
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
   const activePages = pages.filter(p => !p.deleted_at)
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
@@ -264,7 +293,15 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     <div className="flex w-full h-screen bg-white overflow-hidden">
 
       {/* Sidebar desktop */}
-      <div className="hidden md:flex flex-col border-r flex-shrink-0 bg-gray-50" style={{ width: '240px' }}>
+      <div className="hidden md:flex flex-col border-r flex-shrink-0 bg-gray-50 relative" style={{ width: `${sidebarWidth}px` }}>
+        {/* Drag handle */}
+        <div
+          onMouseDown={startResize}
+          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-300 transition-colors group"
+          title="Redimensionner"
+        >
+          <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
+        </div>
         <div className="px-4 flex items-center justify-between border-b border-gray-200" style={{ minHeight: '52px' }}>
           <span className="font-semibold text-gray-800 text-sm">Idée</span>
           <div className="flex items-center gap-1">
@@ -330,12 +367,22 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
 
             {/* Icône + Titre */}
             <div className="px-4 md:px-8 pt-4 pb-2">
-              <div className="flex items-start gap-3" style={{ maxWidth: '720px' }}>
+              <div className="flex items-start gap-3 group/title" style={{ maxWidth: '720px' }}>
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
                   {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
                 </div>
                 <input className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
+                <button
+                  onClick={() => toggleFavorite(selected.id)}
+                  className={`flex-shrink-0 mt-2 text-xl transition-all
+                    ${selected.favorite
+                      ? 'opacity-100 text-amber-400'
+                      : 'opacity-0 group-hover/title:opacity-100 text-gray-300 hover:text-amber-400'}`}
+                  title={selected.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                >
+                  {selected.favorite ? '★' : '☆'}
+                </button>
               </div>
             </div>
             <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
