@@ -5,6 +5,7 @@ export type Page = {
   content: string
   icon: string
   color?: string | null   // ex: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null
+  favorite?: boolean
   position: number
   updated_at: string
   deleted_at?: string | null
