@@ -208,13 +208,21 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       if (linked) onNavigate(linked)
     }
 
-    function onClick(e: MouseEvent) {
-      const target = e.target as HTMLElement
-      if (target.closest('[data-page-id]')) {
-        e.preventDefault()
-        handleNav(target)
-      }
-    }
+function onClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  // Lien interne (page)
+  if (target.closest('[data-page-id]')) {
+    e.preventDefault()
+    handleNav(target)
+    return
+  }
+  // Lien externe
+  const anchor = target.closest('a') as HTMLAnchorElement | null
+  if (anchor?.href && !anchor.getAttribute('data-page-id')) {
+    e.preventDefault()
+    window.open(anchor.href, '_blank', 'noopener,noreferrer')
+  }
+}
 
     function onTouchEnd(e: TouchEvent) {
       handleNav(e.target as HTMLElement)
