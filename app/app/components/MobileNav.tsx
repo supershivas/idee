@@ -1,7 +1,7 @@
 'use client'
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { Page } from '../types'
-import { PageTree } from './PageTree'
+import { PageTree, FavoritesSection } from './PageTree'
 import { SearchBar } from './SearchBar'
 
 function getAncestorIds(pages: Page[], page: Page): string[] {
@@ -49,7 +49,7 @@ export function MobileBottomNav({ pages, selected, onSelect, onAdd, onShowAll }:
   )
 }
 
-export function MobilePageDrawer({ pages, trashedCount, selected, onSelect, onAdd, onClose, onShowTrash, openMap, onToggle, overId, overPosition, sensors, onDragStart, onDragOver, onDragEnd, activePage, onRename, onColorChange }: {
+export function MobilePageDrawer({ pages, trashedCount, selected, onSelect, onAdd, onClose, onShowTrash, openMap, onToggle, overId, overPosition, sensors, onDragStart, onDragOver, onDragEnd, activePage, onRename, onColorChange, onToggleFavorite }: {
   pages: Page[], trashedCount: number, selected: Page | null,
   onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
   onClose: () => void, onShowTrash: () => void,
@@ -59,6 +59,7 @@ export function MobilePageDrawer({ pages, trashedCount, selected, onSelect, onAd
   activePage: Page | undefined,
   onRename: (id: string, title: string) => void,
   onColorChange: (id: string, color: string) => void,
+  onToggleFavorite: (id: string) => void,
 }) {
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end">
@@ -83,11 +84,14 @@ export function MobilePageDrawer({ pages, trashedCount, selected, onSelect, onAd
         </div>
         <div className="flex-1 overflow-y-auto py-2 px-2">
           <DndContext sensors={sensors} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
+            <FavoritesSection pages={pages} selectedId={selected?.id || null}
+              onSelect={(p) => { onSelect(p); onClose() }}
+              onToggleFavorite={onToggleFavorite} />
             <PageTree pages={pages} parentId={null} depth={0} selectedId={selected?.id || null}
               onSelect={(p) => { onSelect(p); onClose() }}
               onAdd={onAdd} onToggle={onToggle} openMap={openMap}
               overId={overId} overPosition={overPosition} isMobile={true}
-              onRename={onRename} onColorChange={onColorChange} />
+              onRename={onRename} onColorChange={onColorChange} onToggleFavorite={onToggleFavorite} />
             <DragOverlay>
               {activePage && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-lg text-sm opacity-90">
