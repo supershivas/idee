@@ -2,7 +2,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { Page } from '../types'
 
-export function ActionsMenu({ onDelete, children }: { onDelete: () => void, children: React.ReactNode }) {
+export function ActionsMenu({ onDelete, onConvertToJournal, children }: {
+  onDelete: () => void
+  onConvertToJournal?: () => void
+  children: React.ReactNode
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -20,6 +24,15 @@ export function ActionsMenu({ onDelete, children }: { onDelete: () => void, chil
       {open && (
         <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 min-w-48 overflow-hidden">
           {children}
+          {onConvertToJournal && (
+            <>
+              <div className="border-t border-gray-100" />
+              <button onClick={() => { onConvertToJournal(); setOpen(false) }}
+                className="w-full text-left px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2">
+                <span>📓</span> Convertir en entrée Journal
+              </button>
+            </>
+          )}
           <div className="border-t border-gray-100" />
           <button onClick={() => { onDelete(); setOpen(false) }}
             className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50">
