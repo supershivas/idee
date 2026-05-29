@@ -60,7 +60,6 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 export default function App({ initialPages, userId }: { initialPages: Page[], userId: string }) {
-  const supabase = createClient()
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
@@ -160,7 +159,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   async function addPage(parentId: string | null) {
     const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
     const icon = icons[Math.floor(Math.random() * icons.length)]
-    const { data } = await supabase.from('pages')
+    const { data } = await createClient().from('pages')
       .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
       .select().single()
     if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
@@ -168,32 +167,38 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   async function addJournalEntry() {
     const now = new Date()
     const title = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    const { data } = await supabase.from('pages')
+    const { data } = await createClient().from('pages')
       .insert({ title, content: '', user_id: userId, parent_id: null, position: pages.length, icon: '📝', type: 'journal' })
       .select().single()
     if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false) }
+  }
+
+  async function convertToJournal(id: string) {
+    setPages(prev => prev.map(p => p.id === id ? { ...p, type: 'journal' as const, parent_id: null } : p))
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, type: 'journal' as const, parent_id: null } : null)
+    await createClient().from('pages').update({ type: 'journal', parent_id: null }).eq('id', id)
   }
   async function updateTitle(value: string) {
     if (!selected) return
     const updated = { ...selected, title: value, updated_at: new Date().toISOString() }
     setSelected(updated); setPages(prev => prev.map(p => p.id === updated.id ? updated : p)); setSaving(true)
-    await supabase.from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
+    await createClient().from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
     setSaving(false)
   }
   async function updateIcon(id: string, icon: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, icon } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, icon } : null)
-    await supabase.from('pages').update({ icon }).eq('id', id)
+    await createClient().from('pages').update({ icon }).eq('id', id)
   }
   async function updateColor(id: string, color: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, color } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, color } : null)
-    await supabase.from('pages').update({ color: color || null }).eq('id', id)
+    await createClient().from('pages').update({ color: color || null }).eq('id', id)
   }
   async function renamePage(id: string, title: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, title } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, title } : null)
-    await supabase.from('pages').update({ title }).eq('id', id)
+    await createClient().from('pages').update({ title }).eq('id', id)
   }
   async function updateContent(content: string) {
     if (!selected) return
@@ -201,11 +206,11 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     setSelected(prev => prev ? { ...prev, content } : null)
     setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
     setSaving(true)
-    await supabase.from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
+    await createClient().from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
     const now = Date.now()
     if (now - lastSaveRef.current > 2 * 60 * 1000) {
       lastSaveRef.current = now
-      await supabase.from('page_history').insert({ page_id: selected.id, user_id: userId, title: selected.title, content })
+      await createClient().from('page_history').insert({ page_id: selected.id, user_id: userId, title: selected.title, content })
     }
     setSaving(false)
   }
@@ -213,20 +218,20 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     const deletedAt = new Date().toISOString()
     setPages(prev => prev.map(p => p.id === id || p.parent_id === id ? { ...p, deleted_at: deletedAt } : p))
     if (selected?.id === id) setSelected(activePages.find(p => p.id !== id) || null)
-    await supabase.from('pages').update({ deleted_at: deletedAt }).eq('id', id)
+    await createClient().from('pages').update({ deleted_at: deletedAt }).eq('id', id)
     const children = pages.filter(p => p.parent_id === id)
-    if (children.length) await supabase.from('pages').update({ deleted_at: deletedAt }).in('id', children.map(c => c.id))
+    if (children.length) await createClient().from('pages').update({ deleted_at: deletedAt }).in('id', children.map(c => c.id))
   }
   async function restorePage(id: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } : p))
-    await supabase.from('pages').update({ deleted_at: null }).eq('id', id)
+    await createClient().from('pages').update({ deleted_at: null }).eq('id', id)
   }
   async function deleteForever(id: string) {
     setPages(prev => prev.filter(p => p.id !== id))
-    await supabase.from('pages').delete().eq('id', id)
+    await createClient().from('pages').delete().eq('id', id)
   }
   async function logout() {
-    await supabase.auth.signOut()
+    await createClient().auth.signOut()
     window.location.href = '/login'
   }
   const reorderSiblings = useCallback(async (activeId: string, targetId: string, position: 'before' | 'after' | 'inside') => {
@@ -243,7 +248,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     const updates = siblings.map((p, i) => ({ id: p.id, position: i, parent_id: newParentId }))
     setPages(prev => prev.map(p => { const u = updates.find(u => u.id === p.id); return u ? { ...p, position: u.position, parent_id: u.parent_id as string | null } : p }))
     if (position === 'inside') setOpenMap(o => ({ ...o, [targetId]: true }))
-    await Promise.all(updates.map(u => supabase.from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)))
+    await Promise.all(updates.map(u => createClient().from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)))
   }, [pages])
   function handleDragStart(e: DragStartEvent) { setActiveDragId(e.active.id as string) }
   function handleDragOver(e: DragOverEvent) {
@@ -393,6 +398,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
                     <PageActionBtn onClick={() => {}} title="Historique"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></PageActionBtn>
                     <PageActionBtn onClick={() => {}} title="Exporter"><ExportButton page={selected} /></PageActionBtn>
                     <PageActionBtn onClick={() => {}} title="Partager"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></PageActionBtn>
+                    <button onClick={() => convertToJournal(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-colors text-sm" title="Convertir en entrée Journal">📓</button>
                     <button onClick={() => setConfirmDeleteId(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors text-sm" title="Supprimer">🗑</button>
                   </div>
                 </div>
