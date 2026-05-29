@@ -8,10 +8,10 @@ import HistoryButton from './HistoryButton'
 import EmojiPicker from './EmojiPicker'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { Page, colorBg } from './types'
-import { useIsMobile } from './hooks'
+import { useIsMobile, useToggleFavorite } from './hooks'
 import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
-import { PageTree, Breadcrumb } from './components/PageTree'
+import { PageTree, Breadcrumb, FavoritesSection } from './components/PageTree'
 import { SubpagesList } from './components/SubpagesList'
 import { MobileBottomNav, MobilePageDrawer } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
@@ -77,6 +77,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
   const lastSaveRef = useRef(0)
   const isMobile = useIsMobile()
+  const toggleFavorite = useToggleFavorite(pages, setPages)
 
   const activePages = pages.filter(p => !p.deleted_at)
   const trashedPages = pages.filter(p => !!p.deleted_at)
@@ -277,11 +278,12 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         <SearchBar pages={activePages} onSelect={selectPage} />
         <div className="flex-1 overflow-y-auto py-2 px-2">
           {activePages.filter(p => p.parent_id === null).length === 0 && <p className="text-xs text-gray-400 px-3 py-3">Clique sur + pour créer une page.</p>}
+          <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} />
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
               onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
               overId={overId} overPosition={overPosition} isMobile={false}
-              onRename={renamePage} onColorChange={updateColor} />
+              onRename={renamePage} onColorChange={updateColor} onToggleFavorite={toggleFavorite} />
             <DragOverlay>
               {activeDragPage && <div className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-lg text-sm opacity-90"><span>{activeDragPage.icon}</span><span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span></div>}
             </DragOverlay>
@@ -289,7 +291,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         </div>
       </div>
 
-      {showDrawer && <MobilePageDrawer pages={activePages} trashedCount={trashedPages.length} selected={selected} onSelect={selectPage} onAdd={addPage} onClose={() => setShowDrawer(false)} onShowTrash={() => { setShowDrawer(false); setShowTrash(true) }} openMap={openMap} onToggle={toggleOpen} overId={overId} overPosition={overPosition} sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} activePage={activeDragPage} onRename={renamePage} onColorChange={updateColor} />}
+      {showDrawer && <MobilePageDrawer pages={activePages} trashedCount={trashedPages.length} selected={selected} onSelect={selectPage} onAdd={addPage} onClose={() => setShowDrawer(false)} onShowTrash={() => { setShowDrawer(false); setShowTrash(true) }} openMap={openMap} onToggle={toggleOpen} overId={overId} overPosition={overPosition} sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} activePage={activeDragPage} onRename={renamePage} onColorChange={updateColor} onToggleFavorite={toggleFavorite} />}
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
 
       {/* Contenu */}
