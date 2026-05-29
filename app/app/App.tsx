@@ -16,6 +16,7 @@ import { SubpagesList } from './components/SubpagesList'
 import { MobileHomeView, MobileTopBar } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 import { JournalList, JournalEntryHeader } from './components/JournalView'
+import { SettingsPanel, useTheme } from './components/SettingsPanel'
 // Breadcrumb inline (ancêtres uniquement, sans la page courante)
 function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
   if (!selected) return null
@@ -65,6 +66,13 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
   const [showJournal, setShowJournal] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const { theme, setTheme } = useTheme()
+
+  // Titre dynamique
+  useEffect(() => {
+    document.title = selected ? `Idée · ${selected.title || 'Sans titre'}` : 'Idée'
+  }, [selected?.title, selected?.id])
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
@@ -290,6 +298,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
               🗑{trashedPages.length > 0 && <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">{trashedPages.length}</span>}
             </button>
             <button onClick={logout} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400">⎋</button>
+            <button onClick={() => setShowSettings(true)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400" title="Paramètres">⚙️</button>
           </div>
         </div>
         <SearchBar pages={activePages} onSelect={selectPage} />
@@ -350,6 +359,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         </div>
       )}
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} />}
       {/* Contenu desktop — journal liste */}
       {!isMobile && showJournal && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
