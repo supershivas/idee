@@ -7,7 +7,7 @@ import ExportButton from './ExportButton'
 import HistoryButton from './HistoryButton'
 import EmojiPicker from './EmojiPicker'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
-import { Page, colorBg } from './types'
+import { Page, colorBg, formatSubtitle } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
 import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
@@ -15,6 +15,7 @@ import { PageTree, Breadcrumb, FavoritesSection } from './components/PageTree'
 import { SubpagesList } from './components/SubpagesList'
 import { MobileHomeView, MobileTopBar } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
+import { JournalList, JournalEntryHeader } from './components/JournalView'
 
 // Breadcrumb inline (ancêtres uniquement, sans la page courante)
 function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
@@ -69,6 +70,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
+  const [showJournal, setShowJournal] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
@@ -107,7 +109,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     window.addEventListener('mouseup', onUp)
   }
 
-  const activePages = pages.filter(p => !p.deleted_at)
+  const activePages = pages.filter(p => !p.deleted_at && p.type !== 'journal')
+  const journalEntries = pages.filter(p => !p.deleted_at && p.type === 'journal')
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   // Restaure la dernière page ouverte au chargement
@@ -179,6 +182,16 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon })
       .select().single()
     if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
+  }
+
+  async function addJournalEntry() {
+    const supabase = createClient()
+    const now = new Date()
+    const title = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    const { data } = await supabase.from('pages')
+      .insert({ title, content: '', user_id: userId, parent_id: null, position: pages.length, icon: '📝', type: 'journal' })
+      .select().single()
+    if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false) }
   }
 
   async function updateTitle(value: string) {
@@ -325,68 +338,127 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
             </DragOverlay>
           </DndContext>
         </div>
+        {/* Journal — entrée fixe en bas de sidebar */}
+        <div className="flex-shrink-0 border-t border-gray-200 px-2 py-2">
+          <button
+            onClick={() => { setShowJournal(true); setSelected(null) }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors
+              ${showJournal ? 'bg-gray-200 text-gray-900' : 'text-gray-600 hover:bg-gray-200/60'}`}
+          >
+            <span>📓</span>
+            <span className="flex-1 text-left">Journal</span>
+            <span className="text-xs text-gray-400">{journalEntries.length || ''}</span>
+          </button>
+        </div>
       </div>
 
       {/* Mobile : vue liste ou vue page */}
-      {isMobile && !selected && (
+      {isMobile && !selected && !showJournal && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
             pages={activePages}
             selectedId={null}
-            onSelect={selectPage}
+            onSelect={p => { selectPage(p); setShowJournal(false) }}
             onAdd={() => addPage(null)}
             onShowTrash={() => setShowTrash(true)}
             trashedCount={trashedPages.length}
             onToggleFavorite={toggleFavorite}
+            onShowJournal={() => setShowJournal(true)}
+            journalCount={journalEntries.length}
+          />
+        </div>
+      )}
+
+      {/* Vue Journal mobile */}
+      {isMobile && showJournal && !selected && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
+            <button onClick={() => setShowJournal(false)} className="text-sm text-gray-500">← Pages</button>
+          </div>
+          <JournalList
+            entries={journalEntries}
+            selectedId={null}
+            onSelect={p => { selectPage(p); setShowJournal(false) }}
+            onAdd={addJournalEntry}
           />
         </div>
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
 
-      {/* Contenu */}
-      <div className={`${isMobile && !selected ? 'hidden' : ''} flex-1 flex flex-col overflow-hidden min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
+      {/* Contenu desktop — journal liste */}
+      {!isMobile && showJournal && !selected && (
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <JournalList
+            entries={journalEntries}
+            selectedId={null}
+            onSelect={p => { selectPage(p); setShowJournal(false) }}
+            onAdd={addJournalEntry}
+          />
+        </div>
+      )}
+
+      {/* Contenu — page normale ou entrée journal */}
+      <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 flex flex-col overflow-hidden min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
         {selected ? (
           <>
-            {/* Topbar desktop */}
-            <div className="hidden md:flex items-center justify-between border-b border-gray-100 px-4 md:px-8" style={{ minHeight: '40px' }}>
-              <BreadcrumbInline pages={activePages} selected={selected} onSelect={selectPage} />
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-                <span className={`w-5 h-5 flex items-center justify-center text-xs transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`} title="Sauvegarde...">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                </span>
-                <PageActionBtn onClick={() => {}} title="Historique"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></PageActionBtn>
-                <PageActionBtn onClick={() => {}} title="Exporter"><ExportButton page={selected} /></PageActionBtn>
-                <PageActionBtn onClick={() => {}} title="Partager"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></PageActionBtn>
-                <button onClick={() => setConfirmDeleteId(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors text-sm" title="Supprimer">🗑</button>
-              </div>
-            </div>
-
-            {/* Topbar mobile : ← Pages + saving */}
-            <MobileTopBar onBack={() => setSelected(null)} saving={saving} />
-
-            {/* Icône + Titre */}
-            <div className="px-4 md:px-8 pt-4 pb-2">
-              <div className="flex items-start gap-3 group/title" style={{ maxWidth: '720px' }}>
-                <div className="relative flex-shrink-0">
-                  <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
-                  {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
+            {selected.type === 'journal' ? (
+              /* ── Entrée journal ── */
+              <>
+                <div className="hidden md:flex items-center justify-between border-b border-gray-100 px-4 md:px-8" style={{ minHeight: '40px' }}>
+                  <button onClick={() => { setSelected(null); setShowJournal(true) }} className="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1">← Journal</button>
+                  <div className="flex items-center gap-0.5">
+                    <span className={`w-5 h-5 flex items-center justify-center text-xs transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    </span>
+                    <button onClick={() => setConfirmDeleteId(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors text-sm" title="Supprimer">🗑</button>
+                  </div>
                 </div>
-                <input className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
-                <button
-                  onClick={() => toggleFavorite(selected.id)}
-                  className={`flex-shrink-0 mt-2 text-xl transition-all
-                    ${selected.favorite
-                      ? 'opacity-100 text-amber-400'
-                      : 'opacity-0 group-hover/title:opacity-100 text-gray-300 hover:text-amber-400'}`}
-                  title={selected.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                >
-                  {selected.favorite ? '★' : '☆'}
-                </button>
-              </div>
-            </div>
-            <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
-            <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
+                <MobileTopBar onBack={() => { setSelected(null); setShowJournal(true) }} saving={saving} />
+                <JournalEntryHeader
+                  entry={selected}
+                  onBack={() => { setSelected(null); setShowJournal(true) }}
+                  onTitleChange={updateTitle}
+                  saving={saving}
+                />
+                <Editor key={selected.id} page={selected} pages={[]} onUpdate={updateContent} onAddSubpage={() => {}} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
+              </>
+            ) : (
+              /* ── Page normale ── */
+              <>
+                <div className="hidden md:flex items-center justify-between border-b border-gray-100 px-4 md:px-8" style={{ minHeight: '40px' }}>
+                  <BreadcrumbInline pages={activePages} selected={selected} onSelect={selectPage} />
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <span className={`w-5 h-5 flex items-center justify-center text-xs transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`} title="Sauvegarde...">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    </span>
+                    <PageActionBtn onClick={() => {}} title="Historique"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></PageActionBtn>
+                    <PageActionBtn onClick={() => {}} title="Exporter"><ExportButton page={selected} /></PageActionBtn>
+                    <PageActionBtn onClick={() => {}} title="Partager"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></PageActionBtn>
+                    <button onClick={() => setConfirmDeleteId(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors text-sm" title="Supprimer">🗑</button>
+                  </div>
+                </div>
+                <MobileTopBar onBack={() => setSelected(null)} saving={saving} />
+                <div className="px-4 md:px-8 pt-4 pb-2">
+                  <div className="flex items-start gap-3 group/title" style={{ maxWidth: '720px' }}>
+                    <div className="relative flex-shrink-0">
+                      <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
+                      {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
+                    </div>
+                    <input className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
+                    <button
+                      onClick={() => toggleFavorite(selected.id)}
+                      className={`flex-shrink-0 mt-2 text-xl transition-all ${selected.favorite ? 'opacity-100 text-amber-400' : 'opacity-0 group-hover/title:opacity-100 text-gray-300 hover:text-amber-400'}`}
+                      title={selected.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    >
+                      {selected.favorite ? '★' : '☆'}
+                    </button>
+                  </div>
+                </div>
+                <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
+                <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
+              </>
+            )}
           </>
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center">
