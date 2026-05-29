@@ -16,7 +16,6 @@ import { SubpagesList } from './components/SubpagesList'
 import { MobileHomeView, MobileTopBar } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 import { JournalList, JournalEntryHeader } from './components/JournalView'
-
 // Breadcrumb inline (ancêtres uniquement, sans la page courante)
 function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
   if (!selected) return null
@@ -40,7 +39,6 @@ function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], select
     </div>
   )
 }
-
 // Wrapper discret pour les boutons d'action (rend le bouton enfant plus petit)
 function PageActionBtn({ children, title, onClick }: { children: React.ReactNode, title: string, onClick: () => void }) {
   return (
@@ -49,11 +47,8 @@ function PageActionBtn({ children, title, onClick }: { children: React.ReactNode
     </div>
   )
 }
-
 export type { Page }
-
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
-
 // Remonte tous les ancêtres d'une page pour les ouvrir dans la sidebar
 function getAncestorIds(pages: Page[], pageId: string): string[] {
   const ids: string[] = []
@@ -64,8 +59,8 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   }
   return ids
 }
-
 export default function App({ initialPages, userId }: { initialPages: Page[], userId: string }) {
+  const supabase = createClient()
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
@@ -79,7 +74,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
   const lastSaveRef = useRef(0)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
-
   const SIDEBAR_MIN = 180
   const SIDEBAR_MAX = 400
   const SIDEBAR_DEFAULT = 240
@@ -88,7 +82,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     return parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10)
   })
   const isResizing = useRef(false)
-
   function startResize(e: React.MouseEvent) {
     e.preventDefault()
     isResizing.current = true
@@ -108,18 +101,15 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
   }
-
   const activePages = pages.filter(p => !p.deleted_at && p.type !== 'journal')
   const journalEntries = pages.filter(p => !p.deleted_at && p.type === 'journal')
   const trashedPages = pages.filter(p => !!p.deleted_at)
-
   // Restaure la dernière page ouverte au chargement
   const [selected, setSelected] = useState<Page | null>(() => {
     if (typeof window === 'undefined') return null
     const lastId = localStorage.getItem(lastPageKey(userId))
     return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
   })
-
   const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
     if (!page) return
@@ -128,7 +118,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       const allPages = [...pages, ...initialPages]
       const current = allPages.find(p => p.id === page.id)
       if (!current) return {}
-
       const toOpen: string[] = []
       // Ouvre la page elle-même si elle a des enfants
       const hasChildren = allPages.some(p => p.parent_id === page.id && !p.deleted_at)
@@ -139,7 +128,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         toOpen.push(c.parent_id)
         c = allPages.find(p => p.id === c!.parent_id) as Page
       }
-
       // Si c'est une page racine (pas de parent) → reset complet, on repart de zéro
       // Si c'est une sous-page → on conserve l'openMap existant et on ajoute
       if (!current.parent_id) {
@@ -147,14 +135,12 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
         toOpen.forEach(id => { next[id] = true })
         return next
       }
-
       // Sous-page : on garde ce qui est ouvert et on ajoute les ancêtres
       const next: Record<string, boolean> = {}
       toOpen.forEach(id => { next[id] = true })
       return next
     })
   }, [pages, userId])
-
   // Restaure l'expand au chargement pour la page persistée
   useEffect(() => {
     if (!selected) return
@@ -169,13 +155,9 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       })
     }
   }, []) // une seule fois au mount // se déclenche uniquement quand l'id change
-
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
-
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
-
   async function addPage(parentId: string | null) {
-    const supabase = createClient()
     const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
     const icon = icons[Math.floor(Math.random() * icons.length)]
     const { data } = await supabase.from('pages')
@@ -183,9 +165,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       .select().single()
     if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
   }
-
   async function addJournalEntry() {
-    const supabase = createClient()
     const now = new Date()
     const title = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     const { data } = await supabase.from('pages')
@@ -193,40 +173,34 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
       .select().single()
     if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false) }
   }
-
   async function updateTitle(value: string) {
     if (!selected) return
     const updated = { ...selected, title: value, updated_at: new Date().toISOString() }
     setSelected(updated); setPages(prev => prev.map(p => p.id === updated.id ? updated : p)); setSaving(true)
-    await createClient().from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
+    await supabase.from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
     setSaving(false)
   }
-
   async function updateIcon(id: string, icon: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, icon } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, icon } : null)
-    await createClient().from('pages').update({ icon }).eq('id', id)
+    await supabase.from('pages').update({ icon }).eq('id', id)
   }
-
   async function updateColor(id: string, color: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, color } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, color } : null)
-    await createClient().from('pages').update({ color: color || null }).eq('id', id)
+    await supabase.from('pages').update({ color: color || null }).eq('id', id)
   }
-
   async function renamePage(id: string, title: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, title } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, title } : null)
-    await createClient().from('pages').update({ title }).eq('id', id)
+    await supabase.from('pages').update({ title }).eq('id', id)
   }
-
   async function updateContent(content: string) {
     if (!selected) return
     const updated = { ...selected, content, updated_at: new Date().toISOString() }
     setSelected(prev => prev ? { ...prev, content } : null)
     setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
     setSaving(true)
-    const supabase = createClient()
     await supabase.from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
     const now = Date.now()
     if (now - lastSaveRef.current > 2 * 60 * 1000) {
@@ -235,32 +209,26 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     }
     setSaving(false)
   }
-
   async function deletePage(id: string) {
     const deletedAt = new Date().toISOString()
     setPages(prev => prev.map(p => p.id === id || p.parent_id === id ? { ...p, deleted_at: deletedAt } : p))
     if (selected?.id === id) setSelected(activePages.find(p => p.id !== id) || null)
-    const supabase = createClient()
     await supabase.from('pages').update({ deleted_at: deletedAt }).eq('id', id)
     const children = pages.filter(p => p.parent_id === id)
     if (children.length) await supabase.from('pages').update({ deleted_at: deletedAt }).in('id', children.map(c => c.id))
   }
-
   async function restorePage(id: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } : p))
-    await createClient().from('pages').update({ deleted_at: null }).eq('id', id)
+    await supabase.from('pages').update({ deleted_at: null }).eq('id', id)
   }
-
   async function deleteForever(id: string) {
     setPages(prev => prev.filter(p => p.id !== id))
-    await createClient().from('pages').delete().eq('id', id)
+    await supabase.from('pages').delete().eq('id', id)
   }
-
   async function logout() {
-    await createClient().auth.signOut()
+    await supabase.auth.signOut()
     window.location.href = '/login'
   }
-
   const reorderSiblings = useCallback(async (activeId: string, targetId: string, position: 'before' | 'after' | 'inside') => {
     const dragged = pages.find(p => p.id === activeId)
     const target = pages.find(p => p.id === targetId)
@@ -275,10 +243,8 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     const updates = siblings.map((p, i) => ({ id: p.id, position: i, parent_id: newParentId }))
     setPages(prev => prev.map(p => { const u = updates.find(u => u.id === p.id); return u ? { ...p, position: u.position, parent_id: u.parent_id as string | null } : p }))
     if (position === 'inside') setOpenMap(o => ({ ...o, [targetId]: true }))
-    const supabase = createClient()
     await Promise.all(updates.map(u => supabase.from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)))
   }, [pages])
-
   function handleDragStart(e: DragStartEvent) { setActiveDragId(e.active.id as string) }
   function handleDragOver(e: DragOverEvent) {
     const { over, active } = e
@@ -297,13 +263,10 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
     if (!over || active.id === over.id) return
     await reorderSiblings(active.id as string, over.id as string, overPosition || 'after')
   }
-
   const activeDragPage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
-
   return (
     <div className="flex w-full h-screen bg-white overflow-hidden">
-
       {/* Sidebar desktop */}
       <div className="hidden md:flex flex-col border-r flex-shrink-0 bg-gray-50 relative" style={{ width: `${sidebarWidth}px` }}>
         {/* Drag handle */}
@@ -351,7 +314,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
           </button>
         </div>
       </div>
-
       {/* Mobile : vue liste ou vue page */}
       {isMobile && !selected && !showJournal && (
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -368,7 +330,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
           />
         </div>
       )}
-
       {/* Vue Journal mobile */}
       {isMobile && showJournal && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -383,9 +344,7 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
           />
         </div>
       )}
-
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-
       {/* Contenu desktop — journal liste */}
       {!isMobile && showJournal && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -397,7 +356,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
           />
         </div>
       )}
-
       {/* Contenu — page normale ou entrée journal */}
       <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 flex flex-col overflow-hidden min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
         {selected ? (
@@ -470,7 +428,6 @@ export default function App({ initialPages, userId }: { initialPages: Page[], us
           </div>
         )}
       </div>
-
       {confirmDeleteId && (() => { const page = pages.find(p => p.id === confirmDeleteId); if (!page) return null; return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} /> })()}
     </div>
   )
