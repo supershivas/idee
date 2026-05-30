@@ -17,8 +17,49 @@ const TURN_INTO = [
   { label: 'Code',            icon: '</>',  action: (e: any) => e.chain().focus().toggleCodeBlock().run() },
 ]
 
-function TurnIntoMenu({ x, y, editor, nodePos, onClose }: {
-  x: number, y: number, editor: any, nodePos: number, onClose: () => void
+function moveNode(view: EditorView, nodePos: number, direction: 'up' | 'down') {
+  try {
+    const { state } = view
+    const node = state.doc.nodeAt(nodePos)
+    if (!node) return
+    const nodeEnd = nodePos + node.nodeSize
+
+    if (direction === 'up') {
+      // Trouve le nœud précédent
+      const $pos = state.doc.resolve(nodePos)
+      if (nodePos === 0) return
+      const prevPos = nodePos - 1
+      const $prev = state.doc.resolve(prevPos)
+      const prevNodePos = $prev.before($prev.depth > 0 ? $prev.depth : 1)
+      const prevNode = state.doc.nodeAt(prevNodePos)
+      if (!prevNode) return
+      const tr = state.tr
+        .delete(nodePos, nodeEnd)
+        .insert(prevNodePos, node)
+      view.dispatch(tr)
+    } else {
+      // Trouve le nœud suivant
+      const nextPos = nodeEnd
+      if (nextPos >= state.doc.content.size) return
+      const nextNode = state.doc.nodeAt(nextPos)
+      if (!nextNode) return
+      const tr = state.tr
+        .insert(nodePos, nextNode)
+        .delete(nodeEnd + nextNode.nodeSize, nodeEnd + nextNode.nodeSize * 2)
+      // Approche plus simple : delete les deux et réinsère dans l'ordre inverse
+      const tr2 = state.tr
+        .delete(nodePos, nodeEnd + nextNode.nodeSize)
+        .insert(nodePos, nextNode)
+        .insert(nodePos + nextNode.nodeSize, node)
+      view.dispatch(tr2)
+    }
+  } catch (err) {
+    console.warn('moveNode error:', err)
+  }
+}
+
+function BlockMenu({ x, y, editor, nodePos, view, onClose }: {
+  x: number, y: number, editor: any, nodePos: number, view: EditorView, onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -33,21 +74,42 @@ function TurnIntoMenu({ x, y, editor, nodePos, onClose }: {
     return () => clearTimeout(t)
   }, [onClose])
 
-  const menuWidth = 192
+  const menuWidth = 200
   const left = Math.max(8, Math.min(x, window.innerWidth - menuWidth - 8))
-  const menuHeight = TURN_INTO.length * 40 + 36
+  const menuHeight = 340
   const top = y + menuHeight > window.innerHeight ? y - menuHeight : y
 
+  function Item({ icon, label, onClick, danger }: { icon: string, label: string, onClick: () => void, danger?: boolean }) {
+    return (
+      <button
+        style={{ pointerEvents: 'auto' }}
+        onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onClick() }}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors
+          ${danger ? 'text-red-500 hover:bg-red-50' : ''}`}
+      >
+        <span className="w-6 h-6 flex items-center justify-center bg-gray-100 rounded text-xs font-mono font-bold text-gray-600 flex-shrink-0">
+          {icon}
+        </span>
+        <span className="text-sm text-gray-700">{label}</span>
+      </button>
+    )
+  }
+
   return (
-    // ⚠️ pointer-events:auto explicite pour contrer le parent none
     <div
       ref={ref}
       style={{ position: 'fixed', left, top, width: menuWidth, zIndex: 9999, pointerEvents: 'auto' }}
       className="bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
     >
-      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2.5 pb-1">
-        Convertir en
-      </p>
+      {/* Déplacer */}
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2.5 pb-1">Déplacer</p>
+      <Item icon="↑" label="Vers le haut" onClick={() => { moveNode(view, nodePos, 'up'); onClose() }} />
+      <Item icon="↓" label="Vers le bas"  onClick={() => { moveNode(view, nodePos, 'down'); onClose() }} />
+
+      <div className="border-t border-gray-100 my-1" />
+
+      {/* Convertir */}
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-1.5 pb-1">Convertir en</p>
       {TURN_INTO.map(item => (
         <button
           key={item.label}
@@ -123,30 +185,6 @@ function DragButton({ view, editor }: { view: EditorView, editor: any }) {
     }
   }, [view, menu])
 
-  // ─── Drag : on laisse le browser gérer le drag natif ─────────────────────
-  function handleDragStart(e: React.DragEvent) {
-    const pmNode = currentNodeRef.current
-    if (!pmNode) { e.preventDefault(); return }
-    // Sélectionne le nœud dans ProseMirror
-    try {
-      const nodePos = currentNodePosRef.current
-      const { state, dispatch } = view
-      const $pos = state.doc.resolve(nodePos + 1)
-      dispatch(state.tr.setSelection(TextSelection.create(state.doc, $pos.pos)))
-    } catch {}
-    // Donne le contenu HTML au dataTransfer pour le drop
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', currentNodeRef.current?.textContent || '')
-    // Simule un mousedown sur le nœud ProseMirror pour activer son drag interne
-    pmNode.setAttribute('draggable', 'true')
-    const mousedown = new MouseEvent('mousedown', { bubbles: true, clientX: e.clientX, clientY: e.clientY })
-    pmNode.dispatchEvent(mousedown)
-  }
-
-  function handleDragEnd() {
-    currentNodeRef.current?.removeAttribute('draggable')
-  }
-
   function handleClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -161,9 +199,6 @@ function DragButton({ view, editor }: { view: EditorView, editor: any }) {
     <>
       <button
         ref={btnRef}
-        draggable
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
         onMouseDown={e => e.preventDefault()}
         onClick={handleClick}
         onMouseEnter={clearHide}
@@ -177,17 +212,18 @@ function DragButton({ view, editor }: { view: EditorView, editor: any }) {
           fontSize: 16,
           zIndex: 100,
           pointerEvents: 'auto',
-          cursor: 'grab',
+          cursor: 'pointer',
         }}
         className="flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors select-none"
-        title="Glisser · Cliquer pour convertir"
+        title="Cliquer pour déplacer ou convertir"
       >⠿</button>
       {menu && (
-        <TurnIntoMenu
+        <BlockMenu
           x={menu.x}
           y={menu.y}
           nodePos={menu.nodePos}
           editor={editor}
+          view={view}
           onClose={() => { setMenu(null); setPos(null) }}
         />
       )}
