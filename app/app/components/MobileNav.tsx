@@ -18,18 +18,17 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
 }) {
   const [search, setSearch] = useState('')
 
-  const rootPages = pages
-    .filter(p => !p.deleted_at)
-    .filter(p => search
-      ? p.title.toLowerCase().includes(search.toLowerCase())
-      : true
-    )
-    .sort((a, b) => a.position - b.position)
+  function handleSelect(p: Page) {
+    if (p.type === 'journal') onShowJournal()
+    onSelect(p)
+  }
 
-  const favorites = pages.filter(p => p.favorite && !p.deleted_at)
+  const nonJournalPages = pages.filter(p => p.type !== 'journal')
   const allFiltered = search
-    ? rootPages
-    : pages.filter(p => !p.deleted_at).sort((a, b) => a.position - b.position)
+    ? pages.filter(p => !p.deleted_at && p.title.toLowerCase().includes(search.toLowerCase())).sort((a, b) => a.position - b.position)
+    : nonJournalPages.filter(p => !p.deleted_at).sort((a, b) => a.position - b.position)
+
+  const favorites = nonJournalPages.filter(p => p.favorite && !p.deleted_at)
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -55,7 +54,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           <>
             <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Favoris</p>
             {favorites.map(page => (
-              <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+              <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={handleSelect} onToggleFavorite={onToggleFavorite} />
             ))}
             <div className="mx-2 my-2 border-t border-gray-100" />
           </>
@@ -82,7 +81,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         )}
 
         {allFiltered.map(page => (
-          <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+          <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={handleSelect} onToggleFavorite={onToggleFavorite} />
         ))}
       </div>
 
