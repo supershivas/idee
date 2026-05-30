@@ -431,7 +431,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                   </div>
                 </div>
                 <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
-                <Editor key={selected.id} page={selected} pages={activePages} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
+                <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }} userId={userId} isMobile={isMobile} />
               </>
             )}
           </>
