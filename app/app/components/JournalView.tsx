@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Page, formatSubtitle } from '../types'
-import EmojiPicker from '../EmojiPicker'
+import EmojiPicker from '../components/EmojiPicker'
 
 // ─── JournalList ──────────────────────────────────────────────────────────────
 export function JournalList({ entries, selectedId, onSelect, onAdd }: {
@@ -20,7 +20,7 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
       <div className="flex items-center justify-between px-4 md:px-8 pt-6 pb-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-2xl">📓</span>
-          <h1 className="text-2xl font-bold text-gray-900">Journal</h1>
+          <h1 className="page-title text-2xl text-gray-900">Journal</h1>
         </div>
         <button
           onClick={onAdd}
@@ -111,7 +111,7 @@ export function JournalEntryHeader({ entry, onBack, onTitleChange, onIconChange,
         </div>
         <div className="flex-1 min-w-0">
           <input
-            className="w-full text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300"
+            className="page-title w-full text-2xl md:text-3xl outline-none bg-transparent placeholder-gray-300"
             value={entry.title}
             onChange={e => onTitleChange(e.target.value)}
             placeholder="Sans titre"
