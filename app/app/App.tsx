@@ -391,7 +391,9 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                   entry={selected}
                   onBack={() => { setSelected(null); setShowJournal(true) }}
                   onTitleChange={updateTitle}
+                  onIconChange={(emoji) => updateIcon(selected.id, emoji)}
                   saving={saving}
+                  isMobile={isMobile}
                 />
                 <Editor key={selected.id} page={selected} pages={[]} onUpdate={updateContent} onAddSubpage={() => {}} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
               </>
