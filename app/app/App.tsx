@@ -300,7 +300,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             <button onClick={() => setShowSettings(true)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400" title="Paramètres">⚙️</button>
           </div>
         </div>
-        <SearchBar pages={activePages} onSelect={selectPage} />
+        <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
         <div className="flex-1 overflow-y-auto py-2 px-2">
           {activePages.filter(p => p.parent_id === null).length === 0 && <p className="text-xs text-gray-400 px-3 py-3">Clique sur + pour créer une page.</p>}
           <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} />
