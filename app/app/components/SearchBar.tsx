@@ -16,17 +16,18 @@ export function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Pa
   return (
     <div className="relative px-2 py-2 border-b border-gray-200">
       <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
-        <span className="text-gray-400 text-sm">🔍</span>
+        <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Rechercher..."
-          className="flex-1 bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400"
+          style={{ background: 'transparent' }}
+          className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400 min-w-0"
         />
         {query && (
-          <button onClick={() => setQuery('')} className="text-gray-400 w-6 h-6 flex items-center justify-center text-sm">✕</button>
+          <button onClick={() => setQuery('')} className="text-gray-400 w-6 h-6 flex items-center justify-center text-sm flex-shrink-0">✕</button>
         )}
       </div>
       {focused && results.length > 0 && (
@@ -34,7 +35,7 @@ export function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Pa
           {results.map(page => (
             <button key={page.id} onClick={() => { onSelect(page); setQuery('') }}
               className="w-full flex items-center gap-2 px-3 py-3 text-left hover:bg-gray-50 border-b last:border-0">
-              <span>{page.icon || '📄'}</span>
+              <span className="flex-shrink-0">{page.icon || '📄'}</span>
               <p className="text-sm font-medium text-gray-800 truncate">{page.title || 'Sans titre'}</p>
             </button>
           ))}
