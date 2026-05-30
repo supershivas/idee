@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Page, formatSubtitle } from '../types'
-import EmojiPicker from '../components/EmojiPicker'
+import EmojiPicker from '../EmojiPicker'
 
 // ─── JournalList ──────────────────────────────────────────────────────────────
 export function JournalList({ entries, selectedId, onSelect, onAdd }: {
