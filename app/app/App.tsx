@@ -331,7 +331,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
       {isMobile && !selected && !showJournal && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
-            pages={activePages}
+            pages={[...activePages, ...journalEntries]}
             selectedId={null}
             onSelect={p => { selectPage(p); setShowJournal(false) }}
             onAdd={() => addPage(null)}
