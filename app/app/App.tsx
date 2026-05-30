@@ -395,7 +395,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                   saving={saving}
                   isMobile={isMobile}
                 />
-                <Editor key={selected.id} page={selected} pages={[]} onUpdate={updateContent} onAddSubpage={() => {}} onNavigate={selectPage} userId={userId} isMobile={isMobile} />
+                <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]} onUpdate={updateContent} onAddSubpage={() => {}} onNavigate={p => { selectPage(p); setShowJournal(false) }} userId={userId} isMobile={isMobile} />
               </>
             ) : (
               /* ── Page normale ── */
