@@ -420,7 +420,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                       <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
                       {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
                     </div>
-                    <input className="flex-1 text-2xl md:text-3xl font-bold outline-none bg-transparent text-gray-900 placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
+                    <input className="page-title flex-1 text-2xl md:text-3xl outline-none bg-transparent placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
                     <button
                       onClick={() => toggleFavorite(selected.id)}
                       className={`flex-shrink-0 mt-2 text-xl transition-all ${selected.favorite ? 'opacity-100 text-amber-400' : 'opacity-0 group-hover/title:opacity-100 text-gray-300 hover:text-amber-400'}`}
