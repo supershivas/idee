@@ -298,7 +298,6 @@ function onClick(e: MouseEvent) {
       {showLinkModal && <LinkModal onConfirm={insertLink} onClose={() => setShowLinkModal(false)} />}
       {showTableSheet && isMobile && <TableBottomSheet editor={editor} onClose={() => setShowTableSheet(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-
       {/* BubbleMenu sélection de texte */}
       {editor && (
         <BubbleMenu
@@ -378,23 +377,35 @@ function onClick(e: MouseEvent) {
         </BubbleMenu>
       )}
 
+      {/* Toolbar — entre sous-pages et contenu (desktop) / sticky bas (mobile) */}
+      {!isMobile && (
+        <div
+          className="editor-toolbar flex items-center gap-0.5 px-2 border-t border-b border-gray-100 bg-white flex-nowrap overflow-x-auto flex-shrink-0"
+          style={{ minHeight: '48px' }}
+        >
+          {toolbarDesktop}
+        </div>
+      )}
+
       {/* Zone d'édition + backlinks */}
       <div className="flex-1 overflow-y-auto">
         <EditorContent
           editor={editor}
-          className="prose max-w-none py-6 px-4 md:px-8 md:py-8"
-          style={{ maxWidth: '720px' }}
+          className="prose max-w-none py-6 px-4 md:px-6 md:py-6"
+          style={{ maxWidth: '680px' }}
         />
         <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
       </div>
 
-      {/* Toolbar sticky */}
-      <div
-        className="editor-toolbar flex items-center gap-0.5 px-2 border-t border-gray-100 bg-white flex-nowrap overflow-x-auto"
-        style={{ minHeight: '48px', position: 'sticky', bottom: isMobile ? keyboardOffset : 0, zIndex: 10, transition: 'bottom 0.2s ease' }}
-      >
-        {isMobile ? toolbarMobile : toolbarDesktop}
-      </div>
+      {/* Toolbar mobile — sticky au-dessus du clavier */}
+      {isMobile && (
+        <div
+          className="editor-toolbar flex items-center gap-0.5 px-2 border-t border-gray-100 bg-white flex-nowrap overflow-x-auto"
+          style={{ minHeight: '48px', position: 'sticky', bottom: keyboardOffset, zIndex: 10, transition: 'bottom 0.2s ease' }}
+        >
+          {toolbarMobile}
+        </div>
+      )}
 
       <style>{`
         .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
