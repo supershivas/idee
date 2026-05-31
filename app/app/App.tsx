@@ -280,7 +280,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   return (
     <div className="flex w-full h-screen bg-white overflow-hidden">
       {/* Sidebar desktop */}
-      <div className="hidden md:flex flex-col border-r flex-shrink-0 bg-gray-50 relative" style={{ width: `${sidebarWidth}px` }}>
+      <div className="hidden md:flex flex-col border-r flex-shrink-0 relative" style={{ width: `${sidebarWidth}px`, background: 'var(--sidebar-bg)' }}>
         {/* Drag handle */}
         <div
           onMouseDown={startResize}
@@ -376,9 +376,9 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         </div>
       )}
       {/* Contenu — page normale ou entrée journal */}
-      <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
+      <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
         {selected ? (
-          <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col">
+          <div className={`page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col transition-colors ${selected.color ? colorBg(selected.color) : ''}`}>
             {selected.type === 'journal' ? (
               /* ── Entrée journal ── */
               <>
