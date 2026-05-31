@@ -289,16 +289,9 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         >
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
         </div>
-        <div className="px-4 flex items-center justify-between border-b border-gray-200" style={{ minHeight: '52px' }}>
+        <div className="px-4 flex items-center justify-between border-b border-gray-200" style={{ minHeight: '48px' }}>
           <span className="font-semibold text-gray-800 text-sm">Idée</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => addPage(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-500 text-xl">+</button>
-            <button onClick={() => setShowTrash(true)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 relative">
-              🗑{trashedPages.length > 0 && <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">{trashedPages.length}</span>}
-            </button>
-            <button onClick={logout} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400">⎋</button>
-            <button onClick={() => setShowSettings(true)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400" title="Paramètres">⚙️</button>
-          </div>
+          <button onClick={() => setShowSettings(true)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400" title="Paramètres">⚙️</button>
         </div>
         <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
         <div className="flex-1 overflow-y-auto py-2 px-2">
@@ -314,8 +307,8 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             </DragOverlay>
           </DndContext>
         </div>
-        {/* Journal — entrée fixe en bas de sidebar */}
-        <div className="flex-shrink-0 border-t border-gray-200 px-2 py-2">
+        {/* Bas de sidebar : corbeille + journal + nouvelle page */}
+        <div className="flex-shrink-0 border-t border-gray-200 px-2 py-2 space-y-1">
           <button
             onClick={() => { setShowJournal(true); setSelected(null) }}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors
@@ -324,6 +317,18 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             <span>📓</span>
             <span className="flex-1 text-left">Journal</span>
             <span className="text-xs text-gray-400">{journalEntries.length || ''}</span>
+          </button>
+          <button onClick={() => setShowTrash(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-500 hover:bg-gray-200/60 transition-colors relative">
+            <span>🗑</span>
+            <span className="flex-1 text-left">Corbeille</span>
+            {trashedPages.length > 0 && <span className="text-xs text-gray-400">{trashedPages.length}</span>}
+          </button>
+          <button
+            onClick={() => showJournal ? addJournalEntry() : addPage(null)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors"
+          >
+            <span>{showJournal ? '✏️' : '+'}</span>
+            <span>{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
           </button>
         </div>
       </div>
@@ -371,21 +376,12 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         </div>
       )}
       {/* Contenu — page normale ou entrée journal */}
-      <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 flex flex-col overflow-y-auto min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
+      <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
         {selected ? (
-          <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col flex-1">
+          <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col">
             {selected.type === 'journal' ? (
               /* ── Entrée journal ── */
               <>
-                <div className="hidden md:flex items-center justify-between border-b border-gray-100 px-4 md:px-8" style={{ minHeight: '40px' }}>
-                  <button onClick={() => { setSelected(null); setShowJournal(true) }} className="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1">← Journal</button>
-                  <div className="flex items-center gap-0.5">
-                    <span className={`w-5 h-5 flex items-center justify-center text-xs transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    </span>
-                    <button onClick={() => setConfirmDeleteId(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors text-sm" title="Supprimer">🗑</button>
-                  </div>
-                </div>
                 <MobileTopBar onBack={() => { setSelected(null); setShowJournal(true) }} saving={saving} />
                 <JournalEntryHeader
                   entry={selected}
@@ -400,22 +396,27 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             ) : (
               /* ── Page normale ── */
               <>
-                <div className="hidden md:flex items-center justify-between border-b border-gray-100 px-4 md:px-8" style={{ minHeight: '40px' }}>
+                <MobileTopBar onBack={() => setSelected(null)} saving={saving} />
+                {/* Breadcrumb sur sa propre ligne */}
+                <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
                   <BreadcrumbInline pages={activePages} selected={selected} onSelect={selectPage} />
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <span className={`w-5 h-5 flex items-center justify-center text-xs transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`} title="Sauvegarde...">
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                     </span>
-                    <PageActionBtn onClick={() => {}} title="Historique"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></PageActionBtn>
-                    <PageActionBtn onClick={() => {}} title="Exporter"><ExportButton page={selected} /></PageActionBtn>
-                    <PageActionBtn onClick={() => {}} title="Partager"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></PageActionBtn>
-                    <button onClick={() => convertToJournal(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-colors text-sm" title="Convertir en entrée Journal">📓</button>
-                    <button onClick={() => setConfirmDeleteId(selected.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors text-sm" title="Supprimer">🗑</button>
+                    <ActionsMenu
+                      onDelete={() => setConfirmDeleteId(selected.id)}
+                      onConvertToJournal={() => convertToJournal(selected.id)}
+                    >
+                      <div className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></div>
+                      <div className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ExportButton page={selected} /></div>
+                      <div className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></div>
+                    </ActionsMenu>
                   </div>
                 </div>
-                <MobileTopBar onBack={() => setSelected(null)} saving={saving} />
-                <div className="px-4 md:px-8 pt-4 pb-2">
-                  <div className="flex items-start gap-3 group/title" style={{ maxWidth: '720px' }}>
+                {/* Icône + Titre */}
+                <div className="px-6 pt-2 pb-2">
+                  <div className="flex items-start gap-3 group/title">
                     <div className="relative flex-shrink-0">
                       <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
                       {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
@@ -436,7 +437,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             )}
           </div>
         ) : (
-          <div className="hidden md:flex flex-1 items-center justify-center">
+          <div className="hidden md:flex flex-1 items-center justify-center h-full">
             <div className="text-center text-gray-400">
               <p className="text-4xl mb-3">💡</p>
               <p className="text-lg font-medium mb-1 text-gray-500">Aucune page sélectionnée</p>
