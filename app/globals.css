@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Lora:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,50 +8,34 @@
 :root {
   --cream: #faf8f4;
   --card-bg: #fffef9;
-  --card-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-  --card-shadow-hover: 0 6px 20px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05);
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
   --font-title: 'Playfair Display', Georgia, serif;
-  --font-body: 'Lora', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --page-width: 680px;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
-body {
+html, body {
   background: var(--cream);
   font-family: var(--font-body);
 }
 
-/* ─── Fiche page — card style ────────────────────────────────────────────────*/
-.page-card {
-  background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: var(--card-shadow);
-  transition: box-shadow 0.2s ease;
-}
-.page-card:hover {
-  box-shadow: var(--card-shadow-hover);
-}
-
-/* Zone contenu principale */
-.content-area {
-  background: var(--card-bg);
-  border-radius: 16px 16px 0 0;
-  box-shadow: var(--card-shadow);
-  margin: 12px 12px 0;
-}
-
-@media (max-width: 767px) {
-  .content-area {
-    margin: 8px 8px 0;
-    border-radius: 12px 12px 0 0;
-  }
-}
-
-/* ─── Titres — Playfair Display ──────────────────────────────────────────────*/
+/* ─── Titres page (input) ────────────────────────────────────────────────────*/
 .page-title {
   font-family: var(--font-title) !important;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #1a1714;
+}
+
+/* ─── Card page — zone de contenu ───────────────────────────────────────────*/
+.page-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  max-width: var(--page-width);
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* ─── Éditeur Tiptap ─────────────────────────────────────────────────────────*/
@@ -80,13 +64,15 @@ body {
 .tippy-content { padding: 0 !important; background: transparent !important; }
 .tippy-arrow { display: none !important; }
 
-/* ─── Prose — typographie éditeur ────────────────────────────────────────────*/
+/* ─── Prose ──────────────────────────────────────────────────────────────────*/
 .prose {
   color: #2d2620;
   font-family: var(--font-body);
   font-size: 1rem;
-  line-height: 1.8;
+  line-height: 1.75;
 }
+
+/* H1, H2 en Playfair — H3 en Inter semi-bold */
 .prose h1 {
   font-family: var(--font-title);
   font-size: 1.75rem;
@@ -104,14 +90,17 @@ body {
   letter-spacing: -0.01em;
 }
 .prose h3 {
-  font-family: var(--font-title);
-  font-size: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
   font-weight: 600;
   margin: 1rem 0 0.3rem;
   color: #1a1714;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.85rem;
 }
-.prose p { margin: 0.5rem 0; line-height: 1.8; }
-.prose ul { list-style: disc; padding-left: 1.5rem; margin: 0.6rem 0; }
+.prose p  { margin: 0.5rem 0; line-height: 1.75; }
+.prose ul { list-style: disc;    padding-left: 1.5rem; margin: 0.6rem 0; }
 .prose ol { list-style: decimal; padding-left: 1.5rem; margin: 0.6rem 0; }
 .prose li { margin: 0.25rem 0; line-height: 1.7; }
 .prose blockquote {
@@ -125,7 +114,6 @@ body {
 .prose a:hover { color: #4e3f78; }
 .prose img { max-width: 100%; border-radius: 10px; margin: 0.75rem 0; }
 
-/* Code inline */
 .prose code {
   background: #f3ede4;
   color: #c2410c;
@@ -135,8 +123,6 @@ body {
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   border: 1px solid #e8ddd0;
 }
-
-/* Bloc de code */
 .prose pre {
   background: #2d2018;
   color: #f5e6c8;
@@ -155,6 +141,15 @@ body {
   font-size: inherit;
 }
 
+/* Tables */
+.prose table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
+.prose table td, .prose table th { min-width: 2em; border: 1px solid #e8ddd0; padding: 6px 10px; vertical-align: top; box-sizing: border-box; position: relative; font-size: 0.9em; }
+.prose table th { background: #f7f2ec; font-weight: 600; text-align: left; }
+.prose table tr:hover td { background: #fdf9f5; }
+.prose table .selectedCell:after { z-index: 2; position: absolute; content: ""; left: 0; right: 0; top: 0; bottom: 0; background: rgba(107,90,158,0.08); pointer-events: none; }
+.prose table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background: #6b5a9e; cursor: col-resize; z-index: 20; }
+.prose .tableWrapper { overflow-x: auto; margin: 1rem 0; }
+
 /* Lien page interne */
 .page-link {
   display: inline-flex;
@@ -169,7 +164,6 @@ body {
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s;
-  font-family: var(--font-body);
 }
 .page-link:hover { background: #e5ddd6; }
 
@@ -183,5 +177,6 @@ body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--card-bg);
+  border-radius: 0 0 16px 16px;
 }
 .editor-toolbar::-webkit-scrollbar { display: none; }
