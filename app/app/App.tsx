@@ -371,9 +371,9 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         </div>
       )}
       {/* Contenu — page normale ou entrée journal */}
-      <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 flex flex-col overflow-hidden min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
+      <div className={`${(isMobile && !selected) || (!isMobile && showJournal && !selected) ? 'hidden' : ''} flex-1 flex flex-col overflow-y-auto min-w-0 transition-colors ${selected?.color ? colorBg(selected.color) : ''}`}>
         {selected ? (
-          <>
+          <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col flex-1">
             {selected.type === 'journal' ? (
               /* ── Entrée journal ── */
               <>
@@ -434,7 +434,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]} onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)} onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }} userId={userId} isMobile={isMobile} />
               </>
             )}
-          </>
+          </div>
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center">
             <div className="text-center text-gray-400">
