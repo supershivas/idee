@@ -6,8 +6,9 @@
 
 /* ─── Variables ──────────────────────────────────────────────────────────────*/
 :root {
-  --cream: #faf8f4;
-  --card-bg: #fffef9;
+  --app-bg: #f0f0ec;
+  --sidebar-bg: #f7f7f5;
+  --card-bg: #ffffff;
   --card-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
   --font-title: 'Playfair Display', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -16,9 +17,12 @@
 
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
 html, body {
-  background: var(--cream);
+  background: var(--app-bg);
   font-family: var(--font-body);
 }
+
+/* Sidebar */
+.sidebar-bg { background: var(--sidebar-bg); }
 
 /* ─── Titres page (input) ────────────────────────────────────────────────────*/
 .page-title {
