@@ -2,26 +2,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Page, colorBg, PAGE_COLORS } from '../types'
-
-// ─── ColorPicker ──────────────────────────────────────────────────────────────
-function ColorDot({ color, onSelect }: { color: string, onSelect: () => void }) {
-  const c = PAGE_COLORS.find(p => p.value === color)
-  return (
-    <button onClick={onSelect} title={c?.name}
-      className={`w-4 h-4 rounded-full flex-shrink-0 border-2 border-transparent hover:border-gray-400 transition-all ${c?.dot || 'bg-gray-300'}`} />
-  )
-}
+import { Page } from '../types'
 
 // ─── SortablePageItem ─────────────────────────────────────────────────────────
-export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition, isMobile, onRename, onColorChange, onToggleFavorite }: {
+export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
   page: Page, pages: Page[], depth: number, selectedId: string | null,
   onSelect: (p: Page) => void, onAdd: (id: string) => void,
   onToggle: (id: string) => void, isOpen: boolean,
   overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
   isMobile: boolean,
   onRename: (id: string, title: string) => void,
-  onColorChange: (id: string, color: string) => void,
   onToggleFavorite: (id: string) => void,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
@@ -31,32 +21,15 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
   const isOver = overId === page.id
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState(page.title)
-  const [showColors, setShowColors] = useState(false)
   const renameRef = useRef<HTMLInputElement>(null)
-  const colorRef = useRef<HTMLDivElement>(null)
 
-  // Focus l'input de renommage quand il s'ouvre
   useEffect(() => { if (renaming) renameRef.current?.select() }, [renaming])
-
-  // Ferme le color picker en cliquant ailleurs
-  useEffect(() => {
-    if (!showColors) return
-    function handler(e: MouseEvent) {
-      if (colorRef.current && !colorRef.current.contains(e.target as Node)) setShowColors(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showColors])
 
   function commitRename() {
     setRenaming(false)
     const trimmed = renameValue.trim()
     if (trimmed !== page.title) onRename(page.id, trimmed)
   }
-
-  const colorDot = page.color
-    ? PAGE_COLORS.find(c => c.value === page.color)
-    : null
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -67,29 +40,17 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
           ${isOver && overPosition === 'inside' ? 'bg-blue-50 ring-1 ring-blue-300' : ''}`}
         style={{ paddingLeft: `${depth * 14 + 6}px`, minHeight: isMobile ? '48px' : '32px' }}
       >
-        {/* Poignée drag desktop */}
         {!isMobile && (
           <button {...attributes} {...listeners}
             className="w-4 h-full flex items-center justify-center text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100">
             ⠿
           </button>
         )}
-
-        {/* Toggle enfants */}
         <button onClick={() => onToggle(page.id)}
           className="w-4 h-4 flex items-center justify-center text-gray-400 flex-shrink-0 text-xs">
           {hasChildren ? (isOpen ? '▾' : '▸') : ''}
         </button>
-
-        {/* Point couleur */}
-        {colorDot && (
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${colorDot.dot}`} />
-        )}
-
-        {/* Icône */}
         <span className="text-sm flex-shrink-0">{page.icon || '📄'}</span>
-
-        {/* Titre — renommage inline sur double-clic */}
         {renaming ? (
           <input
             ref={renameRef}
@@ -113,33 +74,8 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
             {page.title || 'Sans titre'}
           </span>
         )}
-
-        {/* Actions hover */}
         {!renaming && (
           <div className={`flex items-center gap-0.5 flex-shrink-0 ${isMobile ? '' : 'opacity-0 group-hover:opacity-100'}`}>
-            {/* Color picker */}
-            <div className="relative" ref={colorRef}>
-              <button
-                onClick={e => { e.stopPropagation(); setShowColors(v => !v) }}
-                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 text-xs"
-                title="Couleur">
-                {page.color
-                  ? <div className={`w-2.5 h-2.5 rounded-full ${PAGE_COLORS.find(c => c.value === page.color)?.dot}`} />
-                  : '●'}
-              </button>
-              {showColors && (
-                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-2 z-[100] flex gap-1.5 flex-wrap w-36">
-                  {PAGE_COLORS.map(c => (
-                    <button key={c.value} onClick={() => { onColorChange(page.id, c.value); setShowColors(false) }}
-                      title={c.name}
-                      className={`w-5 h-5 rounded-full border-2 transition-all
-                        ${page.color === c.value ? 'border-gray-500 scale-110' : 'border-transparent hover:border-gray-300'}
-                        ${c.dot}`} />
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Nouvelle sous-page */}
             <button onClick={() => onAdd(page.id)}
               className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 text-sm"
               title="Ajouter une sous-page">+</button>
@@ -152,14 +88,13 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
 }
 
 // ─── PageTree ─────────────────────────────────────────────────────────────────
-export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onColorChange, onToggleFavorite }: {
+export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
   pages: Page[], parentId: string | null, depth: number, selectedId: string | null,
   onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
   onToggle: (id: string) => void, openMap: Record<string, boolean>,
   overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
   isMobile: boolean,
   onRename: (id: string, title: string) => void,
-  onColorChange: (id: string, color: string) => void,
   onToggleFavorite: (id: string) => void,
 }) {
   const children = pages
@@ -175,14 +110,14 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
             page={page} pages={pages} depth={depth} selectedId={selectedId}
             onSelect={onSelect} onAdd={onAdd} onToggle={onToggle}
             isOpen={!!openMap[page.id]} overId={overId} overPosition={overPosition}
-            isMobile={isMobile} onRename={onRename} onColorChange={onColorChange}
+            isMobile={isMobile} onRename={onRename}
             onToggleFavorite={onToggleFavorite}
           />
           {openMap[page.id] && (
             <PageTree pages={pages} parentId={page.id} depth={depth + 1}
               selectedId={selectedId} onSelect={onSelect} onAdd={onAdd}
               onToggle={onToggle} openMap={openMap} overId={overId} overPosition={overPosition}
-              isMobile={isMobile} onRename={onRename} onColorChange={onColorChange}
+              isMobile={isMobile} onRename={onRename}
               onToggleFavorite={onToggleFavorite} />
           )}
         </div>
@@ -200,28 +135,19 @@ export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite
 }) {
   const favorites = pages.filter(p => p.favorite && !p.deleted_at)
   if (!favorites.length) return null
-
   return (
     <div className="mb-1">
-      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider select-none">
-        Favoris
-      </div>
+      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider select-none">Favoris</div>
       {favorites.map(page => (
-        <div
-          key={page.id}
-          onClick={() => onSelect(page)}
+        <div key={page.id} onClick={() => onSelect(page)}
           className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
             ${selectedId === page.id ? 'bg-gray-200' : 'hover:bg-gray-200/60'}`}
-          style={{ minHeight: '30px' }}
-        >
+          style={{ minHeight: '30px' }}>
           <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
           <span className="flex-1 truncate text-gray-700 text-sm">{page.title || 'Sans titre'}</span>
-          <button
-            onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
+          <button onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
             className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 text-xs flex-shrink-0 transition-opacity"
-            style={{ color: '#f59e0b' }}
-            title="Retirer des favoris"
-          >★</button>
+            style={{ color: '#f59e0b' }} title="Retirer des favoris">★</button>
         </div>
       ))}
       <div className="mx-2 mt-1.5 mb-0.5 border-t border-gray-200" />
