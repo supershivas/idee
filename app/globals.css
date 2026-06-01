@@ -1,189 +1,379 @@
-'use client'
-import { useState, useRef, useEffect } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Page } from '../types'
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
 
-// ─── SortablePageItem ─────────────────────────────────────────────────────────
-export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
-  page: Page, pages: Page[], depth: number, selectedId: string | null,
-  onSelect: (p: Page) => void, onAdd: (id: string) => void,
-  onToggle: (id: string) => void, isOpen: boolean,
-  overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
-  isMobile: boolean,
-  onRename: (id: string, title: string) => void,
-  onToggleFavorite: (id: string) => void,
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
-  const hasChildren = pages.some(p => p.parent_id === page.id && !p.deleted_at)
-  const isSelected = selectedId === page.id
-  const isOver = overId === page.id
-  const [renaming, setRenaming] = useState(false)
-  const [renameValue, setRenameValue] = useState(page.title)
-  const renameRef = useRef<HTMLInputElement>(null)
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  useEffect(() => { if (renaming) renameRef.current?.select() }, [renaming])
+/* ─── Variables — Light ──────────────────────────────────────────────────────*/
+:root {
+  --app-bg:          #f0f0ec;
+  --sidebar-bg:      #f7f7f5;
+  --card-bg:         #ffffff;
+  --card-shadow:     0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
+  --font-title:      'Playfair Display', Georgia, serif;
+  --font-body:       'Inter', system-ui, sans-serif;
+  --page-width:      680px;
 
-  function commitRename() {
-    setRenaming(false)
-    const trimmed = renameValue.trim()
-    if (trimmed !== page.title) onRename(page.id, trimmed)
-  }
+  /* Text */
+  --text-primary:    #1a1714;
+  --text-secondary:  #4b4440;
+  --text-muted:      #9ca3af;
+  --text-faint:      #d1d5db;
 
-  return (
-    <div ref={setNodeRef} style={style}>
-      {isOver && overPosition === 'before' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
-      <div
-        className={`flex items-center gap-1 pr-1 rounded-md cursor-pointer group transition-colors
-          ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}
-          ${isOver && overPosition === 'inside' ? 'sidebar-drop-inside' : ''}`}
-        style={{ paddingLeft: `${depth * 14 + 6}px`, minHeight: isMobile ? '48px' : '32px' }}
-      >
-        {!isMobile && (
-          <button {...attributes} {...listeners}
-            className="w-4 h-full flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
-            style={{ color: 'var(--text-muted)' }}>
-            ⠿
-          </button>
-        )}
-        <button onClick={() => onToggle(page.id)}
-          className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs"
-          style={{ color: 'var(--text-muted)' }}>
-          {hasChildren ? (isOpen ? '▾' : '▸') : ''}
-        </button>
-        <span className="text-sm flex-shrink-0">{page.icon || '📄'}</span>
-        {renaming ? (
-          <input
-            ref={renameRef}
-            value={renameValue}
-            onChange={e => setRenameValue(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitRename()
-              if (e.key === 'Escape') { setRenameValue(page.title); setRenaming(false) }
-              e.stopPropagation()
-            }}
-            className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0"
-            style={{ background: 'var(--card-bg)', border: '1px solid #60a5fa', color: 'var(--text-primary)' }}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : (
-          <span
-            onClick={() => onSelect(page)}
-            onDoubleClick={() => { setRenameValue(page.title); setRenaming(true) }}
-            className="flex-1 text-sm truncate py-1 select-none"
-            style={{ color: 'var(--text-secondary)' }}
-            title={isMobile ? undefined : 'Double-clic pour renommer'}>
-            {page.title || 'Sans titre'}
-          </span>
-        )}
-        {!renaming && (
-          <div className={`flex items-center gap-0.5 flex-shrink-0 ${isMobile ? '' : 'opacity-0 group-hover:opacity-100'}`}>
-            <button onClick={() => onAdd(page.id)}
-              className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn"
-              title="Ajouter une sous-page">+</button>
-          </div>
-        )}
-      </div>
-      {isOver && overPosition === 'after' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
-    </div>
-  )
+  /* Borders / dividers */
+  --border:          #e5e7eb;
+  --border-light:    #f3f4f6;
+
+  /* Interactive */
+  --hover-bg:        rgba(0,0,0,0.04);
+  --selected-bg:     #e5e7eb;
+  --selected-bg-60:  rgba(229,231,235,0.6);
+
+  /* Sidebar bottom btn */
+  --btn-primary-bg:  #111827;
+  --btn-primary-fg:  #ffffff;
+  --btn-primary-hover: #374151;
+
+  /* Prose */
+  --prose-color:     #2d2620;
+  --prose-h-color:   #1a1714;
+  --prose-muted:     #7c6e5e;
+  --prose-border:    #d4c5b0;
+  --prose-code-bg:   #f3ede4;
+  --prose-code-fg:   #c2410c;
+  --prose-code-border: #e8ddd0;
+  --prose-pre-bg:    #2d2018;
+  --prose-pre-fg:    #f5e6c8;
+  --prose-table-th:  #f7f2ec;
+  --prose-table-border: #e8ddd0;
+  --prose-link:      #6b5a9e;
+  --prose-link-hover:#4e3f78;
+  --prose-row-hover: #fdf9f5;
+
+  /* Page link */
+  --pagelink-bg:     #f0ebe4;
+  --pagelink-fg:     #6b5a9e;
+  --pagelink-border: #d9cfc4;
+  --pagelink-hover:  #e5ddd6;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #d4c5b0;
+
+  /* DragOverlay */
+  --drag-bg:         #ffffff;
+  --drag-border:     #e5e7eb;
+
+  /* Empty state */
+  --empty-fg:        #9ca3af;
+  --empty-title:     #6b7280;
 }
 
-// ─── PageTree ─────────────────────────────────────────────────────────────────
-export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
-  pages: Page[], parentId: string | null, depth: number, selectedId: string | null,
-  onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
-  onToggle: (id: string) => void, openMap: Record<string, boolean>,
-  overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
-  isMobile: boolean,
-  onRename: (id: string, title: string) => void,
-  onToggleFavorite: (id: string) => void,
-}) {
-  const children = pages
-    .filter(p => p.parent_id === parentId && !p.deleted_at)
-    .sort((a, b) => a.position - b.position)
+/* ─── Variables — Dark ───────────────────────────────────────────────────────*/
+html.dark {
+  --app-bg:          #141414;
+  --sidebar-bg:      #1c1c1c;
+  --card-bg:         #1f1f1f;
+  --card-shadow:     0 2px 16px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.3);
 
-  if (!children.length) return null
-  return (
-    <div>
-      {children.map(page => (
-        <div key={page.id}>
-          <SortablePageItem
-            page={page} pages={pages} depth={depth} selectedId={selectedId}
-            onSelect={onSelect} onAdd={onAdd} onToggle={onToggle}
-            isOpen={!!openMap[page.id]} overId={overId} overPosition={overPosition}
-            isMobile={isMobile} onRename={onRename}
-            onToggleFavorite={onToggleFavorite}
-          />
-          {openMap[page.id] && (
-            <PageTree pages={pages} parentId={page.id} depth={depth + 1}
-              selectedId={selectedId} onSelect={onSelect} onAdd={onAdd}
-              onToggle={onToggle} openMap={openMap} overId={overId} overPosition={overPosition}
-              isMobile={isMobile} onRename={onRename}
-              onToggleFavorite={onToggleFavorite} />
-          )}
-        </div>
-      ))}
-    </div>
-  )
+  --text-primary:    #e8e4df;
+  --text-secondary:  #b8b0a8;
+  --text-muted:      #6b6560;
+  --text-faint:      #3d3a37;
+
+  --border:          #2e2e2e;
+  --border-light:    #252525;
+
+  --hover-bg:        rgba(255,255,255,0.05);
+  --selected-bg:     rgba(255,255,255,0.1);
+  --selected-bg-60:  rgba(255,255,255,0.06);
+
+  --btn-primary-bg:  #e8e4df;
+  --btn-primary-fg:  #141414;
+  --btn-primary-hover: #ccc8c3;
+
+  --prose-color:     #d4cfc9;
+  --prose-h-color:   #e8e4df;
+  --prose-muted:     #8c8078;
+  --prose-border:    #3d3530;
+  --prose-code-bg:   #2a2420;
+  --prose-code-fg:   #f97316;
+  --prose-code-border: #3d3530;
+  --prose-pre-bg:    #0f0d0b;
+  --prose-pre-fg:    #f5e6c8;
+  --prose-table-th:  #252220;
+  --prose-table-border: #333030;
+  --prose-link:      #a594d4;
+  --prose-link-hover:#c4b8e8;
+  --prose-row-hover: #262220;
+
+  --pagelink-bg:     #2a2420;
+  --pagelink-fg:     #a594d4;
+  --pagelink-border: #3d3530;
+  --pagelink-hover:  #332e28;
+
+  --scrollbar-thumb: #3d3530;
+
+  --drag-bg:         #2a2a2a;
+  --drag-border:     #3d3d3d;
+
+  --empty-fg:        #6b6560;
+  --empty-title:     #8c8680;
 }
 
-// ─── FavoritesSection ─────────────────────────────────────────────────────────
-export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite }: {
-  pages: Page[]
-  selectedId: string | null
-  onSelect: (p: Page) => void
-  onToggleFavorite: (id: string) => void
-}) {
-  const favorites = pages.filter(p => p.favorite && !p.deleted_at)
-  if (!favorites.length) return null
-  return (
-    <div className="mb-1">
-      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider select-none" style={{ color: 'var(--text-muted)' }}>Favoris</div>
-      {favorites.map(page => (
-        <div key={page.id} onClick={() => onSelect(page)}
-          className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
-            ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}`}
-          style={{ minHeight: '30px' }}>
-          <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
-          <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
-          <button onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
-            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
-            style={{ color: '#f59e0b' }} title="Retirer des favoris">★</button>
-        </div>
-      ))}
-      <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--border)' }} />
-    </div>
-  )
+/* ─── Base ───────────────────────────────────────────────────────────────────*/
+html, body {
+  background: var(--app-bg);
+  font-family: var(--font-body);
+  color: var(--text-primary);
 }
 
-// ─── Breadcrumb ───────────────────────────────────────────────────────────────
-export function Breadcrumb({ pages, selected, onSelect }: {
-  pages: Page[], selected: Page | null, onSelect: (p: Page) => void
-}) {
-  if (!selected) return null
-  const crumbs: Page[] = []
-  let current: Page | undefined = selected
-  while (current) {
-    crumbs.unshift(current)
-    current = pages.find(p => p.id === current!.parent_id)
-  }
-  const ancestors = crumbs.slice(0, -1)
-  if (ancestors.length === 0) return null
-  return (
-    <div className="hidden md:flex items-center gap-1 text-sm px-4 md:px-8 py-1.5 overflow-x-auto" style={{ maxWidth: '720px', color: 'var(--text-muted)' }}>
-      {ancestors.map((crumb, i) => (
-        <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
-          {i > 0 && <span style={{ color: 'var(--text-faint)' }}>/</span>}
-          <button onClick={() => onSelect(crumb)} className="transition-colors flex items-center gap-1 hover:opacity-80">
-            <span>{crumb.icon || '📄'}</span>
-            <span className="whitespace-nowrap">{crumb.title || 'Sans titre'}</span>
-          </button>
-        </span>
-      ))}
-      <span style={{ color: 'var(--text-faint)' }}>/</span>
-    </div>
-  )
+/* Sidebar */
+.sidebar-bg { background: var(--sidebar-bg); }
+
+/* ─── Titres page (input) ────────────────────────────────────────────────────*/
+.page-title {
+  font-family: var(--font-title) !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+/* ─── Card page ──────────────────────────────────────────────────────────────*/
+.page-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  max-width: var(--page-width);
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ─── Éditeur Tiptap ─────────────────────────────────────────────────────────*/
+.tiptap {
+  min-height: 300px;
+  outline: none;
+  font-family: var(--font-body);
+  color: var(--prose-color);
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: var(--text-muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-style: italic;
+}
+
+/* ─── Tippy ──────────────────────────────────────────────────────────────────*/
+.tippy-box {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.tippy-content { padding: 0 !important; background: transparent !important; }
+.tippy-arrow { display: none !important; }
+
+/* ─── Prose ──────────────────────────────────────────────────────────────────*/
+.prose {
+  color: var(--prose-color);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.prose h1 {
+  font-family: var(--font-title);
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.6rem;
+  color: var(--prose-h-color);
+  letter-spacing: -0.02em;
+}
+.prose h2 {
+  font-family: var(--font-title);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 1.2rem 0 0.4rem;
+  color: var(--prose-h-color);
+  letter-spacing: -0.01em;
+}
+.prose h3 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  margin: 1rem 0 0.3rem;
+  color: var(--prose-h-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.85rem;
+}
+.prose p  { margin: 0.5rem 0; line-height: 1.75; }
+.prose ul { list-style: disc;    padding-left: 1.5rem; margin: 0.6rem 0; }
+.prose ol { list-style: decimal; padding-left: 1.5rem; margin: 0.6rem 0; }
+.prose li { margin: 0.25rem 0; line-height: 1.7; }
+.prose blockquote {
+  border-left: 3px solid var(--prose-border);
+  padding-left: 1rem;
+  color: var(--prose-muted);
+  margin: 0.75rem 0;
+  font-style: italic;
+}
+.prose a { color: var(--prose-link); text-decoration: underline; }
+.prose a:hover { color: var(--prose-link-hover); }
+.prose img { max-width: 100%; border-radius: 10px; margin: 0.75rem 0; }
+
+.prose code {
+  background: var(--prose-code-bg);
+  color: var(--prose-code-fg);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  border: 1px solid var(--prose-code-border);
+}
+.prose pre {
+  background: var(--prose-pre-bg);
+  color: var(--prose-pre-fg);
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  font-size: 0.875em;
+  line-height: 1.6;
+}
+.prose pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+}
+
+/* Tables */
+.prose table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
+.prose table td, .prose table th {
+  min-width: 2em;
+  border: 1px solid var(--prose-table-border);
+  padding: 6px 10px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  font-size: 0.9em;
+}
+.prose table th { background: var(--prose-table-th); font-weight: 600; text-align: left; }
+.prose table tr:hover td { background: var(--prose-row-hover); }
+.prose table .selectedCell:after {
+  z-index: 2; position: absolute; content: "";
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(107,90,158,0.08); pointer-events: none;
+}
+.prose table .column-resize-handle {
+  position: absolute; right: -2px; top: 0; bottom: 0;
+  width: 4px; background: var(--prose-link); cursor: col-resize; z-index: 20;
+}
+.prose .tableWrapper { overflow-x: auto; margin: 1rem 0; }
+
+/* Lien page interne */
+.page-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--pagelink-bg);
+  color: var(--pagelink-fg);
+  border: 1px solid var(--pagelink-border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.page-link:hover { background: var(--pagelink-hover); }
+
+/* ─── Sidebar scrollbar ──────────────────────────────────────────────────────*/
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+
+/* ─── Toolbar éditeur ────────────────────────────────────────────────────────*/
+.editor-toolbar {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--card-bg);
+  border-radius: 0 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+.editor-toolbar::-webkit-scrollbar { display: none; }
+
+/* ─── Toolbar boutons ────────────────────────────────────────────────────────*/
+.toolbar-btn {
+  color: var(--text-secondary);
+  border-radius: 4px;
+  transition: background 0.1s, color 0.1s;
+}
+.toolbar-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+.toolbar-btn.is-active { background: var(--selected-bg); color: var(--text-primary); }
+
+/* ─── Input / placeholder global ────────────────────────────────────────────*/
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* ─── Utility classes thème ──────────────────────────────────────────────────*/
+/* À utiliser dans les composants à la place des classes Tailwind gray-xxx fixes */
+.t-bg-app    { background: var(--app-bg); }
+.t-bg-card   { background: var(--card-bg); }
+.t-bg-sidebar{ background: var(--sidebar-bg); }
+.t-border    { border-color: var(--border); }
+.t-text      { color: var(--text-primary); }
+.t-text-muted{ color: var(--text-muted); }
+.t-hover     { transition: background 0.1s; }
+.t-hover:hover { background: var(--hover-bg); }
+
+/* ─── Sidebar interactive states ─────────────────────────────────────────────*/
+/* Ces classes remplacent les bg-gray-200 / hover:bg-gray-200/60 Tailwind fixes */
+
+.sidebar-selected {
+  background: var(--selected-bg);
+}
+.sidebar-item-hover {
+  background: transparent;
+}
+.sidebar-item-hover:hover {
+  background: var(--selected-bg-60);
+}
+.sidebar-drop-inside {
+  background: rgba(96,165,250,0.08) !important;
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.4);
+}
+.sidebar-icon-btn {
+  color: var(--text-muted);
+  background: transparent;
+}
+.sidebar-icon-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+/* ─── Journal entry rows ──────────────────────────────────────────────────────*/
+.journal-entry-row {
+  border-bottom: 1px solid var(--border-light);
+}
+.journal-entry-row:hover {
+  background: var(--hover-bg);
+}
+.journal-entry-selected {
+  background: var(--hover-bg);
+}
+
+/* ─── Mobile rows ────────────────────────────────────────────────────────────*/
+.mobile-row-hover:hover {
+  background: var(--hover-bg);
+}
+.mobile-row-hover:active {
+  background: var(--selected-bg);
+}
+.mobile-row-selected {
+  background: var(--selected-bg);
 }
