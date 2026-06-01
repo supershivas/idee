@@ -27,24 +27,25 @@ function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], select
   const ancestors = crumbs.slice(0, -1)
   if (ancestors.length === 0) return <div className="flex-1 min-w-0" />
   return (
-    <div className="flex items-center gap-1 text-xs text-gray-400 flex-1 min-w-0 overflow-x-auto">
+    <div className="flex items-center gap-1 text-xs flex-1 min-w-0 overflow-x-auto" style={{ color: 'var(--text-muted)' }}>
       {ancestors.map((crumb, i) => (
         <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
-          {i > 0 && <span className="text-gray-200">/</span>}
-          <button onClick={() => onSelect(crumb)} className="hover:text-gray-600 transition-colors flex items-center gap-1 py-1">
+          {i > 0 && <span style={{ color: 'var(--text-faint)' }}>/</span>}
+          <button onClick={() => onSelect(crumb)} className="transition-opacity hover:opacity-70 flex items-center gap-1 py-1">
             <span>{crumb.icon || '📄'}</span>
             <span className="whitespace-nowrap">{crumb.title || 'Sans titre'}</span>
           </button>
         </span>
       ))}
-      <span className="text-gray-200 flex-shrink-0">/</span>
+      <span style={{ color: 'var(--text-faint)' }} className="flex-shrink-0">/</span>
     </div>
   )
 }
 
 function PageActionBtn({ children, title, onClick }: { children: React.ReactNode, title: string, onClick: () => void }) {
   return (
-    <div className="[&_button]:!text-xs [&_button]:!text-gray-300 [&_button]:hover:!text-gray-600 [&_button]:!px-1.5 [&_button]:!py-1 [&_button]:!rounded [&_button]:hover:!bg-gray-100 [&_button]:transition-colors" title={title}>
+    <div className="[&_button]:!text-xs [&_button]:!px-1.5 [&_button]:!py-1 [&_button]:!rounded [&_button]:transition-colors" title={title}
+      style={{ ['--tw-text-opacity' as any]: 1 }}>
       {children}
     </div>
   )
@@ -286,17 +287,29 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   return (
     <div className="flex w-full h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
       {/* Sidebar desktop */}
-      <div className="hidden md:flex flex-col border-r border-gray-200 flex-shrink-0 relative" style={{ width: `${sidebarWidth}px`, background: 'var(--sidebar-bg)' }}>
-        <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-300 transition-colors" title="Redimensionner">
+      <div
+        className="hidden md:flex flex-col flex-shrink-0 relative"
+        style={{ width: `${sidebarWidth}px`, background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}
+      >
+        <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-400 transition-colors" title="Redimensionner">
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
         </div>
-        <div className="px-4 flex items-center justify-between border-b border-gray-200" style={{ minHeight: '48px' }}>
-          <span className="font-semibold text-gray-800 text-sm">Idée</span>
-          <button onClick={() => setShowSettings(true)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400" title="Paramètres">⚙️</button>
+        <div className="px-4 flex items-center justify-between" style={{ minHeight: '48px', borderBottom: '1px solid var(--border)' }}>
+          <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Idée</span>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            title="Paramètres"
+          >⚙️</button>
         </div>
         <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
-        <div className="flex-1 overflow-y-auto py-2 px-2">
-          {activePages.filter(p => p.parent_id === null).length === 0 && <p className="text-xs text-gray-400 px-3 py-3">Clique sur + pour créer une page.</p>}
+        <div className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
+          {activePages.filter(p => p.parent_id === null).length === 0 && (
+            <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
+          )}
           <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} />
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
@@ -304,26 +317,59 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               overId={overId} overPosition={overPosition} isMobile={false}
               onRename={renamePage} onToggleFavorite={toggleFavorite} />
             <DragOverlay>
-              {activeDragPage && <div className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-lg text-sm opacity-90"><span>{activeDragPage.icon}</span><span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span></div>}
+              {activeDragPage && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg text-sm opacity-90"
+                  style={{ background: 'var(--drag-bg)', border: '1px solid var(--drag-border)', color: 'var(--text-primary)' }}>
+                  <span>{activeDragPage.icon}</span>
+                  <span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span>
+                </div>
+              )}
             </DragOverlay>
           </DndContext>
         </div>
-        <div className="flex-shrink-0 border-t border-gray-200 px-2 py-2 space-y-1">
-          <button onClick={() => { setShowJournal(true); setShowTags(false); setSelected(null) }}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${showJournal && !showTags ? 'bg-gray-200 text-gray-900' : 'text-gray-600 hover:bg-gray-200/60'}`}>
+        <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={() => { setShowJournal(true); setShowTags(false); setSelected(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{
+              background: showJournal && !showTags ? 'var(--selected-bg)' : 'transparent',
+              color: showJournal && !showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { if (!(showJournal && !showTags)) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showJournal && !showTags ? 'var(--selected-bg)' : 'transparent' }}
+          >
             <span>📓</span><span className="flex-1 text-left">Journal</span>
-            <span className="text-xs text-gray-400">{journalEntries.length || ''}</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{journalEntries.length || ''}</span>
           </button>
-          <button onClick={() => { setShowTags(true); setShowJournal(false); setSelected(null) }}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${showTags ? 'bg-gray-200 text-gray-900' : 'text-gray-600 hover:bg-gray-200/60'}`}>
+          <button
+            onClick={() => { setShowTags(true); setShowJournal(false); setSelected(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{
+              background: showTags ? 'var(--selected-bg)' : 'transparent',
+              color: showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { if (!showTags) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showTags ? 'var(--selected-bg)' : 'transparent' }}
+          >
             <span>🏷️</span><span className="flex-1 text-left">Tags</span>
           </button>
-          <button onClick={() => setShowTrash(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-500 hover:bg-gray-200/60 transition-colors">
+          <button
+            onClick={() => setShowTrash(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
             <span>🗑</span><span className="flex-1 text-left">Corbeille</span>
-            {trashedPages.length > 0 && <span className="text-xs text-gray-400">{trashedPages.length}</span>}
+            {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{trashedPages.length}</span>}
           </button>
-          <button onClick={() => showJournal ? addJournalEntry() : addPage(null)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors">
+          <button
+            onClick={() => showJournal ? addJournalEntry() : addPage(null)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
+          >
             <span>{showJournal ? '✏️' : '+'}</span>
             <span>{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
           </button>
@@ -346,7 +392,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
       {isMobile && showJournal && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
-            <button onClick={() => setShowJournal(false)} className="text-sm text-gray-500">← Pages</button>
+            <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
           <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
         </div>
@@ -396,9 +442,24 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                     </span>
                     <ActionsMenu onDelete={() => setConfirmDeleteId(selected.id)} onConvertToJournal={() => convertToJournal(selected.id)}>
-                      <div className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><HistoryButton page={selected} onRestore={(title, content) => { setSelected(prev => prev ? { ...prev, title, content } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p)) }} /></div>
-                      <div className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ExportButton page={selected} /></div>
-                      <div className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"><ShareButton page={selected as any} onUpdate={(updates) => { setSelected(prev => prev ? { ...prev, ...updates } : null); setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p)) }} /></div>
+                      <div className="px-3 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100"
+                        style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
+                        <HistoryButton page={selected} onRestore={(title, content) => {
+                          setSelected(prev => prev ? { ...prev, title, content } : null)
+                          setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
+                        }} />
+                      </div>
+                      <div className="px-3 py-2.5 text-sm border-b"
+                        style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
+                        <ExportButton page={selected} />
+                      </div>
+                      <div className="px-3 py-2.5 text-sm border-b"
+                        style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
+                        <ShareButton page={selected as any} onUpdate={(updates) => {
+                          setSelected(prev => prev ? { ...prev, ...updates } : null)
+                          setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
+                        }} />
+                      </div>
                     </ActionsMenu>
                   </div>
                 </div>
@@ -408,9 +469,16 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                       <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
                       {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
                     </div>
-                    <input className="page-title flex-1 text-2xl md:text-3xl outline-none bg-transparent placeholder-gray-300 min-w-0 pt-1" style={{ minHeight: '44px' }} value={selected.title} onChange={e => updateTitle(e.target.value)} placeholder="Sans titre" />
+                    <input
+                      className="page-title flex-1 text-2xl md:text-3xl outline-none bg-transparent min-w-0 pt-1"
+                      style={{ minHeight: '44px', caretColor: 'var(--text-primary)' }}
+                      value={selected.title}
+                      onChange={e => updateTitle(e.target.value)}
+                      placeholder="Sans titre"
+                    />
                     <button onClick={() => toggleFavorite(selected.id)}
-                      className={`flex-shrink-0 mt-2 text-xl transition-all ${selected.favorite ? 'opacity-100 text-amber-400' : 'opacity-0 group-hover/title:opacity-100 text-gray-300 hover:text-amber-400'}`}
+                      className={`flex-shrink-0 mt-2 text-xl transition-all ${selected.favorite ? 'opacity-100' : 'opacity-0 group-hover/title:opacity-100 hover:!opacity-100'}`}
+                      style={{ color: selected.favorite ? '#f59e0b' : 'var(--text-faint)' }}
                       title={selected.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
                       {selected.favorite ? '★' : '☆'}
                     </button>
@@ -427,16 +495,20 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
           </div>
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center h-full">
-            <div className="text-center text-gray-400">
+            <div className="text-center">
               <p className="text-4xl mb-3">💡</p>
-              <p className="text-lg font-medium mb-1 text-gray-500">Aucune page sélectionnée</p>
-              <button onClick={() => addPage(null)} className="text-sm text-blue-500 hover:text-blue-700 underline">Créer une page</button>
+              <p className="text-lg font-medium mb-1" style={{ color: 'var(--empty-title)' }}>Aucune page sélectionnée</p>
+              <button onClick={() => addPage(null)} className="text-sm text-blue-500 hover:text-blue-400 underline">Créer une page</button>
             </div>
           </div>
         )}
       </div>
 
-      {confirmDeleteId && (() => { const page = pages.find(p => p.id === confirmDeleteId); if (!page) return null; return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} /> })()}
+      {confirmDeleteId && (() => {
+        const page = pages.find(p => p.id === confirmDeleteId)
+        if (!page) return null
+        return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} />
+      })()}
     </div>
   )
 }
