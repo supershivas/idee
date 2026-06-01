@@ -1,7 +1,14 @@
+// tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./app/**/*.{js,ts,jsx,tsx}'],
-  darkMode: 'class',
-  theme: { extend: {} },
+  darkMode: 'class',   // ← active le mode sombre via html.dark
+  content: [
+    './app/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+  ],
+  theme: {
+    extend: {},
+  },
   plugins: [],
 }
