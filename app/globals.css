@@ -1,186 +1,189 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+'use client'
+import { useState, useRef, useEffect } from 'react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Page } from '../types'
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+// ─── SortablePageItem ─────────────────────────────────────────────────────────
+export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
+  page: Page, pages: Page[], depth: number, selectedId: string | null,
+  onSelect: (p: Page) => void, onAdd: (id: string) => void,
+  onToggle: (id: string) => void, isOpen: boolean,
+  overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
+  isMobile: boolean,
+  onRename: (id: string, title: string) => void,
+  onToggleFavorite: (id: string) => void,
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  const hasChildren = pages.some(p => p.parent_id === page.id && !p.deleted_at)
+  const isSelected = selectedId === page.id
+  const isOver = overId === page.id
+  const [renaming, setRenaming] = useState(false)
+  const [renameValue, setRenameValue] = useState(page.title)
+  const renameRef = useRef<HTMLInputElement>(null)
 
-/* ─── Variables ──────────────────────────────────────────────────────────────*/
-:root {
-  --app-bg: #f0f0ec;
-  --sidebar-bg: #f7f7f5;
-  --card-bg: #ffffff;
-  --card-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
-  --font-title: 'Playfair Display', Georgia, serif;
-  --font-body: 'Inter', system-ui, sans-serif;
-  --page-width: 680px;
-}
+  useEffect(() => { if (renaming) renameRef.current?.select() }, [renaming])
 
-/* ─── Base ───────────────────────────────────────────────────────────────────*/
-html, body {
-  background: var(--app-bg);
-  font-family: var(--font-body);
-}
+  function commitRename() {
+    setRenaming(false)
+    const trimmed = renameValue.trim()
+    if (trimmed !== page.title) onRename(page.id, trimmed)
+  }
 
-/* Sidebar */
-.sidebar-bg { background: var(--sidebar-bg); }
-
-/* ─── Titres page (input) ────────────────────────────────────────────────────*/
-.page-title {
-  font-family: var(--font-title) !important;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #1a1714;
-}
-
-/* ─── Card page — zone de contenu ───────────────────────────────────────────*/
-.page-card {
-  background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: var(--card-shadow);
-  max-width: var(--page-width);
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* ─── Éditeur Tiptap ─────────────────────────────────────────────────────────*/
-.tiptap {
-  min-height: 300px;
-  outline: none;
-  font-family: var(--font-body);
-}
-
-.tiptap p.is-editor-empty:first-child::before {
-  color: #b8ae9e;
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-  font-style: italic;
-}
-
-/* ─── Tippy ──────────────────────────────────────────────────────────────────*/
-.tippy-box {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-.tippy-content { padding: 0 !important; background: transparent !important; }
-.tippy-arrow { display: none !important; }
-
-/* ─── Prose ──────────────────────────────────────────────────────────────────*/
-.prose {
-  color: #2d2620;
-  font-family: var(--font-body);
-  font-size: 1rem;
-  line-height: 1.75;
-}
-
-/* H1, H2 en Playfair — H3 en Inter semi-bold */
-.prose h1 {
-  font-family: var(--font-title);
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 1.5rem 0 0.6rem;
-  color: #1a1714;
-  letter-spacing: -0.02em;
-}
-.prose h2 {
-  font-family: var(--font-title);
-  font-size: 1.35rem;
-  font-weight: 600;
-  margin: 1.2rem 0 0.4rem;
-  color: #1a1714;
-  letter-spacing: -0.01em;
-}
-.prose h3 {
-  font-family: var(--font-body);
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin: 1rem 0 0.3rem;
-  color: #1a1714;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 0.85rem;
-}
-.prose p  { margin: 0.5rem 0; line-height: 1.75; }
-.prose ul { list-style: disc;    padding-left: 1.5rem; margin: 0.6rem 0; }
-.prose ol { list-style: decimal; padding-left: 1.5rem; margin: 0.6rem 0; }
-.prose li { margin: 0.25rem 0; line-height: 1.7; }
-.prose blockquote {
-  border-left: 3px solid #d4c5b0;
-  padding-left: 1rem;
-  color: #7c6e5e;
-  margin: 0.75rem 0;
-  font-style: italic;
-}
-.prose a { color: #6b5a9e; text-decoration: underline; }
-.prose a:hover { color: #4e3f78; }
-.prose img { max-width: 100%; border-radius: 10px; margin: 0.75rem 0; }
-
-.prose code {
-  background: #f3ede4;
-  color: #c2410c;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.875em;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  border: 1px solid #e8ddd0;
-}
-.prose pre {
-  background: #2d2018;
-  color: #f5e6c8;
-  padding: 1rem 1.25rem;
-  border-radius: 10px;
-  overflow-x: auto;
-  margin: 0.75rem 0;
-  font-size: 0.875em;
-  line-height: 1.6;
-}
-.prose pre code {
-  background: transparent;
-  color: inherit;
-  padding: 0;
-  border: none;
-  font-size: inherit;
+  return (
+    <div ref={setNodeRef} style={style}>
+      {isOver && overPosition === 'before' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
+      <div
+        className={`flex items-center gap-1 pr-1 rounded-md cursor-pointer group transition-colors
+          ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}
+          ${isOver && overPosition === 'inside' ? 'sidebar-drop-inside' : ''}`}
+        style={{ paddingLeft: `${depth * 14 + 6}px`, minHeight: isMobile ? '48px' : '32px' }}
+      >
+        {!isMobile && (
+          <button {...attributes} {...listeners}
+            className="w-4 h-full flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
+            style={{ color: 'var(--text-muted)' }}>
+            ⠿
+          </button>
+        )}
+        <button onClick={() => onToggle(page.id)}
+          className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs"
+          style={{ color: 'var(--text-muted)' }}>
+          {hasChildren ? (isOpen ? '▾' : '▸') : ''}
+        </button>
+        <span className="text-sm flex-shrink-0">{page.icon || '📄'}</span>
+        {renaming ? (
+          <input
+            ref={renameRef}
+            value={renameValue}
+            onChange={e => setRenameValue(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commitRename()
+              if (e.key === 'Escape') { setRenameValue(page.title); setRenaming(false) }
+              e.stopPropagation()
+            }}
+            className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0"
+            style={{ background: 'var(--card-bg)', border: '1px solid #60a5fa', color: 'var(--text-primary)' }}
+            onClick={e => e.stopPropagation()}
+          />
+        ) : (
+          <span
+            onClick={() => onSelect(page)}
+            onDoubleClick={() => { setRenameValue(page.title); setRenaming(true) }}
+            className="flex-1 text-sm truncate py-1 select-none"
+            style={{ color: 'var(--text-secondary)' }}
+            title={isMobile ? undefined : 'Double-clic pour renommer'}>
+            {page.title || 'Sans titre'}
+          </span>
+        )}
+        {!renaming && (
+          <div className={`flex items-center gap-0.5 flex-shrink-0 ${isMobile ? '' : 'opacity-0 group-hover:opacity-100'}`}>
+            <button onClick={() => onAdd(page.id)}
+              className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn"
+              title="Ajouter une sous-page">+</button>
+          </div>
+        )}
+      </div>
+      {isOver && overPosition === 'after' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
+    </div>
+  )
 }
 
-/* Tables */
-.prose table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
-.prose table td, .prose table th { min-width: 2em; border: 1px solid #e8ddd0; padding: 6px 10px; vertical-align: top; box-sizing: border-box; position: relative; font-size: 0.9em; }
-.prose table th { background: #f7f2ec; font-weight: 600; text-align: left; }
-.prose table tr:hover td { background: #fdf9f5; }
-.prose table .selectedCell:after { z-index: 2; position: absolute; content: ""; left: 0; right: 0; top: 0; bottom: 0; background: rgba(107,90,158,0.08); pointer-events: none; }
-.prose table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background: #6b5a9e; cursor: col-resize; z-index: 20; }
-.prose .tableWrapper { overflow-x: auto; margin: 1rem 0; }
+// ─── PageTree ─────────────────────────────────────────────────────────────────
+export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
+  pages: Page[], parentId: string | null, depth: number, selectedId: string | null,
+  onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
+  onToggle: (id: string) => void, openMap: Record<string, boolean>,
+  overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
+  isMobile: boolean,
+  onRename: (id: string, title: string) => void,
+  onToggleFavorite: (id: string) => void,
+}) {
+  const children = pages
+    .filter(p => p.parent_id === parentId && !p.deleted_at)
+    .sort((a, b) => a.position - b.position)
 
-/* Lien page interne */
-.page-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #f0ebe4;
-  color: #6b5a9e;
-  border: 1px solid #d9cfc4;
-  border-radius: 5px;
-  padding: 1px 6px;
-  font-size: 0.9em;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.15s;
+  if (!children.length) return null
+  return (
+    <div>
+      {children.map(page => (
+        <div key={page.id}>
+          <SortablePageItem
+            page={page} pages={pages} depth={depth} selectedId={selectedId}
+            onSelect={onSelect} onAdd={onAdd} onToggle={onToggle}
+            isOpen={!!openMap[page.id]} overId={overId} overPosition={overPosition}
+            isMobile={isMobile} onRename={onRename}
+            onToggleFavorite={onToggleFavorite}
+          />
+          {openMap[page.id] && (
+            <PageTree pages={pages} parentId={page.id} depth={depth + 1}
+              selectedId={selectedId} onSelect={onSelect} onAdd={onAdd}
+              onToggle={onToggle} openMap={openMap} overId={overId} overPosition={overPosition}
+              isMobile={isMobile} onRename={onRename}
+              onToggleFavorite={onToggleFavorite} />
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
-.page-link:hover { background: #e5ddd6; }
 
-/* ─── Sidebar ────────────────────────────────────────────────────────────────*/
-.sidebar-scroll::-webkit-scrollbar { width: 4px; }
-.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-.sidebar-scroll::-webkit-scrollbar-thumb { background: #d4c5b0; border-radius: 4px; }
-
-/* ─── Toolbar éditeur ────────────────────────────────────────────────────────*/
-.editor-toolbar {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background: var(--card-bg);
-  border-radius: 0 0 16px 16px;
+// ─── FavoritesSection ─────────────────────────────────────────────────────────
+export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite }: {
+  pages: Page[]
+  selectedId: string | null
+  onSelect: (p: Page) => void
+  onToggleFavorite: (id: string) => void
+}) {
+  const favorites = pages.filter(p => p.favorite && !p.deleted_at)
+  if (!favorites.length) return null
+  return (
+    <div className="mb-1">
+      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider select-none" style={{ color: 'var(--text-muted)' }}>Favoris</div>
+      {favorites.map(page => (
+        <div key={page.id} onClick={() => onSelect(page)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
+            ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}`}
+          style={{ minHeight: '30px' }}>
+          <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
+          <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
+          <button onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
+            style={{ color: '#f59e0b' }} title="Retirer des favoris">★</button>
+        </div>
+      ))}
+      <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--border)' }} />
+    </div>
+  )
 }
-.editor-toolbar::-webkit-scrollbar { display: none; }
+
+// ─── Breadcrumb ───────────────────────────────────────────────────────────────
+export function Breadcrumb({ pages, selected, onSelect }: {
+  pages: Page[], selected: Page | null, onSelect: (p: Page) => void
+}) {
+  if (!selected) return null
+  const crumbs: Page[] = []
+  let current: Page | undefined = selected
+  while (current) {
+    crumbs.unshift(current)
+    current = pages.find(p => p.id === current!.parent_id)
+  }
+  const ancestors = crumbs.slice(0, -1)
+  if (ancestors.length === 0) return null
+  return (
+    <div className="hidden md:flex items-center gap-1 text-sm px-4 md:px-8 py-1.5 overflow-x-auto" style={{ maxWidth: '720px', color: 'var(--text-muted)' }}>
+      {ancestors.map((crumb, i) => (
+        <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
+          {i > 0 && <span style={{ color: 'var(--text-faint)' }}>/</span>}
+          <button onClick={() => onSelect(crumb)} className="transition-colors flex items-center gap-1 hover:opacity-80">
+            <span>{crumb.icon || '📄'}</span>
+            <span className="whitespace-nowrap">{crumb.title || 'Sans titre'}</span>
+          </button>
+        </span>
+      ))}
+      <span style={{ color: 'var(--text-faint)' }}>/</span>
+    </div>
+  )
+}
