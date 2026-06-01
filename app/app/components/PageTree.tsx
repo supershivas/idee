@@ -36,18 +36,20 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
       {isOver && overPosition === 'before' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
       <div
         className={`flex items-center gap-1 pr-1 rounded-md cursor-pointer group transition-colors
-          ${isSelected ? 'bg-gray-200' : 'hover:bg-gray-200/60'}
-          ${isOver && overPosition === 'inside' ? 'bg-blue-50 ring-1 ring-blue-300' : ''}`}
+          ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}
+          ${isOver && overPosition === 'inside' ? 'sidebar-drop-inside' : ''}`}
         style={{ paddingLeft: `${depth * 14 + 6}px`, minHeight: isMobile ? '48px' : '32px' }}
       >
         {!isMobile && (
           <button {...attributes} {...listeners}
-            className="w-4 h-full flex items-center justify-center text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100">
+            className="w-4 h-full flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
+            style={{ color: 'var(--text-muted)' }}>
             ⠿
           </button>
         )}
         <button onClick={() => onToggle(page.id)}
-          className="w-4 h-4 flex items-center justify-center text-gray-400 flex-shrink-0 text-xs">
+          className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs"
+          style={{ color: 'var(--text-muted)' }}>
           {hasChildren ? (isOpen ? '▾' : '▸') : ''}
         </button>
         <span className="text-sm flex-shrink-0">{page.icon || '📄'}</span>
@@ -62,14 +64,16 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
               if (e.key === 'Escape') { setRenameValue(page.title); setRenaming(false) }
               e.stopPropagation()
             }}
-            className="flex-1 text-sm outline-none bg-white border border-blue-300 rounded px-1 py-0.5 min-w-0"
+            className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0"
+            style={{ background: 'var(--card-bg)', border: '1px solid #60a5fa', color: 'var(--text-primary)' }}
             onClick={e => e.stopPropagation()}
           />
         ) : (
           <span
             onClick={() => onSelect(page)}
             onDoubleClick={() => { setRenameValue(page.title); setRenaming(true) }}
-            className="flex-1 text-sm truncate py-1 text-gray-700 select-none"
+            className="flex-1 text-sm truncate py-1 select-none"
+            style={{ color: 'var(--text-secondary)' }}
             title={isMobile ? undefined : 'Double-clic pour renommer'}>
             {page.title || 'Sans titre'}
           </span>
@@ -77,7 +81,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
         {!renaming && (
           <div className={`flex items-center gap-0.5 flex-shrink-0 ${isMobile ? '' : 'opacity-0 group-hover:opacity-100'}`}>
             <button onClick={() => onAdd(page.id)}
-              className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 text-sm"
+              className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn"
               title="Ajouter une sous-page">+</button>
           </div>
         )}
@@ -137,20 +141,20 @@ export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite
   if (!favorites.length) return null
   return (
     <div className="mb-1">
-      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider select-none">Favoris</div>
+      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider select-none" style={{ color: 'var(--text-muted)' }}>Favoris</div>
       {favorites.map(page => (
         <div key={page.id} onClick={() => onSelect(page)}
           className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
-            ${selectedId === page.id ? 'bg-gray-200' : 'hover:bg-gray-200/60'}`}
+            ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}`}
           style={{ minHeight: '30px' }}>
           <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
-          <span className="flex-1 truncate text-gray-700 text-sm">{page.title || 'Sans titre'}</span>
+          <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
           <button onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
-            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 text-xs flex-shrink-0 transition-opacity"
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
             style={{ color: '#f59e0b' }} title="Retirer des favoris">★</button>
         </div>
       ))}
-      <div className="mx-2 mt-1.5 mb-0.5 border-t border-gray-200" />
+      <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--border)' }} />
     </div>
   )
 }
@@ -169,17 +173,17 @@ export function Breadcrumb({ pages, selected, onSelect }: {
   const ancestors = crumbs.slice(0, -1)
   if (ancestors.length === 0) return null
   return (
-    <div className="hidden md:flex items-center gap-1 text-sm text-gray-400 px-4 md:px-8 py-1.5 overflow-x-auto" style={{ maxWidth: '720px' }}>
+    <div className="hidden md:flex items-center gap-1 text-sm px-4 md:px-8 py-1.5 overflow-x-auto" style={{ maxWidth: '720px', color: 'var(--text-muted)' }}>
       {ancestors.map((crumb, i) => (
         <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
-          {i > 0 && <span className="text-gray-300">/</span>}
-          <button onClick={() => onSelect(crumb)} className="hover:text-gray-700 transition-colors flex items-center gap-1">
+          {i > 0 && <span style={{ color: 'var(--text-faint)' }}>/</span>}
+          <button onClick={() => onSelect(crumb)} className="transition-colors flex items-center gap-1 hover:opacity-80">
             <span>{crumb.icon || '📄'}</span>
             <span className="whitespace-nowrap">{crumb.title || 'Sans titre'}</span>
           </button>
         </span>
       ))}
-      <span className="text-gray-300">/</span>
+      <span style={{ color: 'var(--text-faint)' }}>/</span>
     </div>
   )
 }
