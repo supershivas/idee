@@ -1,207 +1,178 @@
 'use client'
 import { useState, useRef } from 'react'
-import { Page } from '../types'
-import { createClient } from '@/lib/supabase/client'
+import { Page, formatSubtitle } from '../types'
+import EmojiPicker from '../EmojiPicker'
 
-const PAGE_SIZE_OPTIONS = [10, 15, 20]
+const PAGE_SIZE = 10
 
-export function JournalList({
-  entries,
-  selectedId,
-  onSelect,
-  onAdd,
-}: {
+// ─── JournalList ──────────────────────────────────────────────────────────────
+export function JournalList({ entries, selectedId, onSelect, onAdd }: {
   entries: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
   onAdd: () => void
 }) {
-  const [pageSize, setPageSize] = useState(10)
-  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(PAGE_SIZE)
 
   const sorted = [...entries].sort((a, b) =>
-    new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
   )
 
-  const total = sorted.length
-  const shown = sorted.slice(0, page * pageSize)
-  const hasMore = shown.length < total
+  const visible = sorted.slice(0, limit)
+  const hasMore = sorted.length > limit
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 md:px-8 pt-6 pb-2">
-        <h2
-          className="text-2xl font-bold"
-          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
-        >
-          📓 Journal
-        </h2>
-        <div className="flex items-center gap-2">
-          {/* Page size selector */}
-          <select
-            value={pageSize}
-            onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-            className="text-xs rounded-md px-2 py-1 outline-none"
-            style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-          >
-            {PAGE_SIZE_OPTIONS.map(n => (
-              <option key={n} value={n}>{n} / page</option>
-            ))}
-          </select>
+    <div className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
+      <div className="page-card my-2 md:my-4 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <span className="text-2xl">📓</span>
+          <h1 className="page-title text-2xl">Journal</h1>
+          <span className="text-xs ml-auto mr-3" style={{ color: 'var(--text-muted)' }}>
+            {sorted.length} entrée{sorted.length !== 1 ? 's' : ''}
+          </span>
           <button
             onClick={onAdd}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex-shrink-0"
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
           >
-            <span>✏️</span>
-            <span>Nouvelle entrée</span>
+            <span>✏️</span> Nouvelle entrée
           </button>
         </div>
-      </div>
 
-      {/* Entries */}
-      <div className="px-4 md:px-6 pb-6">
-        {sorted.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-3xl mb-3">📝</p>
-            <p className="text-base font-medium mb-1" style={{ color: 'var(--empty-title)' }}>Aucune entrée</p>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Commencez à écrire votre journal.</p>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-1 mt-2">
-              {shown.map(entry => (
-                <button
-                  key={entry.id}
-                  onClick={() => onSelect(entry)}
-                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
-                  style={{
-                    background: selectedId === entry.id ? 'var(--selected-bg)' : 'transparent',
-                    color: 'var(--text-primary)',
-                  }}
-                  onMouseEnter={e => { if (selectedId !== entry.id) e.currentTarget.style.background = 'var(--hover-bg)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = selectedId === entry.id ? 'var(--selected-bg)' : 'transparent' }}
-                >
-                  <span className="text-lg flex-shrink-0">{entry.icon || '📝'}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{entry.title || 'Sans titre'}</p>
-                  </div>
-                  <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
-                    {entry.created_at ? new Date(entry.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}
-                  </span>
-                </button>
-              ))}
+        {/* Liste */}
+        <div>
+          {sorted.length === 0 && (
+            <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-3xl mb-2">📝</p>
+              <p className="text-sm">Aucune entrée pour l'instant.</p>
             </div>
-
-            {hasMore && (
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => setPage(p => p + 1)}
-                  className="px-4 py-2 rounded-lg text-sm transition-colors"
-                  style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                >
-                  Charger plus ({total - shown.length} restantes)
-                </button>
+          )}
+          {visible.map(entry => (
+            <button
+              key={entry.id}
+              onClick={() => onSelect(entry)}
+              className={`w-full text-left flex items-center gap-3 px-6 py-4 transition-colors journal-entry-row ${selectedId === entry.id ? 'journal-entry-selected' : ''}`}
+              style={{ borderBottom: '1px solid var(--border-light)' }}
+            >
+              <span className="text-xl flex-shrink-0">{entry.icon || '📝'}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                  {entry.title || 'Sans titre'}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {formatSubtitle(entry.updated_at)}
+                </p>
               </div>
-            )}
-          </>
+              <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Charger plus */}
+        {hasMore && (
+          <div className="px-6 py-3" style={{ borderTop: '1px solid var(--border-light)' }}>
+            <button
+              onClick={() => setLimit(l => l + PAGE_SIZE)}
+              className="w-full text-sm py-2 rounded-lg transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              Charger plus ({sorted.length - limit} restantes)
+            </button>
+          </div>
         )}
       </div>
     </div>
   )
 }
 
-export function JournalEntryHeader({
-  entry,
-  onBack,
-  onTitleChange,
-  onIconChange,
-  saving,
-  isMobile,
-}: {
+// ─── JournalEntryHeader ───────────────────────────────────────────────────────
+export function JournalEntryHeader({ entry, onBack, onTitleChange, onIconChange, onDateChange, saving, isMobile }: {
   entry: Page
   onBack: () => void
-  onTitleChange: (t: string) => void
-  onIconChange: (icon: string) => void
+  onTitleChange: (v: string) => void
+  onIconChange: (emoji: string) => void
+  onDateChange?: (isoDate: string) => void
   saving: boolean
-  isMobile: boolean
+  isMobile?: boolean
 }) {
-  const [editingDate, setEditingDate] = useState(false)
-  // Parse date from title (format: "lundi 2 juin 2025" ou ISO)
-  // We store the display title and allow editing via a date input
+  const [showIconPicker, setShowIconPicker] = useState(false)
   const dateInputRef = useRef<HTMLInputElement>(null)
 
-  // Try to derive a date value for the input from the entry's created_at
-  const isoDate = entry.created_at ? entry.created_at.slice(0, 10) : ''
+  const dateValue = entry.updated_at ? entry.updated_at.slice(0, 10) : ''
 
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value // yyyy-mm-dd
-    if (!val) return
-    const d = new Date(val + 'T12:00:00')
-    const newTitle = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    onTitleChange(newTitle)
-    setEditingDate(false)
+    if (!e.target.value || !onDateChange) return
+    const existing = new Date(entry.updated_at)
+    const [y, m, d] = e.target.value.split('-').map(Number)
+    existing.setFullYear(y, m - 1, d)
+    onDateChange(existing.toISOString())
   }
 
   return (
-    <div className="px-6 pt-3 pb-1">
-      {/* Back link */}
+    <div className="px-6 pt-4 pb-2 flex-shrink-0">
+      {/* Lien retour journal */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1 text-sm mb-3 transition-opacity hover:opacity-70"
+        className="flex items-center gap-1 text-xs mb-3 transition-opacity hover:opacity-70"
         style={{ color: 'var(--text-muted)' }}
       >
-        <span>←</span>
-        <span>Journal</span>
+        ← Journal
       </button>
 
-      {/* Title row */}
       <div className="flex items-start gap-3">
-        <span className="text-4xl flex-shrink-0" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {entry.icon || '📝'}
-        </span>
-        <div className="flex-1 min-w-0">
-          {/* Title = date — click to edit date */}
-          <div className="flex items-center gap-2 group/date">
-            <h1
-              className="page-title text-2xl md:text-3xl font-bold cursor-pointer hover:opacity-70 transition-opacity"
-              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
-              onClick={() => { setEditingDate(true); setTimeout(() => dateInputRef.current?.focus(), 50) }}
-              title="Cliquer pour changer la date"
-            >
-              {entry.title || 'Sans titre'}
-            </h1>
-            <button
-              onClick={() => { setEditingDate(true); setTimeout(() => dateInputRef.current?.focus(), 50) }}
-              className="opacity-0 group-hover/date:opacity-100 transition-opacity text-sm"
-              style={{ color: 'var(--text-muted)' }}
-              title="Changer la date"
-            >✏️</button>
-          </div>
-          {editingDate && (
-            <div className="mt-1">
-              <input
-                ref={dateInputRef}
-                type="date"
-                defaultValue={isoDate}
-                onChange={handleDateChange}
-                onBlur={() => setEditingDate(false)}
-                className="text-sm rounded-md px-2 py-1 outline-none"
-                style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+        <div className="relative flex-shrink-0">
+          <button
+            onClick={() => setShowIconPicker(v => !v)}
+            className="text-4xl hover:opacity-70 transition-opacity"
+            style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {entry.icon || '📝'}
+          </button>
+          {showIconPicker && (
+            <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}>
+              <EmojiPicker
+                onSelect={emoji => { onIconChange(emoji); setShowIconPicker(false) }}
+                onClose={() => setShowIconPicker(false)}
               />
             </div>
           )}
         </div>
-        {saving && (
-          <span className="w-4 h-4 flex items-center justify-center flex-shrink-0 mt-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-          </span>
-        )}
+        <div className="flex-1 min-w-0">
+          <input
+            className="page-title w-full text-2xl md:text-3xl outline-none bg-transparent"
+            style={{ caretColor: 'var(--text-primary)' }}
+            value={entry.title}
+            onChange={e => onTitleChange(e.target.value)}
+            placeholder="Sans titre"
+          />
+          {/* Date cliquable → date picker natif */}
+          <div className="flex items-center gap-1 mt-1">
+            <button
+              onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
+              className="text-xs transition-opacity hover:opacity-70"
+              style={{ color: 'var(--text-muted)' }}
+              title="Modifier la date"
+            >
+              {formatSubtitle(entry.updated_at)} ✎
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={dateValue}
+              onChange={handleDateChange}
+              className="sr-only"
+              tabIndex={-1}
+            />
+          </div>
+        </div>
+        <span className={`w-4 h-4 flex items-center justify-center mt-2 transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+        </span>
       </div>
     </div>
   )
