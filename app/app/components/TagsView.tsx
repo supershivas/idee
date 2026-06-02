@@ -5,7 +5,8 @@ import { Page } from '../types'
 // ─── TagBadge ─────────────────────────────────────────────────────────────────
 export function TagBadge({ tag, onRemove }: { tag: string, onRemove?: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+      style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
       #{tag}
       {onRemove && (
         <button onClick={onRemove} className="hover:text-red-400 transition-colors leading-none">×</button>
@@ -14,7 +15,7 @@ export function TagBadge({ tag, onRemove }: { tag: string, onRemove?: () => void
   )
 }
 
-// ─── TagsInput — sous le titre d'une page ────────────────────────────────────
+// ─── TagsInput ────────────────────────────────────────────────────────────────
 export function TagsInput({ tags, onChange }: {
   tags: string[]
   onChange: (tags: string[]) => void
@@ -40,7 +41,7 @@ export function TagsInput({ tags, onChange }: {
   }
 
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 px-6 pb-3 min-h-[28px]`}>
+    <div className="flex flex-wrap items-center gap-1.5 px-6 pb-3 min-h-[28px]">
       {tags.map(tag => (
         <TagBadge key={tag} tag={tag} onRemove={() => onChange(tags.filter(t => t !== tag))} />
       ))}
@@ -51,21 +52,20 @@ export function TagsInput({ tags, onChange }: {
         onBlur={() => { if (input.trim()) addTag(input); setFocused(false) }}
         onFocus={() => setFocused(true)}
         placeholder={tags.length === 0 ? '+ tag' : ''}
-        className="text-xs text-gray-400 outline-none bg-transparent placeholder-gray-300 w-16 min-w-0"
-        style={{ width: input ? `${input.length + 2}ch` : undefined }}
+        className="text-xs outline-none bg-transparent min-w-0"
+        style={{ color: 'var(--text-muted)', width: input ? `${input.length + 2}ch` : undefined }}
       />
     </div>
   )
 }
 
-// ─── TagsView — vue "pages par tag" ──────────────────────────────────────────
+// ─── TagsView ─────────────────────────────────────────────────────────────────
 export function TagsView({ pages, onSelect }: {
   pages: Page[]
   onSelect: (p: Page) => void
 }) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
 
-  // Collecte tous les tags uniques
   const allTags = Array.from(
     new Set(pages.flatMap(p => p.tags || []))
   ).sort()
@@ -78,34 +78,35 @@ export function TagsView({ pages, onSelect }: {
     <div className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
       <div className="page-card my-2 md:my-4 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
+        <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <span className="text-2xl">🏷️</span>
-          <h1 className="page-title text-2xl text-gray-900">Tags</h1>
-          <span className="text-xs text-gray-400 ml-auto">{allTags.length} tag{allTags.length !== 1 ? 's' : ''}</span>
+          <h1 className="page-title text-2xl">Tags</h1>
+          <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>{allTags.length} tag{allTags.length !== 1 ? 's' : ''}</span>
         </div>
 
         {allTags.length === 0 && (
-          <div className="text-center text-gray-400 py-12">
+          <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
             <p className="text-3xl mb-2">🏷️</p>
             <p className="text-sm">Aucun tag pour l'instant.</p>
-            <p className="text-xs text-gray-300 mt-1">Ajoute des tags sous le titre d'une page.</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>Ajoute des tags sous le titre d'une page.</p>
           </div>
         )}
 
         {/* Liste des tags */}
         {allTags.length > 0 && (
-          <div className="px-6 py-4 flex flex-wrap gap-2 border-b border-gray-50">
+          <div className="px-6 py-4 flex flex-wrap gap-2" style={{ borderBottom: '1px solid var(--border-light)' }}>
             {allTags.map(tag => (
               <button
                 key={tag}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-colors
-                  ${selectedTag === tag
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                style={{
+                  background: selectedTag === tag ? 'var(--btn-primary-bg)' : 'var(--selected-bg)',
+                  color: selectedTag === tag ? 'var(--btn-primary-fg)' : 'var(--text-secondary)',
+                }}
               >
                 #{tag}
-                <span className={`text-xs ml-0.5 ${selectedTag === tag ? 'text-gray-300' : 'text-gray-400'}`}>
+                <span className="text-xs ml-0.5" style={{ color: selectedTag === tag ? 'var(--btn-primary-fg)' : 'var(--text-muted)', opacity: 0.7 }}>
                   {pages.filter(p => (p.tags || []).includes(tag) && !p.deleted_at).length}
                 </span>
               </button>
@@ -115,25 +116,28 @@ export function TagsView({ pages, onSelect }: {
 
         {/* Pages du tag sélectionné */}
         {selectedTag && (
-          <div className="divide-y divide-gray-50">
+          <div>
             {filtered.length === 0 && (
-              <p className="text-sm text-gray-400 px-6 py-4">Aucune page avec ce tag.</p>
+              <p className="text-sm px-6 py-4" style={{ color: 'var(--text-muted)' }}>Aucune page avec ce tag.</p>
             )}
             {filtered.map(page => (
               <button key={page.id} onClick={() => onSelect(page)}
-                className="w-full text-left flex items-center gap-3 px-6 py-3 hover:bg-gray-50 transition-colors">
+                className="w-full text-left flex items-center gap-3 px-6 py-3 transition-colors"
+                style={{ borderBottom: '1px solid var(--border-light)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                 <span className="text-lg flex-shrink-0">{page.icon || '📄'}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{page.title || 'Sans titre'}</p>
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</p>
                   {(page.tags || []).length > 1 && (
                     <div className="flex gap-1 mt-0.5 flex-wrap">
                       {(page.tags || []).filter(t => t !== selectedTag).map(t => (
-                        <span key={t} className="text-[10px] text-gray-400">#{t}</span>
+                        <span key={t} className="text-[10px]" style={{ color: 'var(--text-muted)' }}>#{t}</span>
                       ))}
                     </div>
                   )}
                 </div>
-                <span className="text-gray-300 text-xs flex-shrink-0">→</span>
+                <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>
               </button>
             ))}
           </div>
