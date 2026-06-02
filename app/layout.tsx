@@ -1,14 +1,36 @@
 import './globals.css'
 
-export const metadata = { title: 'Idée', description: 'Home-made note app', icons: {
+export const metadata = {
+  title: 'Idée',
+  description: 'Home-made note app',
+  icons: {
     icon: '/favicon-32x32.png',
-    apple: '/favicon-512x512.png',
-  } }
+  },
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="fr">
-      <body className="bg-gray-50 text-gray-900">{children}</body>
+      <head>
+        {/* Favicon standard */}
+        <link rel="icon" href="/favicon-32x32.png" />
+
+        {/* iOS / iPadOS home screen icon (CRUCIAL) */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+        {/* Optionnel mais propre pour iOS */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Idée" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
+
+      <body className="bg-gray-50 text-gray-900">
+        {children}
+      </body>
     </html>
   )
 }
