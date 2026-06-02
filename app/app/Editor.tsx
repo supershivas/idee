@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
@@ -118,6 +119,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Underline,
       Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
       Link.configure({
         openOnClick: false,
@@ -259,12 +261,15 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     <>
       <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
       <Sep />
       <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien" />
       <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
@@ -279,6 +284,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     <>
       <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
@@ -286,6 +292,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="• Liste" title="Liste à puces" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1. Liste" title="Numérotée" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑ Cases" title="Cases à cocher" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Code" />
@@ -319,6 +326,9 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
               className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('bold') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>B</button>
             <button onClick={() => editor.chain().focus().toggleItalic().run()}
               className={`px-2 py-1 text-xs italic rounded-lg transition-colors ${editor.isActive('italic') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>I</button>
+            <button onClick={() => editor.chain().focus().toggleUnderline().run()}
+              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('underline') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
+              style={{ textDecoration: 'underline' }}>U</button>
             <button onClick={() => editor.chain().focus().toggleStrike().run()}
               className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('strike') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}><s>S</s></button>
             <button onClick={() => editor.chain().focus().toggleCode().run()}
@@ -413,7 +423,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         </div>
       )}
 
-      {/* Styles ProseMirror inline — réactifs aux variables CSS */}
+      {/* Styles ProseMirror inline */}
       <style>{`
         .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
         .ProseMirror table td, .ProseMirror table th {
@@ -441,6 +451,15 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         .ProseMirror a:hover { color: var(--prose-link-hover); }
         .ProseMirror a.page-link { color: var(--pagelink-fg); text-decoration: underline; cursor: pointer; font-weight: 500; }
         .ProseMirror a.page-link:hover { background: var(--pagelink-hover); border-radius: 3px; }
+        /* Task list */
+        .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
+        .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
+        .ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 0.2rem; cursor: pointer; }
+        .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] { cursor: pointer; width: 1rem; height: 1rem; }
+        .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+        .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { opacity: 0.6; text-decoration: line-through; }
+        /* Drag handle spacing */
+        .drag-handle { margin-left: -28px; padding-right: 8px; }
         @media (max-width: 767px) { .ProseMirror { font-size: 16px; line-height: 1.7; } .ProseMirror p { margin: 0.6em 0; } }
       `}</style>
     </div>
