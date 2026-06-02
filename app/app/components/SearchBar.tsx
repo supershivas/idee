@@ -14,36 +14,43 @@ export function SearchBar({ pages, onSelect }: { pages: Page[], onSelect: (p: Pa
     : []
 
   return (
-    <div className="relative px-2 py-2 border-b border-gray-200">
-      <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
-        <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
+    <div className="relative px-2 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--selected-bg)' }}>
+        <span className="text-sm flex-shrink-0" style={{ color: 'var(--text-muted)' }}>🔍</span>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Rechercher..."
-          style={{ background: 'transparent' }}
-          className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400 min-w-0"
+          className="flex-1 text-sm outline-none bg-transparent min-w-0"
+          style={{ color: 'var(--text-primary)' }}
         />
         {query && (
-          <button onClick={() => setQuery('')} className="text-gray-400 w-6 h-6 flex items-center justify-center text-sm flex-shrink-0">✕</button>
+          <button onClick={() => setQuery('')}
+            className="w-6 h-6 flex items-center justify-center text-sm flex-shrink-0"
+            style={{ color: 'var(--text-muted)' }}>✕</button>
         )}
       </div>
       {focused && results.length > 0 && (
-        <div className="absolute left-2 right-2 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 overflow-hidden">
+        <div className="absolute left-2 right-2 top-full mt-1 rounded-lg shadow-xl z-50 overflow-hidden"
+          style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
           {results.map(page => (
             <button key={page.id} onClick={() => { onSelect(page); setQuery('') }}
-              className="w-full flex items-center gap-2 px-3 py-3 text-left hover:bg-gray-50 border-b last:border-0">
+              className="w-full flex items-center gap-2 px-3 py-3 text-left transition-colors"
+              style={{ borderBottom: '1px solid var(--border-light)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <span className="flex-shrink-0">{page.icon || '📄'}</span>
-              <p className="text-sm font-medium text-gray-800 truncate">{page.title || 'Sans titre'}</p>
+              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</p>
             </button>
           ))}
         </div>
       )}
       {focused && query.length > 1 && results.length === 0 && (
-        <div className="absolute left-2 right-2 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 p-3">
-          <p className="text-sm text-gray-400 text-center">Aucun résultat</p>
+        <div className="absolute left-2 right-2 top-full mt-1 rounded-lg shadow-xl z-50 p-3"
+          style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+          <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>Aucun résultat</p>
         </div>
       )}
     </div>
