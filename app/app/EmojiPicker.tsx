@@ -6,7 +6,9 @@ export default function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: s
   const [Picker, setPicker] = useState<any>(null)
   const [data, setData] = useState<any>(null)
 
-  // Import dynamique pour éviter les erreurs TypeScript avec @emoji-mart
+  // Détecte le thème courant
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+
   useEffect(() => {
     Promise.all([
       import('@emoji-mart/react'),
@@ -34,10 +36,11 @@ export default function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: s
           data={data}
           onEmojiSelect={(emoji: any) => onSelect(emoji.native)}
           locale="fr"
-          theme="light"
+          theme={isDark ? 'dark' : 'light'}
         />
       ) : (
-        <div className="w-64 h-40 flex items-center justify-center bg-white rounded-xl border text-sm text-gray-400">
+        <div className="w-64 h-40 flex items-center justify-center rounded-xl text-sm"
+          style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
           Chargement…
         </div>
       )}
