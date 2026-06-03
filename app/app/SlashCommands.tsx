@@ -8,26 +8,61 @@ import 'tippy.js/dist/tippy.css'
 import { Page } from './types'
 
 // ─── PagePicker ───────────────────────────────────────────────────────────────
-const PagePicker = forwardRef((props: { pages: Page[], onSelect: (page: Page) => void, onClose: () => void }, ref) => {
+const PagePicker = forwardRef((props: {
+  pages: Page[]
+  onSelect: (page: Page) => void
+  onClose: () => void
+}, ref) => {
   const [query, setQuery] = useState('')
+  const [idx, setIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => { inputRef.current?.focus() }, [])
+
   const filtered = props.pages.filter(p =>
     (p.title || 'Sans titre').toLowerCase().includes(query.toLowerCase())
   )
+
+  useEffect(() => { setIdx(0) }, [query])
+
+  useImperativeHandle(ref, () => ({
+    onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+      if (event.key === 'ArrowDown') { setIdx(i => Math.min(i + 1, filtered.length - 1)); return true }
+      if (event.key === 'ArrowUp') { setIdx(i => Math.max(i - 1, 0)); return true }
+      if (event.key === 'Enter') { filtered[idx] && props.onSelect(filtered[idx]); return true }
+      if (event.key === 'Escape') { props.onClose(); return true }
+      return false
+    }
+  }))
+
   return (
-    <div className="bg-white border rounded-xl shadow-2xl overflow-hidden w-64 z-50">
-      <div className="p-2 border-b">
-        <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
+    <div className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden w-64 z-50">
+      <div className="p-2 border-b border-gray-100">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
           placeholder="Rechercher une page..."
           className="w-full text-sm outline-none px-2 py-1.5"
-          onKeyDown={e => { if (e.key === 'Escape') props.onClose() }} />
+          onKeyDown={e => {
+            if (e.key === 'Escape') { e.stopPropagation(); props.onClose() }
+            if (e.key === 'ArrowDown') { e.preventDefault(); setIdx(i => Math.min(i + 1, filtered.length - 1)) }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setIdx(i => Math.max(i - 1, 0)) }
+            if (e.key === 'Enter') { e.preventDefault(); filtered[idx] && props.onSelect(filtered[idx]) }
+          }}
+        />
       </div>
       <div className="max-h-48 overflow-y-auto">
-        {filtered.length === 0 && <p className="text-xs text-gray-400 px-3 py-2">Aucune page trouvée</p>}
-        {filtered.map(page => (
-          <button key={page.id} onClick={() => props.onSelect(page)}
-            className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-gray-50 text-sm border-b border-gray-50 last:border-0">
+        {filtered.length === 0 && (
+          <p className="text-xs text-gray-400 px-3 py-2">Aucune page trouvée</p>
+        )}
+        {filtered.map((page, i) => (
+          <button
+            key={page.id}
+            onClick={() => props.onSelect(page)}
+            onMouseEnter={() => setIdx(i)}
+            className={`w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm border-b border-gray-50 last:border-0 transition-colors ${i === idx ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+          >
             <span>{page.icon || '📄'}</span>
             <span className="truncate text-gray-800">{page.title?.trim() || 'Sans titre'}</span>
           </button>
@@ -73,6 +108,10 @@ const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Comma
     action: e => e.chain().focus().toggleOrderedList().run()
   },
   {
+    title: 'Cases à cocher', description: 'Liste de tâches', icon: '☑', keywords: ['todo', 'task', 'check', 'case'],
+    action: e => (e.chain().focus() as any).toggleTaskList().run()
+  },
+  {
     title: 'Citation', description: 'Bloc de citation', icon: '❝', keywords: ['quote', 'citation', 'blockquote'],
     action: e => e.chain().focus().toggleBlockquote().run()
   },
@@ -94,11 +133,11 @@ const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Comma
   },
   {
     title: 'Lien vers une page', description: 'Lien cliquable vers une page', icon: '🔗', keywords: ['lien', 'page', 'link'],
-    action: () => {} // géré spécialement — ouvre PagePicker pour lien inline
+    action: () => {} // géré spécialement
   },
   {
     title: 'Bloc sous-page', description: 'Insérer une sous-page en bloc', icon: '📄', keywords: ['page', 'sous', 'bloc', 'embed'],
-    action: () => {} // géré spécialement — ouvre PagePicker pour bloc subpage
+    action: () => {} // géré spécialement
   },
   {
     title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: '＋', keywords: ['page', 'nouveau', 'créer', 'enfant'],
@@ -106,20 +145,16 @@ const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Comma
   },
 ]
 
-// ─── CommandList ──────────────────────────────────────────────────────────────
+// ─── Groupes ──────────────────────────────────────────────────────────────────
 type Group = { label: string, commands: Command[] }
 
 function groupCommands(filtered: Command[]): Group[] {
   const groups: Record<string, Command[]> = {
-    'Texte': [],
-    'Listes': [],
-    'Blocs': [],
-    'Médias': [],
-    'Pages': [],
+    'Texte': [], 'Listes': [], 'Blocs': [], 'Médias': [], 'Pages': [],
   }
   for (const cmd of filtered) {
     if (['Texte', 'Titre 1', 'Titre 2', 'Titre 3'].includes(cmd.title)) groups['Texte'].push(cmd)
-    else if (['Liste à puces', 'Liste numérotée'].includes(cmd.title)) groups['Listes'].push(cmd)
+    else if (['Liste à puces', 'Liste numérotée', 'Cases à cocher'].includes(cmd.title)) groups['Listes'].push(cmd)
     else if (['Citation', 'Code', 'Tableau', 'Séparateur'].includes(cmd.title)) groups['Blocs'].push(cmd)
     else if (['Image', 'Lien vers une page'].includes(cmd.title)) groups['Médias'].push(cmd)
     else groups['Pages'].push(cmd)
@@ -127,9 +162,12 @@ function groupCommands(filtered: Command[]): Group[] {
   return Object.entries(groups).filter(([, cmds]) => cmds.length > 0).map(([label, commands]) => ({ label, commands }))
 }
 
+// ─── CommandList ──────────────────────────────────────────────────────────────
 const CommandList = forwardRef((props: any, ref) => {
   const [selected, setSelected] = useState(0)
   const [showPicker, setShowPicker] = useState<'link' | 'subpage' | null>(null)
+  const pickerRef = useRef<any>(null)
+
   const allCommands = getCommands(props.onAddSubpage || (() => {}), props.onUploadImage || (() => {}))
   const query = (props.query || '').toLowerCase()
 
@@ -138,15 +176,32 @@ const CommandList = forwardRef((props: any, ref) => {
     c.description.toLowerCase().includes(query) ||
     (c.keywords || []).some(k => k.includes(query))
   )
-  const flatFiltered = filtered
+
+  // Tableau plat dans le même ordre que l'affichage par groupes
   const groups = groupCommands(filtered)
+  const flatOrdered: Command[] = groups.flatMap(g => g.commands)
+
+  useEffect(() => { setSelected(0) }, [props.query])
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
-      if (showPicker) return false
-      if (event.key === 'ArrowUp') { setSelected(s => (s + flatFiltered.length - 1) % flatFiltered.length); return true }
-      if (event.key === 'ArrowDown') { setSelected(s => (s + 1) % flatFiltered.length); return true }
-      if (event.key === 'Enter') { flatFiltered[selected] && selectItem(flatFiltered[selected]); return true }
+      // Si le picker est ouvert, déléguer au picker
+      if (showPicker && pickerRef.current) {
+        return pickerRef.current.onKeyDown({ event })
+      }
+      if (event.key === 'ArrowUp') {
+        setSelected(s => (s + flatOrdered.length - 1) % flatOrdered.length)
+        return true
+      }
+      if (event.key === 'ArrowDown') {
+        setSelected(s => (s + 1) % flatOrdered.length)
+        return true
+      }
+      if (event.key === 'Enter') {
+        const item = flatOrdered[selected]
+        if (item) selectItem(item)
+        return true
+      }
       return false
     },
   }))
@@ -170,14 +225,11 @@ const CommandList = forwardRef((props: any, ref) => {
         }
       })
     } else {
-      // Lien inline vers une page
       setShowPicker(null)
       const text = `${page.icon || '📄'} ${page.title || 'Sans titre'}`
       props.command({
         title: '',
         action: (editor: any) => {
-          // À ce stade le range du slash a déjà été supprimé par props.command
-          // On insère le texte, on sélectionne, on applique le lien
           const { from } = editor.state.selection
           editor.chain().focus().insertContent(text).run()
           const to = editor.state.selection.from
@@ -187,15 +239,15 @@ const CommandList = forwardRef((props: any, ref) => {
             .setLink({ href: `#${page.id}`, 'data-page-id': page.id, class: 'page-link', target: null, rel: null })
             .setTextSelection(to)
             .run()
-          // Insère un espace hors du lien
           editor.commands.insertContent(' ')
         }
       })
     }
   }
 
-  if (!flatFiltered.length) return null
+  if (!flatOrdered.length) return null
 
+  // Calcul de l'index global pour highlight
   let globalIndex = 0
 
   return (
@@ -203,16 +255,22 @@ const CommandList = forwardRef((props: any, ref) => {
       <div className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden w-60 z-50 max-h-80 overflow-y-auto">
         {groups.map(group => (
           <div key={group.label}>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2.5 pb-1">{group.label}</p>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2.5 pb-1">
+              {group.label}
+            </p>
             {group.commands.map(item => {
               const idx = globalIndex++
               const isSelected = idx === selected
               return (
-                <button key={item.title}
+                <button
+                  key={item.title}
                   onClick={() => selectItem(item)}
                   onMouseEnter={() => setSelected(idx)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${isSelected ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <span className="w-7 h-7 flex items-center justify-center bg-gray-100 rounded-lg text-sm font-mono font-bold text-gray-600 flex-shrink-0">{item.icon}</span>
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${isSelected ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                >
+                  <span className="w-7 h-7 flex items-center justify-center bg-gray-100 rounded-lg text-sm font-mono font-bold text-gray-600 flex-shrink-0">
+                    {item.icon}
+                  </span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
                     <p className="text-xs text-gray-400 truncate">{item.description}</p>
@@ -228,6 +286,7 @@ const CommandList = forwardRef((props: any, ref) => {
       {showPicker && (
         <div className="absolute left-full top-0 ml-2 z-50">
           <PagePicker
+            ref={pickerRef}
             pages={props.pages || []}
             onSelect={handlePageSelect}
             onClose={() => setShowPicker(null)}
