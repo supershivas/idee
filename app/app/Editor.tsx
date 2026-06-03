@@ -10,8 +10,6 @@ import Table from '@tiptap/extension-table'
 import TableHeader from '@tiptap/extension-table-header'
 import TableCell from '@tiptap/extension-table-cell'
 import TableRow from '@tiptap/extension-table-row'
-import TaskList from '@tiptap/extension-task-list'
-import TaskItem from '@tiptap/extension-task-item'
 import { Plugin } from '@tiptap/pm/state'
 import { SlashCommands } from './SlashCommands'
 import { DragHandleExtension } from './DragHandle'
@@ -121,8 +119,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const editor = useEditor({
     extensions: [
       StarterKit,
-      TaskList,
-      TaskItem.configure({ nested: true }),
       Underline,
       Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
       Link.configure({
@@ -413,8 +409,8 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       <div className="flex-1 overflow-y-auto">
         <EditorContent
           editor={editor}
-          className="prose max-w-none py-6 px-4 md:px-6 md:py-6"
-          style={{ maxWidth: '680px' }}
+          className="prose max-w-none py-6 md:py-6"
+          style={{ paddingLeft: '52px', paddingRight: '24px' }}
         />
         <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
       </div>
