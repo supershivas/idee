@@ -126,9 +126,9 @@ function BlockMenu({ x, y, editor, nodePos, view, onClose }: {
 }
 
 const BTN_SIZE = 24
-// Espace entre le bord gauche du texte et le bouton
-// 40px = assez pour ne jamais sortir de la card même avec peu de marge
-const BTN_OFFSET = 40
+// Le texte commence à 52px du bord gauche de la card.
+// 28px d'offset = bouton visible, jamais en dehors de la card.
+const BTN_OFFSET = 28
 
 function DragButton({ view, editor }: { view: EditorView, editor: any }) {
   const [pos, setPos] = useState<{ top: number, left: number } | null>(null)
