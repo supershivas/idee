@@ -10,6 +10,8 @@ import Table from '@tiptap/extension-table'
 import TableHeader from '@tiptap/extension-table-header'
 import TableCell from '@tiptap/extension-table-cell'
 import TableRow from '@tiptap/extension-table-row'
+tsximport TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
 import { Plugin } from '@tiptap/pm/state'
 import { SlashCommands } from './SlashCommands'
 import { DragHandleExtension } from './DragHandle'
@@ -119,6 +121,8 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const editor = useEditor({
     extensions: [
       StarterKit,
+      TaskList,
+      TaskItem.configure({ nested: true }),
       Underline,
       Placeholder.configure({ placeholder: 'Écris quelque chose ou tape / pour les commandes...' }),
       Link.configure({
