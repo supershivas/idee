@@ -66,6 +66,9 @@
   /* Empty state */
   --empty-fg:        #9ca3af;
   --empty-title:     #6b7280;
+
+  /* Drag handle */
+  --drag-handle-offset: 44px;
 }
 
 /* ─── Variables — Dark ───────────────────────────────────────────────────────*/
@@ -146,6 +149,8 @@ html, body {
   max-width: var(--page-width);
   width: 100%;
   margin: 0 auto;
+  /* Empêche le contenu (toolbar, etc.) de déborder */
+  overflow: hidden;
 }
 
 /* ─── Éditeur Tiptap ─────────────────────────────────────────────────────────*/
@@ -301,8 +306,8 @@ html, body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--card-bg);
-  border-radius: 0 0 16px 16px;
   border-top: 1px solid var(--border);
+  /* Pas de border-radius ici : géré par overflow:hidden sur .page-card */
 }
 .editor-toolbar::-webkit-scrollbar { display: none; }
 
@@ -321,7 +326,6 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ─── Utility classes thème ──────────────────────────────────────────────────*/
-/* À utiliser dans les composants à la place des classes Tailwind gray-xxx fixes */
 .t-bg-app    { background: var(--app-bg); }
 .t-bg-card   { background: var(--card-bg); }
 .t-bg-sidebar{ background: var(--sidebar-bg); }
@@ -332,48 +336,30 @@ input::placeholder, textarea::placeholder {
 .t-hover:hover { background: var(--hover-bg); }
 
 /* ─── Sidebar interactive states ─────────────────────────────────────────────*/
-/* Ces classes remplacent les bg-gray-200 / hover:bg-gray-200/60 Tailwind fixes */
-
-.sidebar-selected {
-  background: var(--selected-bg);
-}
-.sidebar-item-hover {
-  background: transparent;
-}
-.sidebar-item-hover:hover {
-  background: var(--selected-bg-60);
-}
+.sidebar-selected { background: var(--selected-bg); }
+.sidebar-item-hover { background: transparent; }
+.sidebar-item-hover:hover { background: var(--selected-bg-60); }
 .sidebar-drop-inside {
   background: rgba(96,165,250,0.08) !important;
   box-shadow: 0 0 0 1px rgba(96,165,250,0.4);
 }
-.sidebar-icon-btn {
-  color: var(--text-muted);
-  background: transparent;
-}
-.sidebar-icon-btn:hover {
-  background: var(--hover-bg);
-  color: var(--text-primary);
-}
+.sidebar-icon-btn { color: var(--text-muted); background: transparent; }
+.sidebar-icon-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
 
 /* ─── Journal entry rows ──────────────────────────────────────────────────────*/
-.journal-entry-row {
-  border-bottom: 1px solid var(--border-light);
-}
-.journal-entry-row:hover {
-  background: var(--hover-bg);
-}
-.journal-entry-selected {
-  background: var(--hover-bg);
-}
+.journal-entry-row { border-bottom: 1px solid var(--border-light); }
+.journal-entry-row:hover { background: var(--hover-bg); }
+.journal-entry-selected { background: var(--hover-bg); }
 
 /* ─── Mobile rows ────────────────────────────────────────────────────────────*/
-.mobile-row-hover:hover {
-  background: var(--hover-bg);
-}
-.mobile-row-hover:active {
-  background: var(--selected-bg);
-}
-.mobile-row-selected {
-  background: var(--selected-bg);
-}
+.mobile-row-hover:hover { background: var(--hover-bg); }
+.mobile-row-hover:active { background: var(--selected-bg); }
+.mobile-row-selected { background: var(--selected-bg); }
+
+/* ─── Task list ──────────────────────────────────────────────────────────────*/
+.ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
+.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
+.ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 0.2rem; cursor: pointer; }
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] { cursor: pointer; width: 1rem; height: 1rem; }
+.ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { opacity: 0.6; text-decoration: line-through; }
