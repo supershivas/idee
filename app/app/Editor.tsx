@@ -269,7 +269,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
+      <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
       <Sep />
       <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien" />
       <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
@@ -292,7 +292,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="• Liste" title="Liste à puces" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1. Liste" title="Numérotée" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑ Cases" title="Cases à cocher" />
+      <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑ Cases" title="Cases à cocher" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Code" />
