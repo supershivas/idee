@@ -111,6 +111,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
 
   const activePages = pages.filter(p => !p.deleted_at && p.type !== 'journal')
   const journalEntries = pages.filter(p => !p.deleted_at && p.type === 'journal')
+  const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [])))
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   const [selected, setSelected] = useState<Page | null>(() => {
@@ -426,7 +427,13 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                   onBack={() => { setSelected(null); setShowJournal(true) }}
                   onTitleChange={updateTitle}
                   onIconChange={(emoji) => updateIcon(selected.id, emoji)}
-                  saving={saving} isMobile={isMobile} />
+                  saving={saving} isMobile={isMobile}
+onDateChange={async (iso) => {
+  setSelected(prev => prev ? { ...prev, updated_at: iso } : null)
+  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, updated_at: iso } : p))
+  await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
+}}
+/>
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
                   onUpdate={updateContent} onAddSubpage={() => {}}
                   onNavigate={p => { selectPage(p); setShowJournal(false) }}
@@ -484,8 +491,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                     </button>
                   </div>
                 </div>
-                <TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} />
-                <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
+<TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />                <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
                   onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)}
                   onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
