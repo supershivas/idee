@@ -434,6 +434,7 @@ onDateChange={async (iso) => {
   await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
 }}
 />
+                <TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
                   onUpdate={updateContent} onAddSubpage={() => {}}
                   onNavigate={p => { selectPage(p); setShowJournal(false) }}
