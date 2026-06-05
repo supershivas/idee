@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Page } from '../types'
 
@@ -130,30 +131,111 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
   )
 }
 
+// ─── SortableFavoriteItem ─────────────────────────────────────────────────────
+function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, isDragOverlay }: {
+  page: Page, selectedId: string | null,
+  onSelect: (p: Page) => void,
+  onToggleFavorite: (id: string) => void,
+  isDragOverlay?: boolean,
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...style, minHeight: '30px', background: isDragOverlay ? 'var(--drag-bg)' : undefined }}
+      onClick={() => onSelect(page)}
+      className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
+        ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}
+        ${isDragOverlay ? 'shadow-lg' : ''}`}
+    >
+      <button
+        {...attributes} {...listeners}
+        onClick={e => e.stopPropagation()}
+        className="w-4 h-4 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
+        style={{ color: 'var(--text-muted)' }}
+      >⠿</button>
+      <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
+      <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
+      <button
+        onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
+        className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
+        style={{ color: '#f59e0b' }}
+        title="Retirer des favoris"
+      >★</button>
+    </div>
+  )
+}
+
 // ─── FavoritesSection ─────────────────────────────────────────────────────────
-export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite }: {
+export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite, onReorderFavorites }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
   onToggleFavorite: (id: string) => void
+  onReorderFavorites: (orderedIds: string[]) => void
 }) {
-  const favorites = pages.filter(p => p.favorite && !p.deleted_at)
+  const favorites = pages
+    .filter(p => p.favorite && !p.deleted_at)
+    .sort((a, b) => (a.favorite_position ?? 9999) - (b.favorite_position ?? 9999))
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
   if (!favorites.length) return null
+
+  const activePage = favorites.find(p => p.id === activeDragId)
+
+  function handleDragEnd(e: DragEndEvent) {
+    setActiveDragId(null)
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const oldIndex = favorites.findIndex(p => p.id === active.id)
+    const newIndex = favorites.findIndex(p => p.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const reordered = [...favorites]
+    const [moved] = reordered.splice(oldIndex, 1)
+    reordered.splice(newIndex, 0, moved)
+    onReorderFavorites(reordered.map(p => p.id))
+  }
+
   return (
     <div className="mb-1">
       <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider select-none" style={{ color: 'var(--text-muted)' }}>Favoris</div>
-      {favorites.map(page => (
-        <div key={page.id} onClick={() => onSelect(page)}
-          className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
-            ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}`}
-          style={{ minHeight: '30px' }}>
-          <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
-          <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
-          <button onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
-            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
-            style={{ color: '#f59e0b' }} title="Retirer des favoris">★</button>
-        </div>
-      ))}
+      <DndContext
+        sensors={sensors}
+        onDragStart={e => setActiveDragId(e.active.id as string)}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveDragId(null)}
+      >
+        <SortableContext items={favorites.map(p => p.id)} strategy={verticalListSortingStrategy}>
+          {favorites.map(page => (
+            <SortableFavoriteItem
+              key={page.id}
+              page={page}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              onToggleFavorite={onToggleFavorite}
+            />
+          ))}
+        </SortableContext>
+        <DragOverlay>
+          {activePage && (
+            <SortableFavoriteItem
+              page={activePage}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              onToggleFavorite={onToggleFavorite}
+              isDragOverlay
+            />
+          )}
+        </DragOverlay>
+      </DndContext>
       <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--border)' }} />
     </div>
   )
