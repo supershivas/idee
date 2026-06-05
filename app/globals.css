@@ -298,7 +298,7 @@ html, body {
   background: var(--pagelink-bg);
   color: var(--pagelink-fg);
   border-radius: 5px;
-  padding: 8px 6px;
+  padding: 6px 8px;
   font-size: 0.9em;
   cursor: pointer;
   text-decoration: none;
