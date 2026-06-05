@@ -16,7 +16,7 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const sorted = [...entries].sort((a, b) =>
-    new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )
   const visible = sorted.slice(0, limit)
   const hasMore = sorted.length > limit
@@ -72,8 +72,13 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
                   {entry.title || 'Sans titre'}
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {formatSubtitle(entry.updated_at)}
+                  Créé le {formatSubtitle(entry.created_at)}
                 </p>
+                {entry.updated_at !== entry.created_at && (
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>
+                    Modifié le {formatSubtitle(entry.updated_at)}
+                  </p>
+                )}
               </div>
               {(entry.tags || []).length > 0 && (
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -92,7 +97,6 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
           ))}
         </div>
 
-        {/* Sentinel pour infinite scroll */}
         {hasMore && <div ref={sentinelRef} className="h-8" />}
       </div>
     </div>
@@ -100,21 +104,33 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
 }
 
 // ─── JournalEntryHeader ───────────────────────────────────────────────────────
-export function JournalEntryHeader({ entry, onBack, onTitleChange, onIconChange, onDateChange, saving, isMobile }: {
+export function JournalEntryHeader({ entry, onBack, onTitleChange, onIconChange, onCreatedAtChange, onDateChange, saving, isMobile }: {
   entry: Page
   onBack: () => void
   onTitleChange: (v: string) => void
   onIconChange: (emoji: string) => void
+  onCreatedAtChange?: (isoDate: string) => void
   onDateChange?: (isoDate: string) => void
   saving: boolean
   isMobile?: boolean
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const dateInputRef = useRef<HTMLInputElement>(null)
+  const createdInputRef = useRef<HTMLInputElement>(null)
+  const updatedInputRef = useRef<HTMLInputElement>(null)
 
-  const dateValue = entry.updated_at ? entry.updated_at.slice(0, 10) : ''
+  function makeDateValue(iso: string) {
+    return iso ? iso.slice(0, 10) : ''
+  }
 
-  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleCreatedChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.value || !onCreatedAtChange) return
+    const existing = new Date(entry.created_at)
+    const [y, m, d] = e.target.value.split('-').map(Number)
+    existing.setFullYear(y, m - 1, d)
+    onCreatedAtChange(existing.toISOString())
+  }
+
+  function handleUpdatedChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.value || !onDateChange) return
     const existing = new Date(entry.updated_at)
     const [y, m, d] = e.target.value.split('-').map(Number)
@@ -158,23 +174,35 @@ export function JournalEntryHeader({ entry, onBack, onTitleChange, onIconChange,
             onChange={e => onTitleChange(e.target.value)}
             placeholder="Sans titre"
           />
-          <div className="flex items-center gap-1 mt-1">
-            <button
-              onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
-              className="text-xs transition-opacity hover:opacity-70"
-              style={{ color: 'var(--text-muted)' }}
-              title="Modifier la date"
-            >
-              {formatSubtitle(entry.updated_at)} ✎
-            </button>
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={dateValue}
-              onChange={handleDateChange}
-              className="sr-only"
-              tabIndex={-1}
-            />
+          <div className="flex flex-col gap-0.5 mt-1.5">
+            {/* Date de création */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs w-20 flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Créé le</span>
+              <button
+                onClick={() => createdInputRef.current?.showPicker?.() ?? createdInputRef.current?.click()}
+                className="text-xs transition-opacity hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}
+                title="Modifier la date de création"
+              >
+                {formatSubtitle(entry.created_at)} ✎
+              </button>
+              <input ref={createdInputRef} type="date" value={makeDateValue(entry.created_at)}
+                onChange={handleCreatedChange} className="sr-only" tabIndex={-1} />
+            </div>
+            {/* Date de modification */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs w-20 flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Modifié le</span>
+              <button
+                onClick={() => updatedInputRef.current?.showPicker?.() ?? updatedInputRef.current?.click()}
+                className="text-xs transition-opacity hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}
+                title="Modifier la date de modification"
+              >
+                {formatSubtitle(entry.updated_at)} ✎
+              </button>
+              <input ref={updatedInputRef} type="date" value={makeDateValue(entry.updated_at)}
+                onChange={handleUpdatedChange} className="sr-only" tabIndex={-1} />
+            </div>
           </div>
         </div>
         <span className={`w-4 h-4 flex items-center justify-center mt-2 transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
