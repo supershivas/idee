@@ -440,7 +440,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         {/* Bas de sidebar */}
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
           <button
-            onClick={() => { setShowTags(true); setShowJournal && null; setSelected(null) }}
+            onClick={() => { setShowTags(true); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showTags ? 'var(--selected-bg)' : 'transparent',
