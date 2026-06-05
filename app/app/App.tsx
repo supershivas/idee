@@ -114,7 +114,7 @@ function SidebarJournalList({ entries, selectedId, onSelect }: {
   const [limit, setLimit] = useState(SIDEBAR_JOURNAL_PAGE)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const sorted = [...entries].sort((a, b) =>
-    new Date(b.updated_at || '').getTime() - new Date(a.updated_at || '').getTime()
+    new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
   )
   const visible = sorted.slice(0, limit)
   const hasMore = sorted.length > limit
