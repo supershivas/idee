@@ -1,9 +1,9 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 30
 
 // ─── JournalList ──────────────────────────────────────────────────────────────
 export function JournalList({ entries, selectedId, onSelect, onAdd }: {
@@ -13,13 +13,22 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
   onAdd: () => void
 }) {
   const [limit, setLimit] = useState(PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const sorted = [...entries].sort((a, b) =>
     new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
   )
-
   const visible = sorted.slice(0, limit)
   const hasMore = sorted.length > limit
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setLimit(l => l + PAGE_SIZE)
+    }, { threshold: 0.1 })
+    obs.observe(sentinelRef.current)
+    return () => obs.disconnect()
+  }, [hasMore])
 
   return (
     <div className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
@@ -66,25 +75,25 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
                   {formatSubtitle(entry.updated_at)}
                 </p>
               </div>
-              <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>
+              {(entry.tags || []).length > 0 && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {(entry.tags || []).slice(0, 3).map(tag => (
+                    <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+                      {tag}
+                    </span>
+                  ))}
+                  {(entry.tags || []).length > 3 && (
+                    <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>+{(entry.tags || []).length - 3}</span>
+                  )}
+                </div>
+              )}
+              <span className="text-xs flex-shrink-0 ml-1" style={{ color: 'var(--text-faint)' }}>→</span>
             </button>
           ))}
         </div>
 
-        {/* Charger plus */}
-        {hasMore && (
-          <div className="px-6 py-3" style={{ borderTop: '1px solid var(--border-light)' }}>
-            <button
-              onClick={() => setLimit(l => l + PAGE_SIZE)}
-              className="w-full text-sm py-2 rounded-lg transition-colors"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              Charger plus ({sorted.length - limit} restantes)
-            </button>
-          </div>
-        )}
+        {/* Sentinel pour infinite scroll */}
+        {hasMore && <div ref={sentinelRef} className="h-8" />}
       </div>
     </div>
   )
@@ -115,7 +124,6 @@ export function JournalEntryHeader({ entry, onBack, onTitleChange, onIconChange,
 
   return (
     <div className="px-6 pt-4 pb-2 flex-shrink-0">
-      {/* Lien retour journal */}
       <button
         onClick={onBack}
         className="flex items-center gap-1 text-xs mb-3 transition-opacity hover:opacity-70"
@@ -150,7 +158,6 @@ export function JournalEntryHeader({ entry, onBack, onTitleChange, onIconChange,
             onChange={e => onTitleChange(e.target.value)}
             placeholder="Sans titre"
           />
-          {/* Date cliquable → date picker natif */}
           <div className="flex items-center gap-1 mt-1">
             <button
               onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
