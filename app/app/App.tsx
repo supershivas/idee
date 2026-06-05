@@ -64,12 +64,77 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
+const SIDEBAR_JOURNAL_PAGE = 30
+
+function SidebarJournalList({ entries, selectedId, onSelect }: {
+  entries: Page[], selectedId: string | null, onSelect: (p: Page) => void
+}) {
+  const [limit, setLimit] = useState(SIDEBAR_JOURNAL_PAGE)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const sorted = [...entries].sort((a, b) =>
+    new Date(b.updated_at || b.created_at || '').getTime() - new Date(a.updated_at || a.created_at || '').getTime()
+  )
+  const visible = sorted.slice(0, limit)
+  const hasMore = sorted.length > limit
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setLimit(l => l + SIDEBAR_JOURNAL_PAGE)
+    }, { threshold: 0.1 })
+    obs.observe(sentinelRef.current)
+    return () => obs.disconnect()
+  }, [hasMore])
+
+  if (entries.length === 0) return (
+    <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Aucune entrée. Crée la première !</p>
+  )
+
+  return (
+    <div className="py-1">
+      {visible.map(entry => (
+        <button
+          key={entry.id}
+          onClick={() => onSelect(entry)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group/jentry"
+          style={{
+            background: selectedId === entry.id ? 'var(--selected-bg)' : 'transparent',
+            minHeight: '32px',
+          }}
+          onMouseEnter={e => { if (selectedId !== entry.id) e.currentTarget.style.background = 'var(--hover-bg)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = selectedId === entry.id ? 'var(--selected-bg)' : 'transparent' }}
+        >
+          <span className="text-sm flex-shrink-0">{entry.icon || '📝'}</span>
+          <span className="flex-1 text-sm truncate" style={{ color: selectedId === entry.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+            {entry.title || 'Sans titre'}
+          </span>
+          {(entry.tags || []).length > 0 && (
+            <div className="flex items-center gap-0.5 flex-shrink-0 ml-1 opacity-60">
+              {(entry.tags || []).slice(0, 2).map(tag => (
+                <span key={tag} className="text-[10px] px-1 py-0 rounded" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+                  {tag}
+                </span>
+              ))}
+              {(entry.tags || []).length > 2 && (
+                <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>+{(entry.tags || []).length - 2}</span>
+              )}
+            </div>
+          )}
+        </button>
+      ))}
+      {hasMore && <div ref={sentinelRef} className="h-4" />}
+    </div>
+  )
+}
+
 export default function App({ initialPages, userId, userEmail }: { initialPages: Page[], userId: string, userEmail?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
-  const [showJournal, setShowJournal] = useState(false)
+  // sidebarTab: 'pages' | 'journal' — controls which tab is active in the sidebar
+  const [sidebarTab, setSidebarTab] = useState<'pages' | 'journal'>('pages')
+  const showJournal = sidebarTab === 'journal'
   const [showTags, setShowTags] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const { theme, setTheme } = useTheme()
@@ -168,7 +233,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     const { data } = await createClient().from('pages')
       .insert({ title, content: '', user_id: userId, parent_id: null, position: pages.length, icon: '📝', type: 'journal' })
       .select().single()
-    if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false) }
+    if (data) { setPages(prev => [...prev, data]); selectPage(data) }
   }
 
   async function convertToJournal(id: string) {
@@ -281,7 +346,6 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const activeDragPage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
 
-  const isViewOnly = !selected && !isMobile
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
 
@@ -295,8 +359,12 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-400 transition-colors" title="Redimensionner">
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
         </div>
+        {/* Header */}
         <div className="px-4 flex items-center justify-between" style={{ minHeight: '48px', borderBottom: '1px solid var(--border)' }}>
-          <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Idée</span>
+          <div className="flex items-center gap-2">
+            <img src="/apple-touch-icon.png" alt="Idée" className="w-5 h-5 rounded-md flex-shrink-0" />
+            <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Idée</span>
+          </div>
           <button
             onClick={() => setShowSettings(true)}
             className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
@@ -306,44 +374,73 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             title="Paramètres"
           >⚙️</button>
         </div>
+
         <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
-        <div className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
-          {activePages.filter(p => p.parent_id === null).length === 0 && (
-            <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
-          )}
-          <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} />
-          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-            <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
-              onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
-              overId={overId} overPosition={overPosition} isMobile={false}
-              onRename={renamePage} onToggleFavorite={toggleFavorite} />
-            <DragOverlay>
-              {activeDragPage && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg text-sm opacity-90"
-                  style={{ background: 'var(--drag-bg)', border: '1px solid var(--drag-border)', color: 'var(--text-primary)' }}>
-                  <span>{activeDragPage.icon}</span>
-                  <span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        </div>
-        <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+
+        {/* Onglets Pages / Journal */}
+        <div className="flex px-2 pt-2 pb-1 gap-1 flex-shrink-0">
           <button
-            onClick={() => { setShowJournal(true); setShowTags(false); setSelected(null) }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            onClick={() => { setSidebarTab('pages'); setShowTags(false); setSelected(s => s?.type === 'journal' ? null : s) }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
-              background: showJournal && !showTags ? 'var(--selected-bg)' : 'transparent',
-              color: showJournal && !showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: sidebarTab === 'pages' ? 'var(--selected-bg)' : 'transparent',
+              color: sidebarTab === 'pages' ? 'var(--text-primary)' : 'var(--text-muted)',
             }}
-            onMouseEnter={e => { if (!(showJournal && !showTags)) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showJournal && !showTags ? 'var(--selected-bg)' : 'transparent' }}
           >
-            <span>📓</span><span className="flex-1 text-left">Journal</span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{journalEntries.length || ''}</span>
+            <span>📄</span>
+            <span>Pages</span>
           </button>
           <button
-            onClick={() => { setShowTags(true); setShowJournal(false); setSelected(null) }}
+            onClick={() => { setSidebarTab('journal'); setShowTags(false); setSelected(s => s?.type === 'page' ? null : s) }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors"
+            style={{
+              background: sidebarTab === 'journal' ? 'var(--selected-bg)' : 'transparent',
+              color: sidebarTab === 'journal' ? 'var(--text-primary)' : 'var(--text-muted)',
+            }}
+          >
+            <span>📓</span>
+            <span>Journal</span>
+            {journalEntries.length > 0 && (
+              <span className="text-[10px] px-1 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+                {journalEntries.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Contenu de l'onglet actif */}
+        <div className="flex-1 overflow-y-auto py-1 px-2 sidebar-scroll">
+          {sidebarTab === 'pages' ? (
+            <>
+              {activePages.filter(p => p.parent_id === null).length === 0 && (
+                <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
+              )}
+              <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} />
+              <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+                <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
+                  onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
+                  overId={overId} overPosition={overPosition} isMobile={false}
+                  onRename={renamePage} onToggleFavorite={toggleFavorite} />
+                <DragOverlay>
+                  {activeDragPage && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg text-sm opacity-90"
+                      style={{ background: 'var(--drag-bg)', border: '1px solid var(--drag-border)', color: 'var(--text-primary)' }}>
+                      <span>{activeDragPage.icon}</span>
+                      <span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span>
+                    </div>
+                  )}
+                </DragOverlay>
+              </DndContext>
+            </>
+          ) : (
+            <SidebarJournalList entries={journalEntries} selectedId={selected?.id || null} onSelect={selectPage} />
+          )}
+        </div>
+
+        {/* Bas de sidebar */}
+        <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={() => { setShowTags(true); setShowJournal && null; setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showTags ? 'var(--selected-bg)' : 'transparent',
@@ -365,79 +462,64 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{trashedPages.length}</span>}
           </button>
           <button
-            onClick={() => showJournal ? addJournalEntry() : addPage(null)}
+            onClick={() => sidebarTab === 'journal' ? addJournalEntry() : addPage(null)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
           >
-            <span>{showJournal ? '✏️' : '+'}</span>
-            <span>{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+            <span>{sidebarTab === 'journal' ? '✏️' : '+'}</span>
+            <span>{sidebarTab === 'journal' ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
           </button>
         </div>
       </div>
 
-      {/* Mobile : vue liste */}
-      {isMobile && !selected && !showJournal && (
+      {/* Mobile : vue liste (avec onglets dans MobileHomeView) */}
+      {isMobile && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
-            onSelect={p => { selectPage(p); setShowJournal(false) }}
+            onSelect={p => selectPage(p)}
             onAdd={() => addPage(null)} onShowTrash={() => setShowTrash(true)}
             trashedCount={trashedPages.length} onToggleFavorite={toggleFavorite}
-            onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
+            onShowJournal={() => {}} journalCount={journalEntries.length}
+            onAddJournalEntry={addJournalEntry}
           />
-        </div>
-      )}
-      {/* Mobile : vue journal */}
-      {isMobile && showJournal && !selected && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
-            <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
-          </div>
-          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
         </div>
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
 
-      {/* Desktop : vue journal */}
-      {showingJournalDesktop && (
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
-        </div>
-      )}
-
       {/* Desktop : vue tags */}
       {showingTagsDesktop && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} />
+          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false) }} />
         </div>
       )}
 
       {/* Contenu — page ou entrée journal */}
-      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
+      <div className={`${(isMobile && !selected) || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
         {selected ? (
           <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col">
             {selected.type === 'journal' ? (
               <>
-                <MobileTopBar onBack={() => { setSelected(null); setShowJournal(true) }} saving={saving} />
+                <MobileTopBar onBack={() => { setSelected(null) }} saving={saving} />
                 <JournalEntryHeader entry={selected}
-                  onBack={() => { setSelected(null); setShowJournal(true) }}
+                  onBack={() => { setSelected(null) }}
                   onTitleChange={updateTitle}
                   onIconChange={(emoji) => updateIcon(selected.id, emoji)}
                   saving={saving} isMobile={isMobile}
-onDateChange={async (iso) => {
-  setSelected(prev => prev ? { ...prev, updated_at: iso } : null)
-  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, updated_at: iso } : p))
-  await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
-}}
-/>
+                  onDateChange={async (iso) => {
+                    setSelected(prev => prev ? { ...prev, updated_at: iso } : null)
+                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, updated_at: iso } : p))
+                    await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
+                  }}
+                />
                 <TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
                   onUpdate={updateContent} onAddSubpage={() => {}}
-                  onNavigate={p => { selectPage(p); setShowJournal(false) }}
+                  onNavigate={p => { selectPage(p) }}
                   userId={userId} isMobile={isMobile} />
               </>
             ) : (
@@ -492,10 +574,11 @@ onDateChange={async (iso) => {
                     </button>
                   </div>
                 </div>
-<TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />                <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
+                <TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />
+                <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
                   onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)}
-                  onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
+                  onNavigate={p => { selectPage(p) }}
                   userId={userId} isMobile={isMobile} />
               </>
             )}
