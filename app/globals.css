@@ -46,13 +46,13 @@
   --prose-pre-fg:    #f5e6c8;
   --prose-table-th:  #f7f2ec;
   --prose-table-border: #e8ddd0;
-  --prose-link:      #6b5a9e;
-  --prose-link-hover:#4e3f78;
+  --prose-link:      #78716c;
+  --prose-link-hover:#1a1714;
   --prose-row-hover: #fdf9f5;
 
   /* Page link */
   --pagelink-bg:     #f0ebe4;
-  --pagelink-fg:     #6b5a9e;
+  --pagelink-fg:     #57534e;
   --pagelink-border: #d9cfc4;
   --pagelink-hover:  #e5ddd6;
 
@@ -105,12 +105,12 @@ html.dark {
   --prose-pre-fg:    #f5e6c8;
   --prose-table-th:  #252220;
   --prose-table-border: #333030;
-  --prose-link:      #a594d4;
-  --prose-link-hover:#c4b8e8;
+  --prose-link:      #a8a29e;
+  --prose-link-hover:#e8e4df;
   --prose-row-hover: #262220;
 
   --pagelink-bg:     #2a2420;
-  --pagelink-fg:     #a594d4;
+  --pagelink-fg:     #a8a29e;
   --pagelink-border: #3d3530;
   --pagelink-hover:  #332e28;
 
@@ -149,7 +149,6 @@ html, body {
   max-width: var(--page-width);
   width: 100%;
   margin: 0 auto;
-  /* Empêche le contenu (toolbar, etc.) de déborder */
   overflow: hidden;
 }
 
@@ -224,8 +223,20 @@ html, body {
   margin: 0.75rem 0;
   font-style: italic;
 }
-.prose a { color: var(--prose-link); text-decoration: underline; }
-.prose a:hover { color: var(--prose-link-hover); }
+
+/* ─── Liens ──────────────────────────────────────────────────────────────────*/
+.prose a {
+  color: var(--prose-link);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.prose a:hover {
+  color: var(--prose-link-hover);
+  border-bottom-color: var(--prose-link-hover);
+}
+
 .prose img { max-width: 100%; border-radius: 10px; margin: 0.75rem 0; }
 
 .prose code {
@@ -271,7 +282,7 @@ html, body {
 .prose table .selectedCell:after {
   z-index: 2; position: absolute; content: "";
   left: 0; right: 0; top: 0; bottom: 0;
-  background: rgba(107,90,158,0.08); pointer-events: none;
+  background: rgba(120,113,108,0.08); pointer-events: none;
 }
 .prose table .column-resize-handle {
   position: absolute; right: -2px; top: 0; bottom: 0;
@@ -292,9 +303,9 @@ html, body {
   font-size: 0.9em;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
-.page-link:hover { background: var(--pagelink-hover); }
+.page-link:hover { background: var(--pagelink-hover); color: var(--prose-link-hover); }
 
 /* ─── Sidebar scrollbar ──────────────────────────────────────────────────────*/
 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
@@ -307,7 +318,6 @@ html, body {
   -webkit-overflow-scrolling: touch;
   background: var(--card-bg);
   border-top: 1px solid var(--border);
-  /* Pas de border-radius ici : géré par overflow:hidden sur .page-card */
 }
 .editor-toolbar::-webkit-scrollbar { display: none; }
 
