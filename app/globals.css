@@ -298,13 +298,15 @@ html, body {
   background: var(--pagelink-bg);
   color: var(--pagelink-fg);
   border-radius: 5px;
-  padding: 1px 6px;
+  padding: 8px 6px;
   font-size: 0.9em;
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
 .page-link:hover { background: var(--pagelink-hover); color: var(--prose-link-hover); }
+.prose a.page-link { border-bottom: none; padding: 8px 6px; }
+.prose a.page-link:hover { background: var(--pagelink-hover); }
 
 /* ─── Sidebar scrollbar ──────────────────────────────────────────────────────*/
 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
