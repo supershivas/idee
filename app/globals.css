@@ -228,13 +228,13 @@ html, body {
 .prose a {
   color: var(--prose-link);
   text-decoration: none;
-  border-bottom: 1px solid currentColor;
-  padding-bottom: 1px;
-  transition: color 0.15s, border-color 0.15s;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: color 0.15s, background 0.15s;
 }
 .prose a:hover {
   color: var(--prose-link-hover);
-  border-bottom-color: var(--prose-link-hover);
+  background: var(--hover-bg);
 }
 
 .prose img { max-width: 100%; border-radius: 10px; margin: 0.75rem 0; }
@@ -297,7 +297,6 @@ html, body {
   gap: 4px;
   background: var(--pagelink-bg);
   color: var(--pagelink-fg);
-  border: 1px solid var(--pagelink-border);
   border-radius: 5px;
   padding: 1px 6px;
   font-size: 0.9em;
