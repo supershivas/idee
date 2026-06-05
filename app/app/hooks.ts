@@ -13,8 +13,6 @@ export function useIsMobile() {
   return isMobile
 }
 
-// Retourne l'offset en px causé par le clavier virtuel iOS/Android
-// Utilise visualViewport quand disponible, sinon 0
 export function useKeyboardOffset() {
   const [offset, setOffset] = useState(0)
 
@@ -23,7 +21,6 @@ export function useKeyboardOffset() {
     if (!vv) return
 
     function update() {
-      // La hauteur du clavier = hauteur de la fenêtre - hauteur du viewport visuel
       const keyboardHeight = window.innerHeight - vv!.height - vv!.offsetTop
       setOffset(Math.max(0, keyboardHeight))
     }
@@ -47,8 +44,27 @@ export function useToggleFavorite(
     const page = pages.find(p => p.id === id)
     if (!page) return
     const newVal = !page.favorite
-    // Optimistic update
-    setPages(prev => prev.map(p => p.id === id ? { ...p, favorite: newVal } : p))
-    await createClient().from('pages').update({ favorite: newVal }).eq('id', id)
+    const newPos = newVal
+      ? Math.max(0, ...pages.filter(p => p.favorite && p.id !== id).map(p => p.favorite_position ?? 0)) + 1
+      : null
+    setPages(prev => prev.map(p => p.id === id ? { ...p, favorite: newVal, favorite_position: newPos } : p))
+    await createClient().from('pages').update({ favorite: newVal, favorite_position: newPos }).eq('id', id)
   }, [pages, setPages])
+}
+
+export function useReorderFavorites(
+  setPages: React.Dispatch<React.SetStateAction<Page[]>>
+) {
+  return useCallback(async (orderedIds: string[]) => {
+    setPages(prev => prev.map(p => {
+      const idx = orderedIds.indexOf(p.id)
+      if (idx === -1) return p
+      return { ...p, favorite_position: idx }
+    }))
+    await Promise.all(
+      orderedIds.map((id, idx) =>
+        createClient().from('pages').update({ favorite_position: idx }).eq('id', id)
+      )
+    )
+  }, [setPages])
 }
