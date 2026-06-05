@@ -314,7 +314,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       {showTableSheet && isMobile && <TableBottomSheet editor={editor} onClose={() => setShowTableSheet(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
-      {/* BubbleMenu sélection de texte */}
       {editor && (
         <BubbleMenu
           editor={editor}
@@ -359,7 +358,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         </BubbleMenu>
       )}
 
-      {/* BubbleMenu tableau desktop */}
       {editor && !isMobile && (
         <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('table')} tippyOptions={{ placement: 'top', offset: [0, 8] }}>
           <div className="flex items-center gap-0.5 rounded-xl shadow-lg px-2 py-1.5"
@@ -401,7 +399,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         </BubbleMenu>
       )}
 
-      {/* Toolbar desktop */}
       {!isMobile && (
         <div className="editor-toolbar flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto flex-shrink-0"
           style={{ minHeight: '48px' }}>
@@ -409,7 +406,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         </div>
       )}
 
-      {/* Zone d'édition + backlinks */}
       <div className="flex-1 overflow-y-auto">
         <EditorContent
           editor={editor}
@@ -419,7 +415,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
       </div>
 
-      {/* Toolbar mobile sticky */}
       {isMobile && (
         <div className="editor-toolbar flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto"
           style={{ minHeight: '48px', position: 'sticky', bottom: keyboardOffset, zIndex: 10, transition: 'bottom 0.2s ease' }}>
@@ -427,7 +422,6 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         </div>
       )}
 
-      {/* Styles ProseMirror inline */}
       <style>{`
         .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
         .ProseMirror table td, .ProseMirror table th {
@@ -451,18 +445,37 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
         .resize-cursor { cursor: col-resize; }
         .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5rem 0; display: block; }
-        .ProseMirror a { color: var(--prose-link); text-decoration: underline; cursor: pointer; }
-        .ProseMirror a:hover { color: var(--prose-link-hover); }
-        .ProseMirror a.page-link { color: var(--pagelink-fg); text-decoration: underline; cursor: pointer; font-weight: 500; }
-        .ProseMirror a.page-link:hover { background: var(--pagelink-hover); border-radius: 3px; }
-        /* Task list */
+        .ProseMirror a {
+          color: var(--prose-link);
+          text-decoration: none;
+          border-radius: 3px;
+          padding: 0 2px;
+          transition: color 0.15s, background 0.15s;
+          cursor: pointer;
+        }
+        .ProseMirror a:hover {
+          color: var(--prose-link-hover);
+          background: var(--hover-bg);
+        }
+        .ProseMirror a.page-link {
+          color: var(--pagelink-fg);
+          text-decoration: none;
+          background: var(--pagelink-bg);
+          border-radius: 5px;
+          padding: 6px 8px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .ProseMirror a.page-link:hover {
+          background: var(--pagelink-hover);
+          color: var(--pagelink-fg);
+        }
         .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
         .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
         .ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 0.2rem; cursor: pointer; }
         .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] { cursor: pointer; width: 1rem; height: 1rem; }
         .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
         .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { opacity: 0.6; text-decoration: line-through; }
-        /* Drag handle spacing */
         .drag-handle { margin-left: -28px; padding-right: 8px; }
         @media (max-width: 767px) { .ProseMirror { font-size: 16px; line-height: 1.7; } .ProseMirror p { margin: 0.6em 0; } }
       `}</style>
