@@ -8,7 +8,7 @@ import HistoryButton from './HistoryButton'
 import EmojiPicker from './EmojiPicker'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { Page, formatSubtitle } from './types'
-import { useIsMobile, useToggleFavorite } from './hooks'
+import { useIsMobile, useToggleFavorite, useReorderFavorites } from './hooks'
 import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
 import { PageTree, Breadcrumb, FavoritesSection } from './components/PageTree'
@@ -188,6 +188,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const lastSaveRef = useRef(0)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
+  const reorderFavorites = useReorderFavorites(setPages)
   const SIDEBAR_MIN = 180
   const SIDEBAR_MAX = 400
   const SIDEBAR_DEFAULT = 240
@@ -457,7 +458,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               {activePages.filter(p => p.parent_id === null).length === 0 && (
                 <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
               )}
-              <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} />
+              <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} onReorderFavorites={reorderFavorites} />
               <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
                 <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
                   onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
