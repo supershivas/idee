@@ -64,6 +64,48 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
+function PageDates({ page, onCreatedAtChange, onUpdatedAtChange }: {
+  page: Page
+  onCreatedAtChange: (iso: string) => void
+  onUpdatedAtChange: (iso: string) => void
+}) {
+  const createdRef = useRef<HTMLInputElement>(null)
+  const updatedRef = useRef<HTMLInputElement>(null)
+
+  function handleChange(ref: React.RefObject<HTMLInputElement>, current: string, cb: (iso: string) => void) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.value) return
+      const existing = new Date(current)
+      const [y, m, d] = e.target.value.split("-").map(Number)
+      existing.setFullYear(y, m - 1, d)
+      cb(existing.toISOString())
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5 mt-1 mb-1">
+      <div className="flex items-center gap-1">
+        <span className="text-xs w-20 flex-shrink-0" style={{ color: "var(--text-faint)" }}>Créé le</span>
+        <button onClick={() => createdRef.current?.showPicker?.() ?? createdRef.current?.click()}
+          className="text-xs transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
+          {formatSubtitle(page.created_at)} ✎
+        </button>
+        <input ref={createdRef} type="date" value={page.created_at?.slice(0, 10) || ""}
+          onChange={handleChange(createdRef, page.created_at, onCreatedAtChange)} className="sr-only" tabIndex={-1} />
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-xs w-20 flex-shrink-0" style={{ color: "var(--text-faint)" }}>Modifié le</span>
+        <button onClick={() => updatedRef.current?.showPicker?.() ?? updatedRef.current?.click()}
+          className="text-xs transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
+          {formatSubtitle(page.updated_at)} ✎
+        </button>
+        <input ref={updatedRef} type="date" value={page.updated_at?.slice(0, 10) || ""}
+          onChange={handleChange(updatedRef, page.updated_at, onUpdatedAtChange)} className="sr-only" tabIndex={-1} />
+      </div>
+    </div>
+  )
+}
+
 const SIDEBAR_JOURNAL_PAGE = 30
 
 function SidebarJournalList({ entries, selectedId, onSelect }: {
@@ -510,6 +552,11 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                   onTitleChange={updateTitle}
                   onIconChange={(emoji) => updateIcon(selected.id, emoji)}
                   saving={saving} isMobile={isMobile}
+                  onCreatedAtChange={async (iso) => {
+                    setSelected(prev => prev ? { ...prev, created_at: iso } : null)
+                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, created_at: iso } : p))
+                    await createClient().from('pages').update({ created_at: iso }).eq('id', selected.id)
+                  }}
                   onDateChange={async (iso) => {
                     setSelected(prev => prev ? { ...prev, updated_at: iso } : null)
                     setPages(prev => prev.map(p => p.id === selected.id ? { ...p, updated_at: iso } : p))
@@ -573,6 +620,18 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                       {selected.favorite ? '★' : '☆'}
                     </button>
                   </div>
+                  <PageDates page={selected}
+                    onCreatedAtChange={async (iso) => {
+                      setSelected(prev => prev ? { ...prev, created_at: iso } : null)
+                      setPages(prev => prev.map(p => p.id === selected.id ? { ...p, created_at: iso } : p))
+                      await createClient().from('pages').update({ created_at: iso }).eq('id', selected.id)
+                    }}
+                    onUpdatedAtChange={async (iso) => {
+                      setSelected(prev => prev ? { ...prev, updated_at: iso } : null)
+                      setPages(prev => prev.map(p => p.id === selected.id ? { ...p, updated_at: iso } : p))
+                      await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
+                    }}
+                  />
                 </div>
                 <TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />
                 <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
