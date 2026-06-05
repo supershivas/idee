@@ -7,6 +7,7 @@ export type Page = {
   icon: string
   tags?: string[]
   favorite?: boolean
+  favorite_position?: number | null
   type?: PageType
   position: number
   created_at: string
