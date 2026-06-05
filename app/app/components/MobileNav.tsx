@@ -62,7 +62,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
     : journalEntries
 
   const sortedJournal = [...filteredJournal].sort(
-    (a, b) => new Date(b.updated_at || b.created_at || '').getTime() - new Date(a.updated_at || a.created_at || '').getTime()
+    (a, b) => new Date(b.updated_at || '').getTime() - new Date(a.updated_at || '').getTime()
   )
   const visibleJournal = sortedJournal.slice(0, journalLimit)
   const journalHasMore = sortedJournal.length > journalLimit
