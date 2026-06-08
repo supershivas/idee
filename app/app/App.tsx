@@ -415,7 +415,12 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             title="Paramètres"
-          >⚙️</button>
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" clipRule="evenodd" d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM7 8a1 1 0 1 1 2 0A1 1 0 0 1 7 8Z" fill="currentColor"/>
+              <path fillRule="evenodd" clipRule="evenodd" d="M6.5 1a.75.75 0 0 1 .75.75v.6a4.53 4.53 0 0 1 1.16.48l.43-.43a.75.75 0 1 1 1.06 1.06l-.43.43c.2.36.35.75.48 1.16h.6a.75.75 0 0 1 0 1.5h-.6a4.53 4.53 0 0 1-.48 1.16l.43.43a.75.75 0 1 1-1.06 1.06l-.43-.43a4.53 4.53 0 0 1-1.16.48v.6a.75.75 0 0 1-1.5 0v-.6a4.53 4.53 0 0 1-1.16-.48l-.43.43a.75.75 0 0 1-1.06-1.06l.43-.43A4.53 4.53 0 0 1 2.85 7.5h-.6a.75.75 0 0 1 0-1.5h.6c.13-.41.28-.8.48-1.16l-.43-.43a.75.75 0 0 1 1.06-1.06l.43.43A4.53 4.53 0 0 1 5.5 2.35v-.6A.75.75 0 0 1 6.5 1Z" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
 
         <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
