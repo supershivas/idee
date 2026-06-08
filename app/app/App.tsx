@@ -420,69 +420,47 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
 
         <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
 
-        {/* Onglets Pages / Journal */}
-        <div className="flex px-2 pt-2 pb-1 gap-1 flex-shrink-0">
+        {/* Contenu sidebar */}
+        <div className="flex-1 overflow-y-auto py-1 px-2 sidebar-scroll">
+          {/* Entrée Journal en haut */}
           <button
-            onClick={() => { setSidebarTab('pages'); setShowTags(false); setSelected(s => s?.type === 'journal' ? null : s) }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors"
+            onClick={() => { setSidebarTab('journal'); setShowTags(false); setSelected(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg mb-1 transition-colors text-left"
             style={{
-              background: sidebarTab === 'pages' ? 'var(--selected-bg)' : 'transparent',
-              color: sidebarTab === 'pages' ? 'var(--text-primary)' : 'var(--text-muted)',
+              background: showJournal && !selected ? 'var(--selected-bg)' : 'var(--hover-bg)',
+              borderBottom: '1px solid var(--border)',
+              marginBottom: '6px',
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--selected-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showJournal && !selected ? 'var(--selected-bg)' : 'var(--hover-bg)' }}
           >
-            <span>📄</span>
-            <span>Pages</span>
-          </button>
-          <button
-            onClick={() => { setSidebarTab('journal'); setShowTags(false); setSelected(s => s?.type === 'page' ? null : s) }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors"
-            style={{
-              background: sidebarTab === 'journal' ? 'var(--selected-bg)' : 'transparent',
-              color: sidebarTab === 'journal' ? 'var(--text-primary)' : 'var(--text-muted)',
-            }}
-          >
-            <span>📓</span>
-            <span>Journal</span>
+            <span className="text-base">📓</span>
+            <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Journal</span>
             {journalEntries.length > 0 && (
-              <span className="text-[10px] px-1 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
-                {journalEntries.length}
-              </span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{journalEntries.length}</span>
             )}
           </button>
-        </div>
 
-        {/* Contenu de l'onglet actif */}
-        <div className="flex-1 overflow-y-auto py-1 px-2 sidebar-scroll">
-          {sidebarTab === 'pages' ? (
-            <>
-              {activePages.filter(p => p.parent_id === null).length === 0 && (
-                <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
-              )}
-              <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} onReorderFavorites={reorderFavorites} />
-              <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-                <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
-                  onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
-                  overId={overId} overPosition={overPosition} isMobile={false}
-                  onRename={renamePage} onToggleFavorite={toggleFavorite} />
-                <DragOverlay>
-                  {activeDragPage && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg text-sm opacity-90"
-                      style={{ background: 'var(--drag-bg)', border: '1px solid var(--drag-border)', color: 'var(--text-primary)' }}>
-                      <span>{activeDragPage.icon}</span>
-                      <span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span>
-                    </div>
-                  )}
-                </DragOverlay>
-              </DndContext>
-            </>
-          ) : (
-            <div className="px-3 py-3">
-              {journalEntries.length === 0
-                ? <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Aucune entrée. Crée la première !</p>
-                : <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{journalEntries.length} entrée{journalEntries.length !== 1 ? 's' : ''}</p>
-              }
-            </div>
+          {/* Favoris + pages */}
+          {activePages.filter(p => p.parent_id === null).length === 0 && (
+            <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
           )}
+          <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} onReorderFavorites={reorderFavorites} />
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+            <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
+              onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
+              overId={overId} overPosition={overPosition} isMobile={false}
+              onRename={renamePage} onToggleFavorite={toggleFavorite} />
+            <DragOverlay>
+              {activeDragPage && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg text-sm opacity-90"
+                  style={{ background: 'var(--drag-bg)', border: '1px solid var(--drag-border)', color: 'var(--text-primary)' }}>
+                  <span>{activeDragPage.icon}</span>
+                  <span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span>
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         </div>
 
         {/* Bas de sidebar */}
@@ -510,14 +488,14 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{trashedPages.length}</span>}
           </button>
           <button
-            onClick={() => sidebarTab === 'journal' ? addJournalEntry() : addPage(null)}
+            onClick={() => showJournal && !selected ? addJournalEntry() : addPage(null)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
           >
-            <span>{sidebarTab === 'journal' ? '✏️' : '+'}</span>
-            <span>{sidebarTab === 'journal' ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+            <span>{showJournal && !selected ? '✏️' : '+'}</span>
+            <span>{showJournal && !selected ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
           </button>
         </div>
       </div>
