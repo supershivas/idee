@@ -476,7 +476,12 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               </DndContext>
             </>
           ) : (
-            <SidebarJournalList entries={journalEntries} selectedId={selected?.id || null} onSelect={selectPage} />
+            <div className="px-3 py-3">
+              {journalEntries.length === 0
+                ? <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Aucune entrée. Crée la première !</p>
+                : <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{journalEntries.length} entrée{journalEntries.length !== 1 ? 's' : ''}</p>
+              }
+            </div>
           )}
         </div>
 
@@ -541,8 +546,15 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         </div>
       )}
 
+      {/* Desktop : vue liste journal */}
+      {showingJournalDesktop && (
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <JournalList entries={journalEntries} selectedId={null} onSelect={p => selectPage(p)} onAdd={addJournalEntry} />
+        </div>
+      )}
+
       {/* Contenu — page ou entrée journal */}
-      <div className={`${(isMobile && !selected) || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
+      <div className={`${(isMobile && !selected) || showingTagsDesktop || showingJournalDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
         {selected ? (
           <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col">
             {selected.type === 'journal' ? (
