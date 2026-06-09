@@ -629,7 +629,7 @@ async function updatePageMeta(id: string, updates: Partial<Page>) {
                     }}
                   />
                 </div>
-                <TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />
+                <PageMeta page={selected} onChange={updates => updatePageMeta(selected.id, updates)} />
                 <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
                   onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)}
