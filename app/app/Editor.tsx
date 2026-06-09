@@ -538,11 +538,7 @@ Image.extend({
           {toolbarDesktop}
         </div>
       )}
-
-      <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
-      
-        <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
-      </div>
+<EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
 
       {isMobile && (
         <div className="editor-toolbar flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto"
