@@ -30,7 +30,7 @@ const text = content
       messages: [
         {
           role: 'user',
-          content: `Tu es un assistant de prise de notes. Résume le contenu suivant en 2-3 phrases directes en français. Commence directement par le contenu, sans introduction ni mention du mot "résumé".`,        },
+          content: `Tu es un assistant de prise de notes. Résume le contenu suivant en 2-3 phrases directes en français. Commence directement par le contenu, sans introduction ni mention du mot "résumé".\n\n${text}`,        },
       ],
     }),
   })
