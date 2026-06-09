@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Page } from '../types'
 import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect } from 'react'
 
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -22,7 +23,10 @@ export function PageMeta({ page, onChange }: { page: Page; onChange: (updates: P
   const [summary, setSummary] = useState<string | null>(page.summary || null)
   const [tags, setTags] = useState<string[]>(page.tags || [])
   const [tagInput, setTagInput] = useState('')
-
+useEffect(() => {
+  setSummary(page.summary || null)
+  setTags(page.tags || [])
+}, [page.id])
   async function generateSummary() {
     if (!page.content) return
     setLoadingSummary(true)
