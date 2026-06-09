@@ -17,8 +17,8 @@ import { MobileHomeView, MobileTopBar } from './components/MobileNav'
 import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
 import { JournalList, JournalEntryHeader } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
-import { TagsView, TagsInput } from './components/TagsView'
-
+import { TagsView } from './components/TagsView'
+import { PageMeta } from './components/PageMeta'
 function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
   if (!selected) return null
   const crumbs: Page[] = []
@@ -299,11 +299,11 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     await createClient().from('pages').update({ icon }).eq('id', id)
   }
 
-  async function updateTags(id: string, tags: string[]) {
-    setPages(prev => prev.map(p => p.id === id ? { ...p, tags } : p))
-    if (selected?.id === id) setSelected(prev => prev ? { ...prev, tags } : null)
-    await createClient().from('pages').update({ tags }).eq('id', id)
-  }
+async function updatePageMeta(id: string, updates: Partial<Page>) {
+  setPages(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
+  if (selected?.id === id) setSelected(prev => prev ? { ...prev, ...updates } : null)
+  await createClient().from('pages').update(updates).eq('id', id)
+}
 
   async function renamePage(id: string, title: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, title } : p))
@@ -559,7 +559,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                     await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
                   }}
                 />
-                <TagsInput tags={selected.tags || []} onChange={tags => updateTags(selected.id, tags)} allTags={allTags} />
+                <PageMeta page={selected} onChange={updates => updatePageMeta(selected.id, updates)} />
                 <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
                   onUpdate={updateContent} onAddSubpage={() => {}}
                   onNavigate={p => { selectPage(p) }}
