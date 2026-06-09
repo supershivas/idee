@@ -171,7 +171,7 @@ function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
 
       const containerRect = container.getBoundingClientRect()
       const blockRect = block.getBoundingClientRect()
-      setPlusPos({ top: blockRect.bottom - containerRect.top + container.scrollTop - 14, blockEl: block })
+      setPlusPos({ top: blockRect.bottom - containerRect.top + container.scrollTop + 4, blockEl: block })
     }
 
     function onMouseLeave(e: MouseEvent) {
