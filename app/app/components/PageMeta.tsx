@@ -83,26 +83,26 @@ export function PageMeta({ page, onChange }: { page: Page; onChange: (updates: P
       <MetaRow label="Créé le">{formatDate(page.created_at)}</MetaRow>
       <MetaRow label="Modifié le">{formatDate(page.updated_at)}</MetaRow>
 
-      <MetaRow label="Résumé">
-        <div className="flex flex-col gap-1.5">
-          {page.summary ? (
-            <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{page.summary}</p>
-          ) : (
-            <p style={{ color: 'var(--text-faint)' }}>Aucun résumé généré.</p>
-          )}
-          <button
-            onClick={generateSummary}
-            disabled={loadingSummary || !page.content}
-            className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors disabled:opacity-40"
-            style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-          >
-            <span className={loadingSummary ? 'animate-spin' : ''}>↻</span>
-            {loadingSummary ? 'Génération…' : page.summary ? 'Régénérer' : 'Générer'}
-          </button>
-        </div>
-      </MetaRow>
+     <MetaRow label="Résumé">
+  <div className="flex flex-col gap-1.5">
+    {page.summary ? (
+      <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{page.summary}</p>
+    ) : (
+      <p style={{ color: 'var(--text-faint)' }}>Aucun résumé généré.</p>
+    )}
+    <button
+      onClick={generateSummary}
+      disabled={loadingSummary || !page.content}
+      className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors disabled:opacity-40"
+      style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+    >
+      <span className={loadingSummary ? 'animate-spin' : ''}>↻</span>
+      {loadingSummary ? 'Génération…' : page.summary ? 'Régénérer' : 'Générer'}
+    </button>
+  </div>
+</MetaRow>
     </div>
   )
 }
