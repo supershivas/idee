@@ -18,8 +18,7 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Résume ce texte en 2-3 phrases courtes en français, de façon neutre et factuelle. Titre : "${title}"\n\n${text}`,
-        },
+          content: `Tu es un assistant de prise de notes. Résume le contenu suivant en 2-3 phrases directes en français. Commence directement par le contenu, sans introduction ni mention du mot "résumé". Titre : "${title}"\n\n${text}`,        },
       ],
     }),
   })
