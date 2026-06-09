@@ -19,6 +19,7 @@ function formatDate(iso: string | null | undefined) {
 
 export function PageMeta({ page, onChange }: { page: Page; onChange: (updates: Partial<Page>) => void }) {
   const [loadingSummary, setLoadingSummary] = useState(false)
+  const [summary, setSummary] = useState<string | null>(page.summary || null)
   const [tags, setTags] = useState<string[]>(page.tags || [])
   const [tagInput, setTagInput] = useState('')
 
@@ -31,10 +32,11 @@ export function PageMeta({ page, onChange }: { page: Page; onChange: (updates: P
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: page.content, title: page.title }),
       })
-      const { summary } = await res.json()
-      if (summary) {
-        await createClient().from('pages').update({ summary }).eq('id', page.id)
-        onChange({ summary })
+      const { summary: s } = await res.json()
+      if (s) {
+        await createClient().from('pages').update({ summary: s }).eq('id', page.id)
+        setSummary(s)
+        onChange({ summary: s })
       }
     } finally {
       setLoadingSummary(false)
@@ -83,26 +85,33 @@ export function PageMeta({ page, onChange }: { page: Page; onChange: (updates: P
       <MetaRow label="Créé le">{formatDate(page.created_at)}</MetaRow>
       <MetaRow label="Modifié le">{formatDate(page.updated_at)}</MetaRow>
 
-     <MetaRow label="Résumé">
-  <div className="flex flex-col gap-1.5">
-    {page.summary ? (
-      <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{page.summary}</p>
-    ) : (
-      <p style={{ color: 'var(--text-faint)' }}>Aucun résumé généré.</p>
-    )}
-    <button
-      onClick={generateSummary}
-      disabled={loadingSummary || !page.content}
-      className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors disabled:opacity-40"
-      style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-    >
-      <span className={loadingSummary ? 'animate-spin' : ''}>↻</span>
-      {loadingSummary ? 'Génération…' : page.summary ? 'Régénérer' : 'Générer'}
-    </button>
-  </div>
-</MetaRow>
+      <MetaRow label="Résumé">
+        {summary ? (
+          <div className="flex flex-col gap-1.5">
+            <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{summary}</p>
+            <button
+              onClick={generateSummary}
+              disabled={loadingSummary}
+              className="self-start flex items-center gap-1 text-xs transition-opacity disabled:opacity-40 opacity-40 hover:opacity-100"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <span className={loadingSummary ? 'animate-spin' : ''}>↻</span>
+              {loadingSummary ? 'Génération…' : 'Régénérer'}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={generateSummary}
+            disabled={loadingSummary || !page.content}
+            className="text-xs transition-colors disabled:opacity-40"
+            style={{ color: 'var(--text-faint)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
+          >
+            {loadingSummary ? 'Génération…' : '+ Générer un résumé'}
+          </button>
+        )}
+      </MetaRow>
     </div>
   )
 }
