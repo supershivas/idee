@@ -174,10 +174,13 @@ function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
       setPlusPos({ top: blockRect.bottom - containerRect.top + container.scrollTop + 4, blockEl: block })
     }
 
-    function onMouseLeave(e: MouseEvent) {
-      if (plusRef.current?.contains(e.relatedTarget as Node)) return
-      setPlusPos(null)
-    }
+function onMouseLeave(e: MouseEvent) {
+  if (plusRef.current?.contains(e.relatedTarget as Node)) return
+  // Laisser un délai pour que le curseur puisse atteindre le bouton
+  setTimeout(() => {
+    if (!plusRef.current?.matches(':hover')) setPlusPos(null)
+  }, 200)
+}
 
     container.addEventListener('mousemove', onMouseMove)
     container.addEventListener('mouseleave', onMouseLeave)
@@ -212,6 +215,7 @@ function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
           ref={plusRef}
           onClick={insertAfterBlock}
           onMouseEnter={() => {}}
+          onMouseLeave={() => setPlusPos(null)}
           className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center rounded-full shadow-md text-sm font-bold transition-all pointer-events-auto"
           style={{
             top: `${plusPos.top}px`,
