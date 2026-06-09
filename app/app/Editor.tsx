@@ -6,6 +6,7 @@ import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
+import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import Table from '@tiptap/extension-table'
 import TableHeader from '@tiptap/extension-table-header'
 import TableCell from '@tiptap/extension-table-cell'
@@ -101,6 +102,48 @@ async function uploadFileToSupabase(file: File, userId: string): Promise<string 
     return null
   }
 }
+function ImageNodeView({ node, editor, getPos }: any) {
+  const [hovered, setHovered] = useState(false)
+  function insertAfter() {
+    if (!editor || typeof getPos !== 'function') return
+    const pos = getPos() + node.nodeSize
+    editor.chain().focus().insertContentAt(pos, { type: 'paragraph' }).run()
+  }
+  return (
+    <NodeViewWrapper className="relative inline-block w-full">
+      <div
+        className="relative"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <img
+          src={node.attrs.src}
+          alt={node.attrs.alt || ''}
+          className="max-w-full rounded-lg"
+          style={{ display: 'block', margin: '1.5rem 0' }}
+        />
+        {hovered && (
+          <button
+            onClick={insertAfter}
+            contentEditable={false}
+            className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center rounded-full shadow-md text-sm font-bold transition-all"
+            style={{
+              bottom: '-14px',
+              width: '28px',
+              height: '28px',
+              background: 'var(--card-bg)',
+              border: '1.5px solid var(--border)',
+              color: 'var(--text-muted)',
+              zIndex: 10,
+              cursor: 'pointer',
+            }}
+            title="Ajouter un bloc après"
+          >+</button>
+        )}
+      </div>
+    </NodeViewWrapper>
+  )
+}
 
 export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, userId, isMobile }: {
   page: Page, pages: Page[], onUpdate: (content: string) => void
@@ -141,47 +184,52 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       Table.configure({ resizable: !isMobile }),
       TableHeader, TableCell, TableRow,
       subpageExtension,
-      Image.extend({
-        addAttributes() { return { ...this.parent?.(), class: { default: 'max-w-full rounded-lg my-2' } } },
-        addProseMirrorPlugins() {
-          return [new Plugin({
-            props: {
-              handlePaste(view, event) {
-                const items = Array.from(event.clipboardData?.items || [])
-                for (const item of items) {
-                  if (item.type.indexOf('image') === 0) {
-                    event.preventDefault()
-                    const file = item.getAsFile()
-                    if (file) {
-                      setUploading(true)
-                      uploadFileToSupabase(file, userId).then(url => {
-                        if (url) view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.nodes.image.create({ src: url })))
-                        setUploading(false)
-                      })
-                    }
-                    return true
-                  }
-                }
-                return false
-              },
-              handleDrop(view, event) {
-                const images = Array.from(event.dataTransfer?.files || []).filter(f => /image/i.test(f.type))
-                if (!images.length) return false
-                event.preventDefault()
-                const coords = view.posAtCoords({ left: event.clientX, top: event.clientY })
-                images.forEach(file => {
-                  setUploading(true)
-                  uploadFileToSupabase(file, userId).then(url => {
-                    if (url && coords) view.dispatch(view.state.tr.insert(coords.pos, view.state.schema.nodes.image.create({ src: url })))
-                    setUploading(false)
-                  })
+Image.extend({
+  addAttributes() {
+    return { ...this.parent?.(), class: { default: null } }
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView)
+  },
+  addProseMirrorPlugins() {
+    return [new Plugin({
+      props: {
+        handlePaste(view, event) {
+          const items = Array.from(event.clipboardData?.items || [])
+          for (const item of items) {
+            if (item.type.indexOf('image') === 0) {
+              event.preventDefault()
+              const file = item.getAsFile()
+              if (file) {
+                setUploading(true)
+                uploadFileToSupabase(file, userId).then(url => {
+                  if (url) view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.nodes.image.create({ src: url })))
+                  setUploading(false)
                 })
-                return true
               }
+              return true
             }
-          })]
+          }
+          return false
+        },
+        handleDrop(view, event) {
+          const images = Array.from(event.dataTransfer?.files || []).filter(f => /image/i.test(f.type))
+          if (!images.length) return false
+          event.preventDefault()
+          const coords = view.posAtCoords({ left: event.clientX, top: event.clientY })
+          images.forEach(file => {
+            setUploading(true)
+            uploadFileToSupabase(file, userId).then(url => {
+              if (url && coords) view.dispatch(view.state.tr.insert(coords.pos, view.state.schema.nodes.image.create({ src: url })))
+              setUploading(false)
+            })
+          })
+          return true
         }
-      }),
+      }
+    })]
+  }
+}),
       SlashCommands.configure({
         onAddSubpage,
         pages,
