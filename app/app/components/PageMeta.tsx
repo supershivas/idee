@@ -1,8 +1,7 @@
 'use client'
-import { useState } from 'react'
-import { Page } from '../types'
-import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
+  import { Page } from '../types'
+import { createClient } from '@/lib/supabase/client'
 
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
