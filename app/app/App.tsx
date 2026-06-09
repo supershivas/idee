@@ -2,54 +2,19 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
-import ShareButton from './ShareButton'
-import ExportButton from './ExportButton'
-import HistoryButton from './HistoryButton'
-import EmojiPicker from './EmojiPicker'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
-import { Page, formatSubtitle } from './types'
-import { useIsMobile, useToggleFavorite, useReorderFavorites } from './hooks'
+import { Page } from './types'
+import { useIsMobile, useToggleFavorite } from './hooks'
 import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
-import { PageTree, Breadcrumb, FavoritesSection } from './components/PageTree'
+import { PageTree, FavoritesSection } from './components/PageTree'
 import { SubpagesList } from './components/SubpagesList'
 import { MobileHomeView, MobileTopBar } from './components/MobileNav'
-import { ActionsMenu, ConfirmTrashModal } from './components/ActionsMenu'
-import { JournalList, JournalEntryHeader } from './components/JournalView'
+import { ConfirmTrashModal } from './components/ActionsMenu'
+import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
-import { PageMeta } from './components/PageMeta'
-function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
-  if (!selected) return null
-  const crumbs: Page[] = []
-  let current: Page | undefined = selected
-  while (current) { crumbs.unshift(current); current = pages.find(p => p.id === current!.parent_id) }
-  const ancestors = crumbs.slice(0, -1)
-  if (ancestors.length === 0) return <div className="flex-1 min-w-0" />
-  return (
-    <div className="flex items-center gap-1 text-xs flex-1 min-w-0 overflow-x-auto" style={{ color: 'var(--text-muted)' }}>
-      {ancestors.map((crumb, i) => (
-        <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
-          {i > 0 && <span style={{ color: 'var(--text-faint)' }}>/</span>}
-          <button onClick={() => onSelect(crumb)} className="transition-opacity hover:opacity-70 flex items-center gap-1 py-1">
-            <span>{crumb.icon || '📄'}</span>
-            <span className="whitespace-nowrap">{crumb.title || 'Sans titre'}</span>
-          </button>
-        </span>
-      ))}
-      <span style={{ color: 'var(--text-faint)' }} className="flex-shrink-0">/</span>
-    </div>
-  )
-}
-
-function PageActionBtn({ children, title, onClick }: { children: React.ReactNode, title: string, onClick: () => void }) {
-  return (
-    <div className="[&_button]:!text-xs [&_button]:!px-1.5 [&_button]:!py-1 [&_button]:!rounded [&_button]:transition-colors" title={title}
-      style={{ ['--tw-text-opacity' as any]: 1 }}>
-      {children}
-    </div>
-  )
-}
+import { PageHeader } from './components/PageHeader'
 
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
@@ -64,119 +29,11 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
-function PageDates({ page, onCreatedAtChange, onUpdatedAtChange }: {
-  page: Page
-  onCreatedAtChange: (iso: string) => void
-  onUpdatedAtChange: (iso: string) => void
-}) {
-  const createdRef = useRef<HTMLInputElement>(null)
-  const updatedRef = useRef<HTMLInputElement>(null)
-
-  function handleChange(ref: React.RefObject<HTMLInputElement>, current: string, cb: (iso: string) => void) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!e.target.value) return
-      const existing = new Date(current)
-      const [y, m, d] = e.target.value.split("-").map(Number)
-      existing.setFullYear(y, m - 1, d)
-      cb(existing.toISOString())
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-0.5 mt-1 mb-1">
-      <div className="flex items-center gap-1">
-        <span className="text-xs w-20 flex-shrink-0" style={{ color: "var(--text-faint)" }}>Créé le</span>
-        <button onClick={() => createdRef.current?.showPicker?.() ?? createdRef.current?.click()}
-          className="text-xs transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
-          {formatSubtitle(page.created_at)} ✎
-        </button>
-        <input ref={createdRef} type="date" value={page.created_at?.slice(0, 10) || ""}
-          onChange={handleChange(createdRef, page.created_at, onCreatedAtChange)} className="sr-only" tabIndex={-1} />
-      </div>
-      <div className="flex items-center gap-1">
-        <span className="text-xs w-20 flex-shrink-0" style={{ color: "var(--text-faint)" }}>Modifié le</span>
-        <button onClick={() => updatedRef.current?.showPicker?.() ?? updatedRef.current?.click()}
-          className="text-xs transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
-          {formatSubtitle(page.updated_at)} ✎
-        </button>
-        <input ref={updatedRef} type="date" value={page.updated_at?.slice(0, 10) || ""}
-          onChange={handleChange(updatedRef, page.updated_at, onUpdatedAtChange)} className="sr-only" tabIndex={-1} />
-      </div>
-    </div>
-  )
-}
-
-const SIDEBAR_JOURNAL_PAGE = 30
-
-function SidebarJournalList({ entries, selectedId, onSelect }: {
-  entries: Page[], selectedId: string | null, onSelect: (p: Page) => void
-}) {
-  const [limit, setLimit] = useState(SIDEBAR_JOURNAL_PAGE)
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  const sorted = [...entries].sort((a, b) =>
-    new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
-  )
-  const visible = sorted.slice(0, limit)
-  const hasMore = sorted.length > limit
-
-  useEffect(() => {
-    if (!sentinelRef.current || !hasMore) return
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setLimit(l => l + SIDEBAR_JOURNAL_PAGE)
-    }, { threshold: 0.1 })
-    obs.observe(sentinelRef.current)
-    return () => obs.disconnect()
-  }, [hasMore])
-
-  if (entries.length === 0) return (
-    <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Aucune entrée. Crée la première !</p>
-  )
-
-  return (
-    <div className="py-1">
-      {visible.map(entry => (
-        <button
-          key={entry.id}
-          onClick={() => onSelect(entry)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group/jentry"
-          style={{
-            background: selectedId === entry.id ? 'var(--selected-bg)' : 'transparent',
-            minHeight: '32px',
-          }}
-          onMouseEnter={e => { if (selectedId !== entry.id) e.currentTarget.style.background = 'var(--hover-bg)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = selectedId === entry.id ? 'var(--selected-bg)' : 'transparent' }}
-        >
-          <span className="text-sm flex-shrink-0">{entry.icon || '📝'}</span>
-          <span className="flex-1 text-sm truncate" style={{ color: selectedId === entry.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-            {entry.title || 'Sans titre'}
-          </span>
-          {(entry.tags || []).length > 0 && (
-            <div className="flex items-center gap-0.5 flex-shrink-0 ml-1 opacity-60">
-              {(entry.tags || []).slice(0, 2).map(tag => (
-                <span key={tag} className="text-[10px] px-1 py-0 rounded" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
-                  {tag}
-                </span>
-              ))}
-              {(entry.tags || []).length > 2 && (
-                <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>+{(entry.tags || []).length - 2}</span>
-              )}
-            </div>
-          )}
-        </button>
-      ))}
-      {hasMore && <div ref={sentinelRef} className="h-4" />}
-    </div>
-  )
-}
-
 export default function App({ initialPages, userId, userEmail }: { initialPages: Page[], userId: string, userEmail?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
-  const [showIconPicker, setShowIconPicker] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
-  // sidebarTab: 'pages' | 'journal' — controls which tab is active in the sidebar
-  const [sidebarTab, setSidebarTab] = useState<'pages' | 'journal'>('pages')
-  const showJournal = sidebarTab === 'journal'
+  const [showJournal, setShowJournal] = useState(false)
   const [showTags, setShowTags] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const { theme, setTheme } = useTheme()
@@ -188,7 +45,6 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const lastSaveRef = useRef(0)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
-  const reorderFavorites = useReorderFavorites(setPages)
   const SIDEBAR_MIN = 180
   const SIDEBAR_MAX = 400
   const SIDEBAR_DEFAULT = 240
@@ -197,6 +53,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     return parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10)
   })
   const isResizing = useRef(false)
+
   function startResize(e: React.MouseEvent) {
     e.preventDefault()
     isResizing.current = true
@@ -219,7 +76,6 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
 
   const activePages = pages.filter(p => !p.deleted_at && p.type !== 'journal')
   const journalEntries = pages.filter(p => !p.deleted_at && p.type === 'journal')
-  const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [])))
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   const [selected, setSelected] = useState<Page | null>(() => {
@@ -245,8 +101,9 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
       if (hasChildren) toOpen.push(page.id)
       let c = current
       while (c?.parent_id) { toOpen.push(c.parent_id); c = allPages.find(p => p.id === c!.parent_id) as Page }
-      if (!current.parent_id) { const next: Record<string, boolean> = {}; toOpen.forEach(id => { next[id] = true }); return next }
-      const next: Record<string, boolean> = {}; toOpen.forEach(id => { next[id] = true }); return next
+      const next: Record<string, boolean> = {}
+      toOpen.forEach(id => { next[id] = true })
+      return next
     })
   }, [pages, userId])
 
@@ -276,7 +133,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     const { data } = await createClient().from('pages')
       .insert({ title, content: '', user_id: userId, parent_id: null, position: pages.length, icon: '📝', type: 'journal' })
       .select().single()
-    if (data) { setPages(prev => [...prev, data]); selectPage(data) }
+    if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false) }
   }
 
   async function convertToJournal(id: string) {
@@ -299,11 +156,18 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     await createClient().from('pages').update({ icon }).eq('id', id)
   }
 
-async function updatePageMeta(id: string, updates: Partial<Page>) {
-    setPages(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
-    if (selected?.id === id) setSelected(prev => prev ? { ...prev, ...updates } : null)
-    await createClient().from('pages').update(updates).eq('id', id)
+  async function updateTags(id: string, tags: string[]) {
+    setPages(prev => prev.map(p => p.id === id ? { ...p, tags } : p))
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, tags } : null)
+    await createClient().from('pages').update({ tags }).eq('id', id)
   }
+
+  async function updateCreatedAt(id: string, iso: string) {
+    setPages(prev => prev.map(p => p.id === id ? { ...p, created_at: iso } : p))
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, created_at: iso } : null)
+    await createClient().from('pages').update({ created_at: iso }).eq('id', id)
+  }
+
   async function renamePage(id: string, title: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, title } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, title } : null)
@@ -313,7 +177,7 @@ async function updatePageMeta(id: string, updates: Partial<Page>) {
   async function updateContent(content: string) {
     if (!selected) return
     const updated = { ...selected, content, updated_at: new Date().toISOString() }
-    setSelected(prev => prev ? { ...prev, content } : null)
+    setSelected(prev => prev ? { ...prev, content, updated_at: updated.updated_at } : null)
     setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
     setSaving(true)
     await createClient().from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
@@ -387,13 +251,13 @@ async function updatePageMeta(id: string, updates: Partial<Page>) {
 
   const activeDragPage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
-
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
 
   return (
     <div className="flex w-full h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
-      {/* Sidebar desktop */}
+
+      {/* ── Sidebar desktop ── */}
       <div
         className="hidden md:flex flex-col flex-shrink-0 relative"
         style={{ width: `${sidebarWidth}px`, background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}
@@ -401,12 +265,8 @@ async function updatePageMeta(id: string, updates: Partial<Page>) {
         <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-400 transition-colors" title="Redimensionner">
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
         </div>
-        {/* Header */}
         <div className="px-4 flex items-center justify-between" style={{ minHeight: '48px', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center gap-2">
-            <img src="/apple-touch-icon.png" alt="Idée" className="w-5 h-5 rounded-md flex-shrink-0" />
-            <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Idée</span>
-          </div>
+          <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Idée</span>
           <button
             onClick={() => setShowSettings(true)}
             className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
@@ -414,42 +274,14 @@ async function updatePageMeta(id: string, updates: Partial<Page>) {
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             title="Paramètres"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM7 8a1 1 0 1 1 2 0A1 1 0 0 1 7 8Z" fill="currentColor"/>
-              <path fillRule="evenodd" clipRule="evenodd" d="M6.5 1a.75.75 0 0 1 .75.75v.6a4.53 4.53 0 0 1 1.16.48l.43-.43a.75.75 0 1 1 1.06 1.06l-.43.43c.2.36.35.75.48 1.16h.6a.75.75 0 0 1 0 1.5h-.6a4.53 4.53 0 0 1-.48 1.16l.43.43a.75.75 0 1 1-1.06 1.06l-.43-.43a4.53 4.53 0 0 1-1.16.48v.6a.75.75 0 0 1-1.5 0v-.6a4.53 4.53 0 0 1-1.16-.48l-.43.43a.75.75 0 0 1-1.06-1.06l.43-.43A4.53 4.53 0 0 1 2.85 7.5h-.6a.75.75 0 0 1 0-1.5h.6c.13-.41.28-.8.48-1.16l-.43-.43a.75.75 0 0 1 1.06-1.06l.43.43A4.53 4.53 0 0 1 5.5 2.35v-.6A.75.75 0 0 1 6.5 1Z" fill="currentColor"/>
-            </svg>
-          </button>
+          >⚙️</button>
         </div>
-
         <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
-
-        {/* Contenu sidebar */}
-        <div className="flex-1 overflow-y-auto py-1 px-2 sidebar-scroll">
-          {/* Entrée Journal en haut */}
-          <button
-            onClick={() => { setSidebarTab('journal'); setShowTags(false); setSelected(null) }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg mb-1 transition-colors text-left"
-            style={{
-              background: showJournal && !selected ? 'var(--selected-bg)' : 'var(--hover-bg)',
-              borderBottom: '1px solid var(--border)',
-              marginBottom: '6px',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--selected-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showJournal && !selected ? 'var(--selected-bg)' : 'var(--hover-bg)' }}
-          >
-            <span className="text-base">📓</span>
-            <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Journal</span>
-            {journalEntries.length > 0 && (
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{journalEntries.length}</span>
-            )}
-          </button>
-
-          {/* Favoris + pages */}
+        <div className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
           {activePages.filter(p => p.parent_id === null).length === 0 && (
             <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
           )}
-          <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} onReorderFavorites={reorderFavorites} />
+          <FavoritesSection pages={activePages} selectedId={selected?.id || null} onSelect={selectPage} onToggleFavorite={toggleFavorite} />
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
               onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
@@ -466,11 +298,22 @@ async function updatePageMeta(id: string, updates: Partial<Page>) {
             </DragOverlay>
           </DndContext>
         </div>
-
-        {/* Bas de sidebar */}
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
           <button
-            onClick={() => { setShowTags(true); setSelected(null) }}
+            onClick={() => { setShowJournal(true); setShowTags(false); setSelected(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{
+              background: showJournal && !showTags ? 'var(--selected-bg)' : 'transparent',
+              color: showJournal && !showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { if (!(showJournal && !showTags)) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showJournal && !showTags ? 'var(--selected-bg)' : 'transparent' }}
+          >
+            <span>📓</span><span className="flex-1 text-left">Journal</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{journalEntries.length || ''}</span>
+          </button>
+          <button
+            onClick={() => { setShowTags(true); setShowJournal(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showTags ? 'var(--selected-bg)' : 'transparent',
@@ -492,150 +335,110 @@ async function updatePageMeta(id: string, updates: Partial<Page>) {
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{trashedPages.length}</span>}
           </button>
           <button
-            onClick={() => showJournal && !selected ? addJournalEntry() : addPage(null)}
+            onClick={() => showJournal ? addJournalEntry() : addPage(null)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
           >
-            <span>{showJournal && !selected ? '✏️' : '+'}</span>
-            <span>{showJournal && !selected ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+            <span>{showJournal ? '✏️' : '+'}</span>
+            <span>{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
           </button>
         </div>
       </div>
 
-      {/* Mobile : vue liste (avec onglets dans MobileHomeView) */}
-      {isMobile && !selected && (
+      {/* ── Mobile : vue liste ── */}
+      {isMobile && !selected && !showJournal && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
-            onSelect={p => selectPage(p)}
+            onSelect={p => { selectPage(p); setShowJournal(false) }}
             onAdd={() => addPage(null)} onShowTrash={() => setShowTrash(true)}
             trashedCount={trashedPages.length} onToggleFavorite={toggleFavorite}
-            onShowJournal={() => {}} journalCount={journalEntries.length}
-            onAddJournalEntry={addJournalEntry}
+            onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
           />
+        </div>
+      )}
+
+      {/* ── Mobile : vue journal ── */}
+      {isMobile && showJournal && !selected && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
+            <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
+          </div>
+          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
         </div>
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
 
-      {/* Desktop : vue tags */}
-      {showingTagsDesktop && (
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false) }} />
-        </div>
-      )}
-
-      {/* Desktop : vue liste journal */}
+      {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <JournalList entries={journalEntries} selectedId={null} onSelect={p => selectPage(p)} onAdd={addJournalEntry} />
+          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
         </div>
       )}
 
-      {/* Contenu — page ou entrée journal */}
-      <div className={`${(isMobile && !selected) || showingTagsDesktop || showingJournalDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
+      {/* ── Desktop : vue tags ── */}
+      {showingTagsDesktop && (
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} />
+        </div>
+      )}
+
+      {/* ── Contenu principal ── */}
+      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
         {selected ? (
           <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col">
-            {selected.type === 'journal' ? (
-              <>
-                <MobileTopBar onBack={() => { setSelected(null) }} saving={saving} />
-                <JournalEntryHeader entry={selected}
-                  onBack={() => { setSelected(null) }}
-                  onTitleChange={updateTitle}
-                  onIconChange={(emoji) => updateIcon(selected.id, emoji)}
-                  saving={saving} isMobile={isMobile}
-                  onCreatedAtChange={async (iso) => {
-                    setSelected(prev => prev ? { ...prev, created_at: iso } : null)
-                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, created_at: iso } : p))
-                    await createClient().from('pages').update({ created_at: iso }).eq('id', selected.id)
-                  }}
-                  onDateChange={async (iso) => {
-                    setSelected(prev => prev ? { ...prev, updated_at: iso } : null)
-                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, updated_at: iso } : p))
-                    await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
-                  }}
-                />
-                <PageMeta page={selected} onChange={updates => updatePageMeta(selected.id, updates)} />
-                <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
-                  onUpdate={updateContent} onAddSubpage={() => {}}
-                  onNavigate={p => { selectPage(p) }}
-                  userId={userId} isMobile={isMobile} />
-              </>
-            ) : (
-              <>
-                <MobileTopBar onBack={() => setSelected(null)} saving={saving} />
-                <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
-                  <BreadcrumbInline pages={activePages} selected={selected} onSelect={selectPage} />
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    </span>
-                    <ActionsMenu onDelete={() => setConfirmDeleteId(selected.id)} onConvertToJournal={() => convertToJournal(selected.id)}>
-                      <div className="px-3 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100"
-                        style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
-                        <HistoryButton page={selected} onRestore={(title, content) => {
-                          setSelected(prev => prev ? { ...prev, title, content } : null)
-                          setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
-                        }} />
-                      </div>
-                      <div className="px-3 py-2.5 text-sm border-b"
-                        style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
-                        <ExportButton page={selected} />
-                      </div>
-                      <div className="px-3 py-2.5 text-sm border-b"
-                        style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
-                        <ShareButton page={selected as any} onUpdate={(updates) => {
-                          setSelected(prev => prev ? { ...prev, ...updates } : null)
-                          setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
-                        }} />
-                      </div>
-                    </ActionsMenu>
-                  </div>
-                </div>
-                <div className="px-6 pt-2 pb-1">
-                  <div className="flex items-start gap-3 group/title">
-                    <div className="relative flex-shrink-0">
-                      <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity" style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selected.icon || '📄'}</button>
-                      {showIconPicker && <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}><EmojiPicker onSelect={(emoji) => { updateIcon(selected.id, emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} /></div>}
-                    </div>
-                    <input
-                      className="page-title flex-1 text-2xl md:text-3xl outline-none bg-transparent min-w-0 pt-1"
-                      style={{ minHeight: '44px', caretColor: 'var(--text-primary)' }}
-                      value={selected.title}
-                      onChange={e => updateTitle(e.target.value)}
-                      placeholder="Sans titre"
-                    />
-                    <button onClick={() => toggleFavorite(selected.id)}
-                      className={`flex-shrink-0 mt-2 text-xl transition-all ${selected.favorite ? 'opacity-100' : 'opacity-0 group-hover/title:opacity-100 hover:!opacity-100'}`}
-                      style={{ color: selected.favorite ? '#f59e0b' : 'var(--text-faint)' }}
-                      title={selected.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
-                      {selected.favorite ? '★' : '☆'}
-                    </button>
-                  </div>
-                  <PageDates page={selected}
-                    onCreatedAtChange={async (iso) => {
-                      setSelected(prev => prev ? { ...prev, created_at: iso } : null)
-                      setPages(prev => prev.map(p => p.id === selected.id ? { ...p, created_at: iso } : p))
-                      await createClient().from('pages').update({ created_at: iso }).eq('id', selected.id)
-                    }}
-                    onUpdatedAtChange={async (iso) => {
-                      setSelected(prev => prev ? { ...prev, updated_at: iso } : null)
-                      setPages(prev => prev.map(p => p.id === selected.id ? { ...p, updated_at: iso } : p))
-                      await createClient().from('pages').update({ updated_at: iso }).eq('id', selected.id)
-                    }}
-                  />
-                </div>
-                <PageMeta page={selected} onChange={updates => updatePageMeta(selected.id, updates)} />
-                <SubpagesList subpages={subpages} onSelect={selectPage} onReorder={(a, o, p) => reorderSiblings(a, o, p)} isMobile={isMobile} onAddSubpage={() => addPage(selected.id)} />
-                <Editor key={selected.id} page={selected} pages={[...activePages, ...journalEntries]}
-                  onUpdate={updateContent} onAddSubpage={() => addPage(selected.id)}
-                  onNavigate={p => { selectPage(p) }}
-                  userId={userId} isMobile={isMobile} />
-              </>
+            <MobileTopBar
+              onBack={() => {
+                if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
+                else setSelected(null)
+              }}
+              saving={saving}
+            />
+            <PageHeader
+              page={selected}
+              pages={[...activePages, ...journalEntries]}
+              saving={saving}
+              isMobile={isMobile}
+              onBack={() => { setSelected(null); setShowJournal(true) }}
+              onTitleChange={updateTitle}
+              onIconChange={emoji => updateIcon(selected.id, emoji)}
+              onTagsChange={tags => updateTags(selected.id, tags)}
+              onToggleFavorite={toggleFavorite}
+              onDelete={() => setConfirmDeleteId(selected.id)}
+              onConvertToJournal={() => convertToJournal(selected.id)}
+              onCreatedAtChange={iso => updateCreatedAt(selected.id, iso)}
+              onRestore={(title, content) => {
+                setSelected(prev => prev ? { ...prev, title, content } : null)
+                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
+              }}
+              onShareUpdate={updates => {
+                setSelected(prev => prev ? { ...prev, ...updates } : null)
+                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
+              }}
+            />
+            {selected.type !== 'journal' && (
+              <SubpagesList
+                subpages={subpages}
+                onSelect={selectPage}
+                onReorder={(a, o, p) => reorderSiblings(a, o, p)}
+                isMobile={isMobile}
+                onAddSubpage={() => addPage(selected.id)}
+              />
             )}
+            <Editor
+              key={selected.id}
+              page={selected}
+              pages={[...activePages, ...journalEntries]}
+              onUpdate={updateContent}
+              onAddSubpage={() => addPage(selected.id)}
+              onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
+              userId={userId}
+              isMobile={isMobile}
+            />
           </div>
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center h-full">
