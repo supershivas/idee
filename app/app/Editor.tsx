@@ -144,7 +144,92 @@ function ImageNodeView({ node, editor, getPos }: any) {
     </NodeViewWrapper>
   )
 }
+function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [plusPos, setPlusPos] = useState<{ top: number; blockEl: Element } | null>(null)
+  const plusRef = useRef<HTMLButtonElement>(null)
 
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !editor) return
+
+    function onMouseMove(e: MouseEvent) {
+      if (!editor) return
+      const el = document.elementFromPoint(e.clientX, e.clientY)
+      if (!el) return
+      // Ignore le bouton + lui-même
+      if (plusRef.current?.contains(el as Node)) return
+
+      const proseMirror = container.querySelector('.ProseMirror')
+      if (!proseMirror) return
+
+      // Trouve le bloc direct de ProseMirror le plus proche
+      const block = (el as HTMLElement).closest(
+        '.ProseMirror > p, .ProseMirror > h1, .ProseMirror > h2, .ProseMirror > h3, .ProseMirror > ul, .ProseMirror > ol, .ProseMirror > blockquote, .ProseMirror > pre, .ProseMirror > hr, .ProseMirror > .tableWrapper, .ProseMirror > [data-type="taskList"]'
+      )
+      if (!block) { setPlusPos(null); return }
+
+      const containerRect = container.getBoundingClientRect()
+      const blockRect = block.getBoundingClientRect()
+      setPlusPos({ top: blockRect.bottom - containerRect.top + container.scrollTop - 14, blockEl: block })
+    }
+
+    function onMouseLeave(e: MouseEvent) {
+      if (plusRef.current?.contains(e.relatedTarget as Node)) return
+      setPlusPos(null)
+    }
+
+    container.addEventListener('mousemove', onMouseMove)
+    container.addEventListener('mouseleave', onMouseLeave)
+    return () => {
+      container.removeEventListener('mousemove', onMouseMove)
+      container.removeEventListener('mouseleave', onMouseLeave)
+    }
+  }, [editor])
+
+  function insertAfterBlock() {
+    if (!editor || !plusPos) return
+    const proseMirror = containerRef.current?.querySelector('.ProseMirror')
+    if (!proseMirror) return
+    // Trouve la position ProseMirror du nœud correspondant
+    const blockEl = plusPos.blockEl
+    const pos = editor.view.posAtDOM(blockEl, 0)
+    const resolved = editor.state.doc.resolve(pos)
+    const nodeEnd = resolved.node(1) ? resolved.before(1) + resolved.node(1).nodeSize : pos
+    editor.chain().focus().insertContentAt(nodeEnd, { type: 'paragraph' }).run()
+    setPlusPos(null)
+  }
+
+  return (
+    <div ref={containerRef} className="flex-1 overflow-y-auto relative">
+      <EditorContent
+        editor={editor}
+        className="prose max-w-none py-6 md:py-6"
+        style={{ paddingLeft: isMobile ? '16px' : '52px', paddingRight: isMobile ? '16px' : '52px' }}
+      />
+      {plusPos && !isMobile && (
+        <button
+          ref={plusRef}
+          onClick={insertAfterBlock}
+          onMouseEnter={() => {}}
+          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center rounded-full shadow-md text-sm font-bold transition-all pointer-events-auto"
+          style={{
+            top: `${plusPos.top}px`,
+            width: '28px',
+            height: '28px',
+            background: 'var(--card-bg)',
+            border: '1.5px solid var(--border)',
+            color: 'var(--text-muted)',
+            zIndex: 10,
+            cursor: 'pointer',
+          }}
+          title="Ajouter un bloc après"
+        >+</button>
+      )}
+      <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
+    </div>
+  )
+}
 export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, userId, isMobile }: {
   page: Page, pages: Page[], onUpdate: (content: string) => void
   onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string, isMobile: boolean
@@ -454,12 +539,8 @@ Image.extend({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto">
-        <EditorContent
-          editor={editor}
-          className="prose max-w-none py-6 md:py-6"
-          style={{ paddingLeft: '52px', paddingRight: '52px' }}
-        />
+      <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
+      
         <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
       </div>
 
