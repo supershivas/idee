@@ -300,11 +300,10 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   }
 
 async function updatePageMeta(id: string, updates: Partial<Page>) {
-  setPages(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
-  if (selected?.id === id) setSelected(prev => prev ? { ...prev, ...updates } : null)
-  await createClient().from('pages').update(updates).eq('id', id)
-}
-
+    setPages(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, ...updates } : null)
+    await createClient().from('pages').update(updates).eq('id', id)
+  }
   async function renamePage(id: string, title: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, title } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, title } : null)
