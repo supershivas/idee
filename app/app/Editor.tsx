@@ -410,7 +410,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         <EditorContent
           editor={editor}
           className="prose max-w-none py-6 md:py-6"
-          style={{ paddingLeft: '52px', paddingRight: '24px' }}
+          style={{ paddingLeft: '52px', paddingRight: '52px' }}
         />
         <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
       </div>
@@ -444,7 +444,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         }
         .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
         .resize-cursor { cursor: col-resize; }
-        .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5rem 0; display: block; }
+        .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5rem 0; display: block; }
         .ProseMirror a {
           color: var(--prose-link);
           text-decoration: none;
