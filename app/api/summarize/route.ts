@@ -4,8 +4,20 @@ export async function POST(req: NextRequest) {
   const { content, title } = await req.json()
   if (!content) return NextResponse.json({ error: 'No content' }, { status: 400 })
 
-  const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000)
-
+const text = content
+  .replace(/<\/p>/gi, '\n')
+  .replace(/<\/h[1-6]>/gi, '\n')
+  .replace(/<\/li>/gi, '\n')
+  .replace(/<br\s*\/?>/gi, '\n')
+  .replace(/<[^>]*>/g, '')
+  .replace(/&nbsp;/g, ' ')
+  .replace(/&amp;/g, '&')
+  .replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim()
+  .slice(0, 4000)
+  
   const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
