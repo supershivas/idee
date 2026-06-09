@@ -27,3 +27,4 @@ export function formatDate(date: string) {
     hour: '2-digit', minute: '2-digit'
   })
 }
+ 
