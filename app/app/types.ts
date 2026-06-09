@@ -13,6 +13,7 @@ export type Page = {
   created_at: string
   updated_at: string
   deleted_at?: string | null
+  summary?: string | null
 }
 export function formatSubtitle(date: string) {
   return new Date(date).toLocaleString('fr-FR', {
