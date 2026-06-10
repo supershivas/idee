@@ -291,8 +291,12 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
         </div>
       </div>
 
-      {/* Tags */}
-      <TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} />
+      {/* Tags + Métadonnées */}
+      <div className="px-6 pt-1">
+        <MetaRow label="Tags">
+          <TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} compact />
+        </MetaRow>
+      </div>
 
       {/* Métadonnées : dates + résumé */}
       <MetaSection
