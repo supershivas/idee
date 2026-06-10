@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
-import { PageMetadata } from './JournalView'
+import { useRelativeTime } from './JournalView'
 import { ActionsMenu } from './ActionsMenu'
 import HistoryButton from '../HistoryButton'
 import ExportButton from '../ExportButton'
@@ -33,10 +33,35 @@ function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], select
   )
 }
 
-function SummarySection({ page, onUpdate }: { page: Page; onUpdate: (summary: string) => void }) {
-  const [loading, setLoading] = useState(false)
+function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 py-1.5">
+      <span className="text-xs w-24 flex-shrink-0 pt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <div className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{children}</div>
+    </div>
+  )
+}
 
-  async function generate() {
+function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
+  page: Page
+  onCreatedAtChange?: (iso: string) => void
+  onSummaryUpdate?: (summary: string) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const createdInputRef = useRef<HTMLInputElement>(null)
+  const relativeModified = useRelativeTime(
+    page.updated_at && page.updated_at !== page.created_at ? page.updated_at : null
+  )
+
+  function handleCreatedChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.value || !onCreatedAtChange) return
+    const existing = new Date(page.created_at)
+    const [y, m, d] = e.target.value.split('-').map(Number)
+    existing.setFullYear(y, m - 1, d)
+    onCreatedAtChange(existing.toISOString())
+  }
+
+  async function generateSummary() {
     if (!page.content) return
     setLoading(true)
     try {
@@ -48,7 +73,7 @@ function SummarySection({ page, onUpdate }: { page: Page; onUpdate: (summary: st
       const { summary } = await res.json()
       if (summary) {
         await createClient().from('pages').update({ summary }).eq('id', page.id)
-        onUpdate(summary)
+        onSummaryUpdate?.(summary)
       }
     } finally {
       setLoading(false)
@@ -56,32 +81,54 @@ function SummarySection({ page, onUpdate }: { page: Page; onUpdate: (summary: st
   }
 
   return (
-    <div className="px-6 pb-3">
-      {page.summary ? (
-        <div className="flex flex-col gap-1">
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{page.summary}</p>
-          <button
-            onClick={generate}
-            disabled={loading}
-            className="self-start flex items-center gap-1 text-xs transition-opacity disabled:opacity-40 opacity-40 hover:opacity-100"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            <span className={loading ? 'animate-spin inline-block' : ''}>↻</span>
-            {loading ? 'Génération…' : 'Régénérer'}
-          </button>
-        </div>
-      ) : (
+    <div className="px-6 pb-3 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
+      <MetaRow label="Créé le">
         <button
-          onClick={generate}
-          disabled={loading || !page.content}
-          className="text-xs transition-colors disabled:opacity-40"
-          style={{ color: 'var(--text-faint)' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
+          onClick={() => createdInputRef.current?.showPicker?.() ?? createdInputRef.current?.click()}
+          className="transition-opacity hover:opacity-70"
+          title="Modifier la date"
         >
-          {loading ? 'Génération…' : '+ Générer un résumé'}
+          {formatSubtitle(page.created_at)} ✎
         </button>
-      )}
+        <input
+          ref={createdInputRef}
+          type="date"
+          value={page.created_at ? page.created_at.slice(0, 10) : ''}
+          onChange={handleCreatedChange}
+          className="sr-only"
+          tabIndex={-1}
+        />
+      </MetaRow>
+      <MetaRow label="Modifié le">
+        {relativeModified || formatSubtitle(page.updated_at)}
+      </MetaRow>
+      <MetaRow label="Résumé">
+        {page.summary ? (
+          <div className="flex flex-col gap-1">
+            <p className="leading-relaxed">{page.summary}</p>
+            <button
+              onClick={generateSummary}
+              disabled={loading}
+              className="self-start flex items-center gap-1 transition-opacity disabled:opacity-40 opacity-40 hover:opacity-100"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <span className={loading ? 'animate-spin inline-block' : ''}>↻</span>
+              {loading ? 'Génération…' : 'Régénérer'}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={generateSummary}
+            disabled={loading || !page.content}
+            className="transition-colors disabled:opacity-40"
+            style={{ color: 'var(--text-faint)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
+          >
+            {loading ? 'Génération…' : '+ Générer un résumé'}
+          </button>
+        )}
+      </MetaRow>
     </div>
   )
 }
@@ -104,17 +151,8 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
   onSummaryUpdate?: (summary: string) => void
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const [createdInputOpen, setCreatedInputOpen] = useState(false)
   const isJournal = page.type === 'journal'
   const allTags = Array.from(new Set(pages.flatMap(p => p.tags || []))).sort()
-
-  function handleCreatedChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.value || !onCreatedAtChange) return
-    const existing = new Date(page.created_at)
-    const [y, m, d] = e.target.value.split('-').map(Number)
-    existing.setFullYear(y, m - 1, d)
-    onCreatedAtChange(existing.toISOString())
-  }
 
   return (
     <div className="flex-shrink-0">
@@ -180,29 +218,6 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
               onChange={e => onTitleChange(e.target.value)}
               placeholder="Sans titre"
             />
-            {/* Date créée éditable + modifié relatif */}
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <button
-                onClick={() => {
-                  const input = document.getElementById(`created-date-${page.id}`) as HTMLInputElement
-                  input?.showPicker?.() ?? input?.click()
-                }}
-                className="text-xs transition-opacity hover:opacity-70"
-                style={{ color: 'var(--text-muted)' }}
-                title="Modifier la date"
-              >
-                {formatSubtitle(page.created_at)} ✎
-              </button>
-              <input
-                id={`created-date-${page.id}`}
-                type="date"
-                value={page.created_at ? page.created_at.slice(0, 10) : ''}
-                onChange={handleCreatedChange}
-                className="sr-only"
-                tabIndex={-1}
-              />
-              <PageMetadata page={page} inline />
-            </div>
           </div>
           <button
             onClick={() => onToggleFavorite(page.id)}
@@ -218,10 +233,11 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
       {/* Tags */}
       <TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} />
 
-      {/* Résumé Mistral */}
-      <SummarySection
+      {/* Métadonnées : dates + résumé */}
+      <MetaSection
         page={page}
-        onUpdate={summary => onSummaryUpdate?.(summary)}
+        onCreatedAtChange={onCreatedAtChange}
+        onSummaryUpdate={onSummaryUpdate}
       />
     </div>
   )
