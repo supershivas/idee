@@ -430,6 +430,10 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                 setSelected(prev => prev ? { ...prev, ...updates } : null)
                 setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
               }}
+              onSummaryUpdate={summary => {
+                setSelected(prev => prev ? { ...prev, summary } : null)
+                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, summary } : p))
+              }}
             />
             {selected.type !== 'journal' && (
               <SubpagesList
