@@ -436,6 +436,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             <PageHeader
               page={selected}
               pages={[...activePages, ...journalEntries]}
+              userId={userId}
               saving={saving}
               isMobile={isMobile}
               onBack={() => { setSelected(null); setShowJournal(true) }}
@@ -458,6 +459,10 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               onSummaryUpdate={summary => {
                 setSelected(prev => prev ? { ...prev, summary: summary ?? undefined } : null)
                 setPages(prev => prev.map(p => p.id === selected.id ? { ...p, summary: summary ?? undefined } : p))
+              }}
+              onCoverUpdate={cover => {
+                setSelected(prev => prev ? { ...prev, cover_url: cover } : null)
+                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, cover_url: cover } : p))
               }}
             />
             {selected.type !== 'journal' && (
