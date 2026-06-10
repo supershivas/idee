@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
@@ -8,6 +8,7 @@ import { ActionsMenu } from './ActionsMenu'
 import HistoryButton from '../HistoryButton'
 import ExportButton from '../ExportButton'
 import ShareButton from '../ShareButton'
+import { createClient } from '@/lib/supabase/client'
 
 function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
   if (!selected) return null
@@ -32,7 +33,60 @@ function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], select
   )
 }
 
-export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate }: {
+function SummarySection({ page, onUpdate }: { page: Page; onUpdate: (summary: string) => void }) {
+  const [loading, setLoading] = useState(false)
+
+  async function generate() {
+    if (!page.content) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: page.content, title: page.title }),
+      })
+      const { summary } = await res.json()
+      if (summary) {
+        await createClient().from('pages').update({ summary }).eq('id', page.id)
+        onUpdate(summary)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="px-6 pb-3">
+      {page.summary ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{page.summary}</p>
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="self-start flex items-center gap-1 text-xs transition-opacity disabled:opacity-40 opacity-40 hover:opacity-100"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            <span className={loading ? 'animate-spin inline-block' : ''}>↻</span>
+            {loading ? 'Génération…' : 'Régénérer'}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={generate}
+          disabled={loading || !page.content}
+          className="text-xs transition-colors disabled:opacity-40"
+          style={{ color: 'var(--text-faint)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
+        >
+          {loading ? 'Génération…' : '+ Générer un résumé'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate }: {
   page: Page
   pages: Page[]
   saving: boolean
@@ -47,9 +101,10 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
   onCreatedAtChange?: (iso: string) => void
   onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void
+  onSummaryUpdate?: (summary: string) => void
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const createdInputRef = useRef<HTMLInputElement>(null)
+  const [createdInputOpen, setCreatedInputOpen] = useState(false)
   const isJournal = page.type === 'journal'
   const allTags = Array.from(new Set(pages.flatMap(p => p.tags || []))).sort()
 
@@ -74,14 +129,14 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
             ← Journal
           </button>
         ) : (
-          <BreadcrumbInline pages={pages} selected={page} onSelect={p => {}} />
+          <BreadcrumbInline pages={pages} selected={page} onSelect={() => {}} />
         )}
         <div className="flex items-center gap-1 flex-shrink-0">
           <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           </span>
           <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>
-            <div className="px-3 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100"
+            <div className="px-3 py-2.5 text-sm hover:bg-gray-50 border-b"
               style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
               <HistoryButton page={page} onRestore={onRestore} />
             </div>
@@ -125,10 +180,13 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
               onChange={e => onTitleChange(e.target.value)}
               placeholder="Sans titre"
             />
-            {/* Date de création éditable */}
+            {/* Date créée éditable + modifié relatif */}
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <button
-                onClick={() => createdInputRef.current?.showPicker?.() ?? createdInputRef.current?.click()}
+                onClick={() => {
+                  const input = document.getElementById(`created-date-${page.id}`) as HTMLInputElement
+                  input?.showPicker?.() ?? input?.click()
+                }}
                 className="text-xs transition-opacity hover:opacity-70"
                 style={{ color: 'var(--text-muted)' }}
                 title="Modifier la date"
@@ -136,7 +194,7 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
                 {formatSubtitle(page.created_at)} ✎
               </button>
               <input
-                ref={createdInputRef}
+                id={`created-date-${page.id}`}
                 type="date"
                 value={page.created_at ? page.created_at.slice(0, 10) : ''}
                 onChange={handleCreatedChange}
@@ -159,6 +217,12 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
 
       {/* Tags */}
       <TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} />
+
+      {/* Résumé Mistral */}
+      <SummarySection
+        page={page}
+        onUpdate={summary => onSummaryUpdate?.(summary)}
+      />
     </div>
   )
 }
