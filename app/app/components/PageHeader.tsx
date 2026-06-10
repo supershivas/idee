@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
@@ -194,7 +194,7 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
   )
 }
 
-export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate }: {
+export function PageHeader({ page, pages, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate }: {
   page: Page
   pages: Page[]
   saving: boolean
@@ -210,7 +210,7 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
   onCreatedAtChange?: (iso: string) => void
   onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void
-  onSummaryUpdate?: (summary: string) => void
+  onSummaryUpdate?: (summary: string | null) => void
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const isJournal = page.type === 'journal'
