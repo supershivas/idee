@@ -281,20 +281,18 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
           {activePages.filter(p => p.parent_id === null).length === 0 && (
             <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
           )}
-<FavoritesSection
-  pages={[...activePages, ...journalEntries]}
-  selectedId={selected?.id || null}
-  onSelect={selectPage}
-  onToggleFavorite={toggleFavorite}
-  onReorderFavorites={async (orderedIds) => {
-    const updates = orderedIds.map((id, i) => ({ id, favorite_position: i }))
-    setPages(prev => prev.map(p => {
-      const u = updates.find(u => u.id === p.id)
-      return u ? { ...p, favorite_position: u.favorite_position } : p
-    }))
-    await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
-  }}
-/>          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+          <FavoritesSection
+            pages={activePages}
+            selectedId={selected?.id || null}
+            onSelect={selectPage}
+            onToggleFavorite={toggleFavorite}
+            onReorderFavorites={async (orderedIds) => {
+              const updates = orderedIds.map((id, i) => ({ id, favorite_position: i }))
+              setPages(prev => prev.map(p => { const u = updates.find(u => u.id === p.id); return u ? { ...p, favorite_position: u.favorite_position } : p }))
+              await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
+            }}
+          />
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
               onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
               overId={overId} overPosition={overPosition} isMobile={false}
