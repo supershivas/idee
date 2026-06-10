@@ -368,6 +368,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             onAdd={() => addPage(null)} onShowTrash={() => setShowTrash(true)}
             trashedCount={trashedPages.length} onToggleFavorite={toggleFavorite}
             onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
+            onAddJournalEntry={addJournalEntry}
           />
         </div>
       )}
