@@ -23,28 +23,22 @@ function moveNode(view: EditorView, nodePos: number, direction: 'up' | 'down') {
     const node = state.doc.nodeAt(nodePos)
     if (!node) return
     const nodeEnd = nodePos + node.nodeSize
+    const tr = state.tr
 
     if (direction === 'up') {
-      const prevPos = nodePos - 1
-      const $prev = state.doc.resolve(prevPos)
-      const prevNodePos = $prev.before($prev.depth > 0 ? $prev.depth : 1)
-      const prevNode = state.doc.nodeAt(prevNodePos)
-      if (!prevNode) return
-      const tr = state.tr
-        .delete(nodePos, nodeEnd)
-        .insert(prevNodePos, node)
-      view.dispatch(tr)
+      const prev = state.doc.resolve(nodePos).nodeBefore
+      if (!prev) return
+      const prevStart = nodePos - prev.nodeSize
+      tr.delete(nodePos, nodeEnd).insert(prevStart, node)
+      tr.setSelection(TextSelection.near(tr.doc.resolve(prevStart + 1)))
     } else {
-      const nextPos = nodeEnd
-      if (nextPos >= state.doc.content.size) return
-      const nextNode = state.doc.nodeAt(nextPos)
-      if (!nextNode) return
-      const tr2 = state.tr
-        .delete(nodePos, nodeEnd + nextNode.nodeSize)
-        .insert(nodePos, nextNode)
-        .insert(nodePos + nextNode.nodeSize, node)
-      view.dispatch(tr2)
+      const next = state.doc.resolve(nodeEnd).nodeAfter
+      if (!next) return
+      tr.delete(nodePos, nodeEnd).insert(nodePos + next.nodeSize, node)
+      tr.setSelection(TextSelection.near(tr.doc.resolve(nodePos + next.nodeSize + 1)))
     }
+    view.dispatch(tr.scrollIntoView())
+    view.focus()
   } catch (err) {
     console.warn('moveNode error:', err)
   }
