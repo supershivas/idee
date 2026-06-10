@@ -14,6 +14,7 @@ export type Page = {
   updated_at: string
   deleted_at?: string | null
   summary?: string | null
+  cover_url?: string | null
 }
 export function formatSubtitle(date: string) {
   return new Date(date).toLocaleString('fr-FR', {
@@ -27,4 +28,3 @@ export function formatDate(date: string) {
     hour: '2-digit', minute: '2-digit'
   })
 }
- 
