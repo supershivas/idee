@@ -213,7 +213,7 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const isJournal = page.type === 'journal'
-  const allTags = Array.from(new Set(pages.flatMap(p => p.tags || []))).sort()
+  const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [] as string[]))).sort() as string[]
 
   return (
     <div className="flex-shrink-0">
