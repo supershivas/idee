@@ -200,6 +200,7 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
   saving: boolean
   isMobile: boolean
   onBack: () => void
+  onSelectPage: (p: Page) => void
   onTitleChange: (v: string) => void
   onIconChange: (emoji: string) => void
   onTagsChange: (tags: string[]) => void
@@ -228,7 +229,7 @@ export function PageHeader({ page, pages, saving, isMobile, onBack, onTitleChang
             ← Journal
           </button>
         ) : (
-          <BreadcrumbInline pages={pages} selected={page} onSelect={() => {}} />
+          <BreadcrumbInline pages={pages} selected={page} onSelect={onSelectPage} />
         )}
         <div className="flex items-center gap-1 flex-shrink-0">
           <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
