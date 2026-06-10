@@ -45,9 +45,11 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
   page: Page
   onCreatedAtChange?: (iso: string) => void
-  onSummaryUpdate?: (summary: string) => void
+  onSummaryUpdate?: (summary: string | null) => void
 }) {
   const [loading, setLoading] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(page.summary || '')
   const createdInputRef = useRef<HTMLInputElement>(null)
   const relativeModified = useRelativeTime(
     page.updated_at && page.updated_at !== page.created_at ? page.updated_at : null
@@ -74,10 +76,26 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
       if (summary) {
         await createClient().from('pages').update({ summary }).eq('id', page.id)
         onSummaryUpdate?.(summary)
+        setEditValue(summary)
+        setEditing(false)
       }
     } finally {
       setLoading(false)
     }
+  }
+
+  async function saveSummary() {
+    const trimmed = editValue.trim()
+    await createClient().from('pages').update({ summary: trimmed || null }).eq('id', page.id)
+    onSummaryUpdate?.(trimmed || null)
+    setEditing(false)
+  }
+
+  async function deleteSummary() {
+    await createClient().from('pages').update({ summary: null }).eq('id', page.id)
+    onSummaryUpdate?.(null)
+    setEditValue('')
+    setEditing(false)
   }
 
   return (
@@ -103,18 +121,61 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
         {relativeModified || formatSubtitle(page.updated_at)}
       </MetaRow>
       <MetaRow label="Résumé">
-        {page.summary ? (
+        {editing ? (
+          <div className="flex flex-col gap-1.5 w-full">
+            <textarea
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              autoFocus
+              rows={3}
+              className="w-full text-xs rounded-lg px-2 py-1.5 outline-none resize-none"
+              style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={saveSummary}
+                className="text-xs px-2 py-1 rounded-md transition-colors"
+                style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+              >
+                Enregistrer
+              </button>
+              <button
+                onClick={() => { setEditing(false); setEditValue(page.summary || '') }}
+                className="text-xs transition-opacity hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : page.summary ? (
           <div className="flex flex-col gap-1">
             <p className="leading-relaxed">{page.summary}</p>
-            <button
-              onClick={generateSummary}
-              disabled={loading}
-              className="self-start flex items-center gap-1 transition-opacity disabled:opacity-40 opacity-40 hover:opacity-100"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              <span className={loading ? 'animate-spin inline-block' : ''}>↻</span>
-              {loading ? 'Génération…' : 'Régénérer'}
-            </button>
+            <div className="flex items-center gap-3 mt-0.5">
+              <button
+                onClick={generateSummary}
+                disabled={loading}
+                className="flex items-center gap-1 text-xs transition-opacity disabled:opacity-40 opacity-50 hover:opacity-100"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <span className={loading ? 'animate-spin inline-block' : ''}>↻</span>
+                {loading ? 'Génération…' : 'Régénérer'}
+              </button>
+              <button
+                onClick={() => { setEditValue(page.summary || ''); setEditing(true) }}
+                className="text-xs transition-opacity opacity-50 hover:opacity-100"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                ✎ Modifier
+              </button>
+              <button
+                onClick={deleteSummary}
+                className="text-xs transition-opacity opacity-50 hover:opacity-100"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                × Supprimer
+              </button>
+            </div>
           </div>
         ) : (
           <button
