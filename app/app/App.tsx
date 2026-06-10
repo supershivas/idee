@@ -88,6 +88,15 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     document.title = selected ? `Idée · ${selected.title || 'Sans titre'}` : 'Idée'
   }, [selected?.title, selected?.id])
 
+  // Sync selected avec pages (ex: favori togglé depuis la sidebar)
+  useEffect(() => {
+    if (!selected) return
+    const updated = pages.find(p => p.id === selected.id)
+    if (updated && (updated.favorite !== selected.favorite || updated.favorite_position !== selected.favorite_position)) {
+      setSelected(prev => prev ? { ...prev, favorite: updated.favorite, favorite_position: updated.favorite_position } : null)
+    }
+  }, [pages])
+
   const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
     if (!page) return
@@ -415,6 +424,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               saving={saving}
               isMobile={isMobile}
               onBack={() => { setSelected(null); setShowJournal(true) }}
+              onSelectPage={selectPage}
               onTitleChange={updateTitle}
               onIconChange={emoji => updateIcon(selected.id, emoji)}
               onTagsChange={tags => updateTags(selected.id, tags)}
