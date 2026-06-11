@@ -185,7 +185,7 @@ function Cover({ page, userId, onCoverUpdate }: {
   }
 
   return (
-<div className="group/cover w-full h-28 md:h-44 overflow-hidden">
+<div className="relative group/cover w-full h-28 md:h-44 overflow-hidden">
   <div
         className="absolute inset-0"
         style={{ backgroundImage: `url("${coverBackground(page)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
