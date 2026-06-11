@@ -510,7 +510,6 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
       </div>
 
       {/* Métadonnées : dates + résumé */}
-// APRÈS
       <MetaSection
         page={page}
         onCreatedAtChange={onCreatedAtChange}
