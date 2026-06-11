@@ -5,7 +5,7 @@ import Editor from './Editor'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { Page } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
-import { SearchBar, type SearchBarHandle } from './components/SearchBar'
+import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
 import { PageTree, FavoritesSection } from './components/PageTree'
 import { SubpagesList } from './components/SubpagesList'
@@ -43,7 +43,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const [overId, setOverId] = useState<string | null>(null)
   const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
   const lastSaveRef = useRef(0)
-  const searchBarRef = useRef<SearchBarHandle>(null)
+  const searchBarRef = useRef<{ focus: () => void }>(null)
   const mainScrollRef = useRef<HTMLDivElement>(null)
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
