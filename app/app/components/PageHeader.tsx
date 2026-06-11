@@ -170,7 +170,7 @@ function CoverModal({ page, userId, onApply, onClose }: {
   )
 }
 
-export function Cover({ page, userId, onCoverUpdate }: {
+function Cover({ page, userId, onCoverUpdate }: {
   page: Page
   userId: string
   onCoverUpdate?: (coverUrl: string | null) => void
@@ -307,7 +307,7 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
     <div className="px-6 pb-3 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
       <MetaRow label="Créé le">
         <button
-          onClick={() => createdInputRef.current?.showPicker ? createdInputRef.current.showPicker() : createdInputRef.current?.click()}
+          onClick={() => createdInputRef.current?.showPicker?.() ?? createdInputRef.current?.click()}
           className="transition-opacity hover:opacity-70"
           title="Modifier la date"
         >
@@ -446,19 +446,16 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           </span>
           <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>
-            <div className="px-2.5 py-2 text-sm rounded-lg transition-colors" style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
+            <div className="px-3 py-2.5 text-sm hover:bg-gray-50 border-b"
+              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
               <HistoryButton page={page} onRestore={onRestore} />
             </div>
-            <div className="px-2.5 py-2 text-sm rounded-lg transition-colors" style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
+            <div className="px-3 py-2.5 text-sm border-b"
+              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
               <ExportButton page={page} />
             </div>
-            <div className="px-2.5 py-2 text-sm rounded-lg transition-colors" style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
+            <div className="px-3 py-2.5 text-sm border-b"
+              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
               <ShareButton page={page as any} onUpdate={onShareUpdate} />
             </div>
           </ActionsMenu>
