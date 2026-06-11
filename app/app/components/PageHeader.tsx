@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
@@ -68,9 +69,9 @@ function CoverModal({ page, userId, onApply, onClose }: {
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={onClose}
     >
@@ -166,7 +167,8 @@ function CoverModal({ page, userId, onApply, onClose }: {
           {error && <p className="text-xs mt-3" style={{ color: '#ef4444' }}>{error}</p>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -307,7 +309,7 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
     <div className="px-6 pb-3 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
       <MetaRow label="Créé le">
         <button
-          onClick={() => createdInputRef.current?.showPicker?.() ?? createdInputRef.current?.click()}
+          onClick={() => createdInputRef.current?.showPicker ? createdInputRef.current.showPicker() : createdInputRef.current?.click()}
           className="transition-opacity hover:opacity-70"
           title="Modifier la date"
         >
