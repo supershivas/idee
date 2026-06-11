@@ -130,7 +130,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   useEffect(() => {
     const el = mainScrollRef.current
     if (!el) return
-    const handler = () => setScrolledPast(el.scrollTop > 80)
+    const handler = () => setScrolledPast(el.scrollTop > 250)
     el.addEventListener('scroll', handler, { passive: true })
     return () => el.removeEventListener('scroll', handler)
   }, [])
@@ -473,13 +473,16 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             </div>
             {/* Sticky mini header — direct child of scroll container, not inside page-card */}
             {scrolledPast && !isMobile && (
-              <div className="sticky top-0 z-20 flex items-center gap-2 px-5"
-                style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
-                <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
-                <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
-                  {selected.title || 'Sans titre'}
-                </span>
-              </div>
+              <>
+                <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+                <div className="sticky top-0 z-20 flex items-center gap-2 px-5"
+                  style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
+                  <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
+                  <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                    {selected.title || 'Sans titre'}
+                  </span>
+                </div>
+              </>
             )}
             {/* Card contenu qui chevauche la cover */}
             <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ marginTop: '-32px', boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
