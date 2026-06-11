@@ -2,6 +2,14 @@
 import { useState } from 'react'
 import { Page } from './App'
 
+const IconDownload = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6.5 1.5v7M4 6.5l2.5 2.5L9 6.5" />
+    <path d="M2 11h9" />
+  </svg>
+)
+
 function htmlToMarkdown(html: string): string {
   return html
     .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
@@ -34,90 +42,56 @@ function htmlToMarkdown(html: string): string {
 }
 
 export default function ExportButton({ page }: { page: Page }) {
-  const [showMenu, setShowMenu] = useState(false)
+  const [open, setOpen] = useState(false)
 
   function exportMarkdown() {
     const md = `# ${page.title || 'Sans titre'}\n\n${htmlToMarkdown(page.content || '')}`
     const blob = new Blob([md], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
-    a.download = `${page.title || 'sans-titre'}.md`
-    a.click()
+    a.href = url; a.download = `${page.title || 'sans-titre'}.md`; a.click()
     URL.revokeObjectURL(url)
-    setShowMenu(false)
+    setOpen(false)
   }
 
   function exportPDF() {
-    setShowMenu(false)
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${page.title || 'Sans titre'}</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 24px; color: #1f2937; line-height: 1.7; }
-          h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
-          h2 { font-size: 1.5rem; font-weight: 600; margin-top: 1.5rem; }
-          h3 { font-size: 1.2rem; font-weight: 600; margin-top: 1rem; }
-          p { margin: 0.5rem 0; }
-          ul, ol { padding-left: 1.5rem; }
-          blockquote { border-left: 3px solid #d1d5db; padding-left: 1rem; color: #6b7280; font-style: italic; }
-          code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.9em; }
-          pre { background: #1e1e2e; color: #cdd6f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
-          img { max-width: 100%; border-radius: 8px; }
-          a { color: #3b5bdb; }
-          .title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem; }
-          .icon { font-size: 2.5rem; }
-        </style>
-      </head>
-      <body>
-        <div class="title-row">
-          <span class="icon">${page.icon || '📄'}</span>
-          <h1>${page.title || 'Sans titre'}</h1>
-        </div>
-        ${page.content || '<p>Page vide.</p>'}
-        <script>window.onload = () => { window.print(); window.close(); }<\/script>
-      </body>
-      </html>
-    `)
-    printWindow.document.close()
+    setOpen(false)
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(`<!DOCTYPE html><html><head><title>${page.title || 'Sans titre'}</title>
+      <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:800px;margin:40px auto;padding:0 24px;color:#1f2937;line-height:1.7}h1{font-size:2rem;font-weight:700}h2{font-size:1.5rem;font-weight:600;margin-top:1.5rem}p{margin:.5rem 0}ul,ol{padding-left:1.5rem}blockquote{border-left:3px solid #d1d5db;padding-left:1rem;color:#6b7280;font-style:italic}code{background:#f3f4f6;padding:.1rem .3rem;border-radius:4px}pre{background:#1e1e2e;color:#cdd6f4;padding:1rem;border-radius:8px}img{max-width:100%;border-radius:8px}.title-row{display:flex;align-items:center;gap:12px;margin-bottom:2rem;border-bottom:1px solid #e5e7eb;padding-bottom:1rem}.icon{font-size:2.5rem}</style>
+      </head><body>
+      <div class="title-row"><span class="icon">${page.icon || '📄'}</span><h1>${page.title || 'Sans titre'}</h1></div>
+      ${page.content || '<p>Page vide.</p>'}
+      <script>window.onload=()=>{window.print();window.close()}<\/script></body></html>`)
+    w.document.close()
   }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setShowMenu(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-600 transition-colors"
-      >
-        <span>⬇️</span>
-        <span className="hidden sm:inline">Exporter</span>
+    <div>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors text-left"
+        style={{ color: 'var(--text-secondary)', background: 'transparent' }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
+        <span style={{ opacity: 0.55 }}><IconDownload /></span>
+        <span className="flex-1">Exporter</span>
+        <span style={{ opacity: 0.35, fontSize: '9px' }}>{open ? '▲' : '▼'}</span>
       </button>
-
-      {showMenu && (
-        <div className="absolute right-0 top-full mt-2 bg-white border rounded-xl shadow-xl overflow-hidden w-44 z-50">
-          <button
-            onClick={exportMarkdown}
-            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 text-sm text-gray-700"
-          >
-            <span>📝</span>
-            <div>
-              <p className="font-medium">Markdown</p>
-              <p className="text-xs text-gray-400">Fichier .md</p>
-            </div>
-          </button>
-          <button
-            onClick={exportPDF}
-            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 text-sm text-gray-700 border-t"
-          >
-            <span>📄</span>
-            <div>
-              <p className="font-medium">PDF</p>
-              <p className="text-xs text-gray-400">Via impression</p>
-            </div>
-          </button>
+      {open && (
+        <div className="ml-5 flex flex-col pb-1">
+          {[
+            { label: 'Markdown (.md)', action: exportMarkdown },
+            { label: 'PDF (impression)', action: exportPDF },
+          ].map(({ label, action }) => (
+            <button key={label} type="button" onClick={action}
+              className="flex items-center px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left"
+              style={{ color: 'var(--text-muted)', background: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}>
+              {label}
+            </button>
+          ))}
         </div>
       )}
     </div>
