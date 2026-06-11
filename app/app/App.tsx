@@ -126,14 +126,19 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     if (toOpen.length > 0) setOpenMap(prev => { const next = { ...prev }; toOpen.forEach(id => { next[id] = true }); return next })
   }, [])
 
-  // Scroll detection for sticky header
+  // Sticky header: observe the page title element via IntersectionObserver
+  // → appears exactly when the title scrolls out of view, disappears when it comes back
   useEffect(() => {
-    const el = mainScrollRef.current
-    if (!el) return
-    const handler = () => setScrolledPast(el.scrollTop > 250)
-    el.addEventListener('scroll', handler, { passive: true })
-    return () => el.removeEventListener('scroll', handler)
-  }, [])
+    if (isMobile) return
+    const titleEl = document.querySelector('.page-title')
+    if (!titleEl) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setScrolledPast(!entry.isIntersecting),
+      { threshold: 0 }
+    )
+    observer.observe(titleEl)
+    return () => observer.disconnect()
+  }, [selected?.id, isMobile])
 
   // Reset scroll & sticky on page change
   useEffect(() => {
