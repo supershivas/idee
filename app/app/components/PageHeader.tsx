@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
@@ -170,7 +170,7 @@ function CoverModal({ page, userId, onApply, onClose }: {
   )
 }
 
-export function Cover({ page, userId, onCoverUpdate }: {
+function Cover({ page, userId, onCoverUpdate }: {
   page: Page
   userId: string
   onCoverUpdate?: (coverUrl: string | null) => void
@@ -185,8 +185,8 @@ export function Cover({ page, userId, onCoverUpdate }: {
   }
 
   return (
-    <div className="relative group/cover w-full h-28 md:h-44 overflow-hidden">
-      <div
+<div className="group/cover w-full h-28 md:h-44 overflow-hidden">
+  <div
         className="absolute inset-0"
         style={{ backgroundImage: `url("${coverBackground(page)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
@@ -399,7 +399,7 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
   )
 }
 
-export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate }: {
+export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onCoverUpdate }: {
   page: Page
   pages: Page[]
   userId: string
@@ -417,6 +417,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void
   onSummaryUpdate?: (summary: string | null) => void
+  onCoverUpdate?: (coverUrl: string | null) => void
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const isJournal = page.type === 'journal'
@@ -424,8 +425,10 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
 
   return (
     <div className="flex-shrink-0">
-
-      {/* Barre supérieure : breadcrumb/retour + actions */}
+      {/* Couverture */}
+      <Cover page={page} userId={userId} onCoverUpdate={onCoverUpdate} /><div className="relative z-10 -mt-5 rounded-t-2xl flex flex-col" style={{ background: 'var(--card-bg)' }}>
+      
+        {/* Barre supérieure : breadcrumb/retour + actions */}
       <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
         {isJournal ? (
           <button
@@ -443,18 +446,21 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           </span>
           <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>
-            <div className="px-3 py-2.5 text-sm hover:bg-gray-50 border-b"
-              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
-              <HistoryButton page={page} onRestore={onRestore} />
-            </div>
-            <div className="px-3 py-2.5 text-sm border-b"
-              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
-              <ExportButton page={page} />
-            </div>
-            <div className="px-3 py-2.5 text-sm border-b"
-              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
-              <ShareButton page={page as any} onUpdate={onShareUpdate} />
-            </div>
+            {[
+              <HistoryButton key="h" page={page} onRestore={onRestore} />,
+              <ExportButton  key="e" page={page} />,
+              <ShareButton   key="s" page={page as any} onUpdate={onShareUpdate} />,
+            ].map((child, i) => (
+              <div
+                key={i}
+                className="px-2.5 py-2 text-sm rounded-lg transition-colors"
+                style={{ color: 'var(--text-secondary)', background: 'transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+              >
+                {child}
+              </div>
+            ))}
           </ActionsMenu>
         </div>
       </div>
@@ -499,7 +505,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
         </div>
       </div>
 
-      {/* Tags */}
+      {/* Tags + Métadonnées */}
       <div className="px-6 pt-1">
         <MetaRow label="Tags">
           <TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} compact />
@@ -512,6 +518,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
         onCreatedAtChange={onCreatedAtChange}
         onSummaryUpdate={onSummaryUpdate}
       />
+      </div>
     </div>
   )
 }
