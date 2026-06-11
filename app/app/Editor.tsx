@@ -344,6 +344,7 @@ Image.extend({
       ...(!isMobile ? [DragHandleExtension] : []),
     ],
     content: page.content || '',
+    onCreate: ({ editor: ed }) => { updateStats(ed) },
     onUpdate: ({ editor: ed }) => { onUpdate(ed.getHTML()); updateStats(ed) },
   })
 
@@ -351,7 +352,6 @@ Image.extend({
     if (editor && editor.getHTML() !== (page.content || '')) {
       editor.commands.setContent(page.content || '', false)
     }
-    if (editor) requestAnimationFrame(() => updateStats(editor))
   }, [page.id])
 
   function insertLink(url: string) {
