@@ -14,7 +14,7 @@ import { ConfirmTrashModal } from './components/ActionsMenu'
 import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
-import { PageHeader } from './components/PageHeader'
+import { PageHeader, Cover } from './components/PageHeader'
 
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
@@ -88,7 +88,6 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     document.title = selected ? `Idée · ${selected.title || 'Sans titre'}` : 'Idée'
   }, [selected?.title, selected?.id])
 
-  // Sync selected avec pages (ex: favori togglé depuis la sidebar)
   useEffect(() => {
     if (!selected) return
     const updated = pages.find(p => p.id === selected.id)
@@ -286,7 +285,6 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
           >⚙️</button>
         </div>
         <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
-        {/* Onglets Notes / Journal / Tags */}
         <div className="flex px-2 pt-1 pb-1 gap-1 flex-shrink-0">
           <button
             onClick={() => { setShowJournal(false); setShowTags(false); setSelected(s => s?.type === 'journal' ? null : s) }}
@@ -425,66 +423,76 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
       {/* ── Contenu principal ── */}
       <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
         {selected ? (
-          <div className="page-card my-4 mx-3 md:mx-auto md:my-6 flex flex-col">
-            <MobileTopBar
-              onBack={() => {
-                if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
-                else setSelected(null)
-              }}
-              saving={saving}
-            />
-            <PageHeader
-              page={selected}
-              pages={[...activePages, ...journalEntries]}
-              userId={userId}
-              saving={saving}
-              isMobile={isMobile}
-              onBack={() => { setSelected(null); setShowJournal(true) }}
-              onSelectPage={selectPage}
-              onTitleChange={updateTitle}
-              onIconChange={emoji => updateIcon(selected.id, emoji)}
-              onTagsChange={tags => updateTags(selected.id, tags)}
-              onToggleFavorite={toggleFavorite}
-              onDelete={() => setConfirmDeleteId(selected.id)}
-              onConvertToJournal={() => convertToJournal(selected.id)}
-              onCreatedAtChange={iso => updateCreatedAt(selected.id, iso)}
-              onRestore={(title, content) => {
-                setSelected(prev => prev ? { ...prev, title, content } : null)
-                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
-              }}
-              onShareUpdate={updates => {
-                setSelected(prev => prev ? { ...prev, ...updates } : null)
-                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
-              }}
-              onSummaryUpdate={summary => {
-                setSelected(prev => prev ? { ...prev, summary: summary ?? undefined } : null)
-                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, summary: summary ?? undefined } : p))
-              }}
-              onCoverUpdate={cover => {
-                setSelected(prev => prev ? { ...prev, cover_url: cover } : null)
-                setPages(prev => prev.map(p => p.id === selected.id ? { ...p, cover_url: cover } : p))
-              }}
-            />
-            {selected.type !== 'journal' && (
-              <SubpagesList
-                subpages={subpages}
-                onSelect={selectPage}
-                onReorder={(a, o, p) => reorderSiblings(a, o, p)}
-                isMobile={isMobile}
-                onAddSubpage={() => addPage(selected.id)}
+          <>
+            {/* Cover pleine largeur, sticky derrière le contenu */}
+            <div className="sticky top-0 z-0 w-full">
+              <Cover
+                page={selected}
+                userId={userId}
+                onCoverUpdate={cover => {
+                  setSelected(prev => prev ? { ...prev, cover_url: cover } : null)
+                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, cover_url: cover } : p))
+                }}
               />
-            )}
-            <Editor
-              key={selected.id}
-              page={selected}
-              pages={[...activePages, ...journalEntries]}
-              onUpdate={updateContent}
-              onAddSubpage={() => addPage(selected.id)}
-              onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
-              userId={userId}
-              isMobile={isMobile}
-            />
-          </div>
+            </div>
+            {/* Card contenu qui chevauche la cover */}
+            <div className="page-card -mt-8 relative z-10 mx-3 md:mx-auto mb-6 flex flex-col">
+              <MobileTopBar
+                onBack={() => {
+                  if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
+                  else setSelected(null)
+                }}
+                saving={saving}
+              />
+              <PageHeader
+                page={selected}
+                pages={[...activePages, ...journalEntries]}
+                userId={userId}
+                saving={saving}
+                isMobile={isMobile}
+                onBack={() => { setSelected(null); setShowJournal(true) }}
+                onSelectPage={selectPage}
+                onTitleChange={updateTitle}
+                onIconChange={emoji => updateIcon(selected.id, emoji)}
+                onTagsChange={tags => updateTags(selected.id, tags)}
+                onToggleFavorite={toggleFavorite}
+                onDelete={() => setConfirmDeleteId(selected.id)}
+                onConvertToJournal={() => convertToJournal(selected.id)}
+                onCreatedAtChange={iso => updateCreatedAt(selected.id, iso)}
+                onRestore={(title, content) => {
+                  setSelected(prev => prev ? { ...prev, title, content } : null)
+                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
+                }}
+                onShareUpdate={updates => {
+                  setSelected(prev => prev ? { ...prev, ...updates } : null)
+                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
+                }}
+                onSummaryUpdate={summary => {
+                  setSelected(prev => prev ? { ...prev, summary: summary ?? undefined } : null)
+                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, summary: summary ?? undefined } : p))
+                }}
+              />
+              {selected.type !== 'journal' && (
+                <SubpagesList
+                  subpages={subpages}
+                  onSelect={selectPage}
+                  onReorder={(a, o, p) => reorderSiblings(a, o, p)}
+                  isMobile={isMobile}
+                  onAddSubpage={() => addPage(selected.id)}
+                />
+              )}
+              <Editor
+                key={selected.id}
+                page={selected}
+                pages={[...activePages, ...journalEntries]}
+                onUpdate={updateContent}
+                onAddSubpage={() => addPage(selected.id)}
+                onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
+                userId={userId}
+                isMobile={isMobile}
+              />
+            </div>
+          </>
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center h-full">
             <div className="text-center">
