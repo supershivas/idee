@@ -9,6 +9,7 @@ import { ActionsMenu } from './ActionsMenu'
 import HistoryButton from '../HistoryButton'
 import ExportButton from '../ExportButton'
 import ShareButton from '../ShareButton'
+import { toast } from './Toast'
 import { createClient } from '@/lib/supabase/client'
 import { coverDataUri, coverSeeds } from '@/lib/coverGen'
 
@@ -179,10 +180,28 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
     if (!page.content) return
     setLoading(true)
     try {
-      const res = await fetch('/api/summarize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: page.content, title: page.title }) })
-      const { summary } = await res.json()
-      if (summary) { await createClient().from('pages').update({ summary }).eq('id', page.id); onSummaryUpdate?.(summary); setEditValue(summary); setEditing(false) }
-    } finally { setLoading(false) }
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: page.content, title: page.title }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast(data.error || 'Erreur lors de la génération', 'error')
+        return
+      }
+      if (data.summary) {
+        await createClient().from('pages').update({ summary: data.summary }).eq('id', page.id)
+        onSummaryUpdate?.(data.summary)
+        setEditValue(data.summary)
+        setEditing(false)
+        toast('Résumé généré', 'success')
+      }
+    } catch {
+      toast('Erreur lors de la génération', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function saveSummary() {
