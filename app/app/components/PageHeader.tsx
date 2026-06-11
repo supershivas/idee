@@ -307,7 +307,7 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
     <div className="px-6 pb-3 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
       <MetaRow label="Créé le">
         <button
-          onClick={() => createdInputRef.current?.showPicker?.() ?? createdInputRef.current?.click()}
+          onClick={() => createdInputRef.current?.showPicker ? createdInputRef.current.showPicker() : createdInputRef.current?.click()}
           className="transition-opacity hover:opacity-70"
           title="Modifier la date"
         >
