@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from './components/Toast'
 import { Page } from './App'
 
 const IconLink = () => (
@@ -11,10 +12,6 @@ const IconLink = () => (
     <path d="M8 6.5a3 3 0 0 0-4.5-.4L2 7.6a3 3 0 0 0 4.2 4.3l1.3-1.3" />
   </svg>
 )
-
-function generateToken() {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-}
 
 export default function ShareButton({ page, onUpdate }: {
   page: Page & { is_shared?: boolean; share_token?: string }
@@ -32,7 +29,7 @@ export default function ShareButton({ page, onUpdate }: {
   async function toggleShare() {
     setLoading(true)
     if (!isShared) {
-      const token = page.share_token || generateToken()
+      const token = page.share_token || crypto.randomUUID()
       await createClient().from('pages').update({ is_shared: true, share_token: token }).eq('id', page.id)
       onUpdate({ is_shared: true, share_token: token } as any)
     } else {
@@ -46,6 +43,7 @@ export default function ShareButton({ page, onUpdate }: {
     if (!shareUrl) return
     await navigator.clipboard.writeText(shareUrl)
     setCopied(true)
+    toast('Lien copié !', 'success')
     setTimeout(() => setCopied(false), 2000)
   }
 
