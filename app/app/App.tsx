@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
+import { Toaster } from './components/Toast'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { Page } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
@@ -515,6 +516,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         if (!page) return null
         return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} />
       })()}
+      <Toaster />
     </div>
   )
 }
