@@ -4,105 +4,109 @@ import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from './App'
 
-const IconLink = () => (
+const IconClock = () => (
   <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
     stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 6.5a3 3 0 0 0 4.5.4l1.5-1.5a3 3 0 0 0-4.2-4.3L5.5 2.4" />
-    <path d="M8 6.5a3 3 0 0 0-4.5-.4L2 7.6a3 3 0 0 0 4.2 4.3l1.3-1.3" />
+    <circle cx="6.5" cy="6.5" r="5" />
+    <path d="M6.5 3.5v3l2 1.5" />
   </svg>
 )
 
-function generateToken() {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-}
+type Snapshot = { id: string; title: string; content: string; created_at: string }
 
-export default function ShareButton({ page, onUpdate }: {
-  page: Page & { is_shared?: boolean; share_token?: string }
-  onUpdate: (updates: Partial<Page>) => void
-}) {
-  const [loading, setLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
+export default function HistoryButton({ page, onRestore }: { page: Page, onRestore: (title: string, content: string) => void }) {
   const [showPanel, setShowPanel] = useState(false)
+  const [history, setHistory] = useState<Snapshot[]>([])
+  const [loading, setLoading] = useState(false)
+  const [restoring, setRestoring] = useState<string | null>(null)
+  const [preview, setPreview] = useState<Snapshot | null>(null)
 
-  const isShared = page.is_shared
-  const shareUrl = page.share_token && typeof window !== 'undefined'
-    ? `${window.location.origin}/share/${page.share_token}`
-    : null
-
-  async function toggleShare() {
+  async function loadHistory() {
     setLoading(true)
-    if (!isShared) {
-      const token = page.share_token || generateToken()
-      await createClient().from('pages').update({ is_shared: true, share_token: token }).eq('id', page.id)
-      onUpdate({ is_shared: true, share_token: token } as any)
-    } else {
-      await createClient().from('pages').update({ is_shared: false }).eq('id', page.id)
-      onUpdate({ is_shared: false } as any)
-    }
+    const { data } = await createClient().from('page_history')
+      .select('id, title, content, created_at')
+      .eq('page_id', page.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    setHistory(data || [])
     setLoading(false)
   }
 
-  async function copyLink() {
-    if (!shareUrl) return
-    await navigator.clipboard.writeText(shareUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  function open() { setShowPanel(true); loadHistory() }
+
+  async function restore(snap: Snapshot) {
+    setRestoring(snap.id)
+    onRestore(snap.title, snap.content)
+    await createClient().from('pages').update({ title: snap.title, content: snap.content, updated_at: new Date().toISOString() }).eq('id', page.id)
+    setRestoring(null); setShowPanel(false); setPreview(null)
+  }
+
+  function fmt(iso: string) {
+    return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   }
 
   return (
     <>
-      <button type="button" onClick={() => setShowPanel(true)}
+      <button type="button" onClick={open}
         className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors text-left"
         style={{ color: 'var(--text-secondary)', background: 'transparent' }}
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
-        <span style={{ opacity: 0.55 }}><IconLink /></span>
-        <span className="flex-1">Partager</span>
-        {isShared && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
-            Actif
-          </span>
-        )}
+        <span style={{ opacity: 0.55 }}><IconClock /></span>
+        <span>Historique</span>
       </button>
 
       {showPanel && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.4)' }}
-          onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}
-          onClick={() => setShowPanel(false)}>
-          <div className="w-full max-w-sm rounded-2xl p-5 shadow-xl"
-            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Partage public</p>
-              <button onClick={() => setShowPanel(false)}
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }} onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', maxHeight: '80vh' }}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Historique</h2>
+              <button onClick={() => { setShowPanel(false); setPreview(null) }}
                 className="w-7 h-7 flex items-center justify-center rounded-md transition-opacity hover:opacity-70"
                 style={{ color: 'var(--text-muted)' }}>✕</button>
             </div>
-            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-              {isShared ? 'Toute personne avec le lien peut lire cette page.' : 'Activez le partage pour obtenir un lien public.'}
-            </p>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isShared ? 'Activé' : 'Désactivé'}</span>
-              <button onClick={toggleShare} disabled={loading}
-                className="relative inline-flex w-11 h-6 rounded-full transition-colors disabled:opacity-50"
-                style={{ background: isShared ? 'var(--btn-primary-bg)' : 'var(--selected-bg)' }}>
-                <span className="inline-block w-5 h-5 mt-0.5 rounded-full shadow transition-transform"
-                  style={{ background: 'white', transform: isShared ? 'translateX(20px)' : 'translateX(2px)' }} />
-              </button>
-            </div>
-            {isShared && shareUrl && (
-              <div className="flex items-center gap-2">
-                <input readOnly value={shareUrl}
-                  className="flex-1 text-xs rounded-lg px-2 py-1.5 outline-none truncate"
-                  style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }} />
-                <button onClick={copyLink}
-                  className="px-2 py-1.5 text-xs rounded-lg flex-shrink-0 transition-colors"
-                  style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
-                  {copied ? '✓' : 'Copier'}
-                </button>
+            <div className="flex flex-1 overflow-hidden">
+              <div className="w-48 overflow-y-auto flex-shrink-0" style={{ borderRight: '1px solid var(--border)' }}>
+                {loading && <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>Chargement…</p>}
+                {!loading && history.length === 0 && <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>Aucun historique.</p>}
+                {history.map((snap, i) => (
+                  <button key={snap.id} onClick={() => setPreview(snap)}
+                    className="w-full text-left px-4 py-3 transition-colors"
+                    style={{ borderBottom: '1px solid var(--border)', background: preview?.id === snap.id ? 'var(--selected-bg)' : 'transparent' }}
+                    onMouseEnter={e => { if (preview?.id !== snap.id) e.currentTarget.style.background = 'var(--hover-bg)' }}
+                    onMouseLeave={e => { if (preview?.id !== snap.id) e.currentTarget.style.background = 'transparent' }}>
+                    <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{i === 0 ? 'Version actuelle' : fmt(snap.created_at)}</p>
+                    <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{snap.title || 'Sans titre'}</p>
+                  </button>
+                ))}
               </div>
-            )}
+              <div className="flex-1 overflow-y-auto p-6">
+                {preview ? (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{preview.title || 'Sans titre'}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{fmt(preview.created_at)}</p>
+                      </div>
+                      <button onClick={() => restore(preview)} disabled={restoring === preview.id}
+                        className="px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50"
+                        style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}>
+                        {restoring === preview.id ? 'Restauration…' : 'Restaurer'}
+                      </button>
+                    </div>
+                    <div className="prose max-w-none text-sm rounded-lg p-4"
+                      style={{ border: '1px solid var(--border)', background: 'var(--hover-bg)' }}
+                      dangerouslySetInnerHTML={{ __html: preview.content || '<p>Vide</p>' }} />
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Sélectionne une version pour prévisualiser</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>,
         document.body
