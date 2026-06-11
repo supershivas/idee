@@ -170,7 +170,7 @@ function CoverModal({ page, userId, onApply, onClose }: {
   )
 }
 
-function Cover({ page, userId, onCoverUpdate }: {
+export function Cover({ page, userId, onCoverUpdate }: {
   page: Page
   userId: string
   onCoverUpdate?: (coverUrl: string | null) => void
@@ -417,7 +417,6 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void
   onSummaryUpdate?: (summary: string | null) => void
-  onCoverUpdate?: (coverUrl: string | null) => void
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const isJournal = page.type === 'journal'
@@ -425,9 +424,6 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
 
   return (
     <div className="flex-shrink-0">
-      {/* Couverture */}
-      <Cover page={page} userId={userId} onCoverUpdate={onCoverUpdate} /><div className="relative z-10 -mt-5 rounded-t-2xl flex flex-col" style={{ background: 'var(--card-bg)' }}>
-      
         {/* Barre supérieure : breadcrumb/retour + actions */}
       <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
         {isJournal ? (
@@ -510,12 +506,11 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
       </div>
 
       {/* Métadonnées : dates + résumé */}
-      <MetaSection
+      <<MetaSection
         page={page}
         onCreatedAtChange={onCreatedAtChange}
         onSummaryUpdate={onSummaryUpdate}
       />
-      </div>
     </div>
   )
 }
