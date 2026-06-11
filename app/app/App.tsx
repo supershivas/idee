@@ -1,4 +1,4 @@
-'use client' 
+'use client'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
@@ -514,6 +514,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               />
               {selected.type !== 'journal' && (
                 <SubpagesList
+                  page={selected}
                   subpages={subpages}
                   onSelect={selectPage}
                   onReorder={(a, o, p) => reorderSiblings(a, o, p)}
