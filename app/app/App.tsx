@@ -130,7 +130,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   useEffect(() => {
     const el = mainScrollRef.current
     if (!el) return
-    const handler = () => setScrolledPast(el.scrollTop > 150)
+    const handler = () => setScrolledPast(el.scrollTop > 80)
     el.addEventListener('scroll', handler, { passive: true })
     return () => el.removeEventListener('scroll', handler)
   }, [])
@@ -145,7 +145,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (!(e.metaKey || e.ctrlKey)) return
-      if (e.key === 'k') { e.preventDefault(); searchBarRef.current?.focus() }
+      if (e.key === '/') { e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus() }
       if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); addPage(null) }
       if ((e.key === 'j' || e.key === 'J') && e.shiftKey) { e.preventDefault(); addJournalEntry() }
     }
@@ -468,17 +468,9 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             {/* Card contenu qui chevauche la cover */}
             <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ marginTop: '-32px', boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
               {/* Sticky mini header – appears when title scrolls past */}
-              {!isMobile && (
-                <div
-                  className="sticky top-0 z-20 flex items-center gap-2 px-5 flex-shrink-0 transition-all duration-150"
-                  style={{
-                    height: scrolledPast ? '44px' : '0px',
-                    overflow: 'hidden',
-                    background: 'var(--card-bg)',
-                    borderBottom: scrolledPast ? '1px solid var(--border)' : '1px solid transparent',
-                    opacity: scrolledPast ? 1 : 0,
-                  }}
-                >
+              {scrolledPast && !isMobile && (
+                <div className="sticky top-0 z-20 flex-shrink-0 flex items-center gap-2 px-5"
+                  style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
                   <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
                   <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
                     {selected.title || 'Sans titre'}
