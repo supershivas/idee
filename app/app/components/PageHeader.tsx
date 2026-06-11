@@ -185,7 +185,7 @@ function Cover({ page, userId, onCoverUpdate }: {
   }
 
   return (
-<div className="sticky top-0 z-0 group/cover w-full h-28 md:h-44 overflow-hidden">
+<div className="group/cover w-full h-28 md:h-44 overflow-hidden">
   <div
         className="absolute inset-0"
         style={{ backgroundImage: `url("${coverBackground(page)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
@@ -426,7 +426,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   return (
     <div className="flex-shrink-0">
       {/* Couverture */}
-      <Cover page={page} userId={userId} onCoverUpdate={onCoverUpdate} /><div className="relative z-10 flex flex-col" style={{ background: 'var(--card-bg)' }}>
+      <Cover page={page} userId={userId} onCoverUpdate={onCoverUpdate} /><div className="relative z-10 -mt-5 rounded-t-2xl flex flex-col" style={{ background: 'var(--card-bg)' }}>
       
         {/* Barre supérieure : breadcrumb/retour + actions */}
       <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
