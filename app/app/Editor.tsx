@@ -241,6 +241,9 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [showTableSheet, setShowTableSheet] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [wordCount, setWordCount] = useState(0)
+  const [headings, setHeadings] = useState<{ level: number; text: string; idx: number }[]>([])
+  const [tocOpen, setTocOpen] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const keyboardOffset = useKeyboardOffset()
 
@@ -249,6 +252,17 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pages.map(p => p.id + p.title + p.icon).join(',')]
   )
+
+  function updateStats(ed: any) {
+    const text = ed.state.doc.textContent || ''
+    setWordCount(text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0)
+    const h: { level: number; text: string; idx: number }[] = []
+    let i = 0
+    ed.state.doc.forEach((node: any) => {
+      if (node.type.name === 'heading') h.push({ level: node.attrs.level, text: node.textContent, idx: i++ })
+    })
+    setHeadings(h)
+  }
 
   const editor = useEditor({
     extensions: [
@@ -330,13 +344,14 @@ Image.extend({
       ...(!isMobile ? [DragHandleExtension] : []),
     ],
     content: page.content || '',
-    onUpdate: ({ editor }) => onUpdate(editor.getHTML()),
+    onUpdate: ({ editor: ed }) => { onUpdate(ed.getHTML()); updateStats(ed) },
   })
 
   useEffect(() => {
     if (editor && editor.getHTML() !== (page.content || '')) {
       editor.commands.setContent(page.content || '', false)
     }
+    if (editor) requestAnimationFrame(() => updateStats(editor))
   }, [page.id])
 
   function insertLink(url: string) {
@@ -542,6 +557,35 @@ Image.extend({
           {toolbarDesktop}
         </div>
       )}
+      {!isMobile && headings.length >= 2 && (
+        <div className="flex-shrink-0 px-[52px] py-2" style={{ borderBottom: '1px solid var(--border-light)' }}>
+          <button
+            onClick={() => setTocOpen(v => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium mb-1.5 transition-opacity hover:opacity-100 opacity-60"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <span style={{ fontSize: '9px' }}>{tocOpen ? '▾' : '▸'}</span>
+            Table des matières
+          </button>
+          {tocOpen && (
+            <div className="flex flex-col gap-0.5">
+              {headings.map((h, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    const els = document.querySelectorAll('.ProseMirror h1, .ProseMirror h2, .ProseMirror h3')
+                    els[h.idx]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  className="text-xs text-left transition-opacity hover:opacity-100 opacity-55 truncate"
+                  style={{ paddingLeft: `${(h.level - 1) * 14}px`, color: 'var(--text-secondary)' }}
+                >
+                  {h.text || '—'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
 
       {isMobile && (
@@ -551,6 +595,13 @@ Image.extend({
         </div>
       )}
 
+      {wordCount > 0 && !isMobile && (
+        <div className="flex-shrink-0 flex justify-end px-[52px] py-2" style={{ borderTop: '1px solid var(--border-light)' }}>
+          <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+            {wordCount} mot{wordCount > 1 ? 's' : ''} · {Math.max(1, Math.ceil(wordCount / 200))} min
+          </span>
+        </div>
+      )}
       <style>{`
         .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
         .ProseMirror table td, .ProseMirror table th {
