@@ -332,26 +332,14 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             onClick={() => { setShowJournal(true); setShowTags(false); setSelected(null) }}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
-              background: showJournal && !showTags ? 'var(--selected-bg)' : 'transparent',
-              color: showJournal && !showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: showJournal ? 'var(--selected-bg)' : 'transparent',
+              color: showJournal ? 'var(--text-primary)' : 'var(--text-secondary)',
             }}
-            onMouseEnter={e => { if (!(showJournal && !showTags)) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showJournal && !showTags ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (!showJournal) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showJournal ? 'var(--selected-bg)' : 'transparent' }}
           >
             <span>📓</span><span>Journal</span>
             {journalEntries.length > 0 && <span className="text-[10px] opacity-60">{journalEntries.length}</span>}
-          </button>
-          <button
-            onClick={() => { setShowTags(true); setShowJournal(false); setSelected(null) }}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
-            style={{
-              background: showTags ? 'var(--selected-bg)' : 'transparent',
-              color: showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
-            }}
-            onMouseEnter={e => { if (!showTags) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showTags ? 'var(--selected-bg)' : 'transparent' }}
-          >
-            <span>🏷️</span><span>Tags</span>
           </button>
         </div>
         <div className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
@@ -386,6 +374,24 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
           </DndContext>
         </div>
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={() => { setShowTags(true); setShowJournal(false); setSelected(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{
+              background: showTags ? 'var(--selected-bg)' : 'transparent',
+              color: showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { if (!showTags) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showTags ? 'var(--selected-bg)' : 'transparent' }}
+          >
+            <span>🏷️</span>
+            <span className="flex-1 text-left">Tags</span>
+            {Array.from(new Set([...activePages, ...journalEntries].flatMap(p => p.tags || []))).length > 0 && (
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {Array.from(new Set([...activePages, ...journalEntries].flatMap(p => p.tags || []))).length}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => setShowTrash(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
