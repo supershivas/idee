@@ -471,18 +471,18 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
                 }}
               />
             </div>
+            {/* Sticky mini header — direct child of scroll container, not inside page-card */}
+            {scrolledPast && !isMobile && (
+              <div className="sticky top-0 z-20 flex items-center gap-2 px-5"
+                style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
+                <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
+                <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                  {selected.title || 'Sans titre'}
+                </span>
+              </div>
+            )}
             {/* Card contenu qui chevauche la cover */}
             <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ marginTop: '-32px', boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
-              {/* Sticky mini header – appears when title scrolls past */}
-              {scrolledPast && !isMobile && (
-                <div className="sticky top-0 z-20 flex-shrink-0 flex items-center gap-2 px-5"
-                  style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
-                  <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
-                  <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
-                    {selected.title || 'Sans titre'}
-                  </span>
-                </div>
-              )}
               <MobileTopBar
                 onBack={() => {
                   if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
