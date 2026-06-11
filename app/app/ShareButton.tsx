@@ -1,32 +1,42 @@
 'use client'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from './App'
+
+const IconLink = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 6.5a3 3 0 0 0 4.5.4l1.5-1.5a3 3 0 0 0-4.2-4.3L5.5 2.4" />
+    <path d="M8 6.5a3 3 0 0 0-4.5-.4L2 7.6a3 3 0 0 0 4.2 4.3l1.3-1.3" />
+  </svg>
+)
 
 function generateToken() {
   return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
 }
 
-export default function ShareButton({ page, onUpdate }: { page: Page & { is_shared?: boolean, share_token?: string }, onUpdate: (updates: Partial<Page>) => void }) {
+export default function ShareButton({ page, onUpdate }: {
+  page: Page & { is_shared?: boolean; share_token?: string }
+  onUpdate: (updates: Partial<Page>) => void
+}) {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
 
   const isShared = page.is_shared
-  const shareUrl = page.share_token
+  const shareUrl = page.share_token && typeof window !== 'undefined'
     ? `${window.location.origin}/share/${page.share_token}`
     : null
 
   async function toggleShare() {
     setLoading(true)
-    const supabase = createClient()
-
     if (!isShared) {
       const token = page.share_token || generateToken()
-      await supabase.from('pages').update({ is_shared: true, share_token: token }).eq('id', page.id)
+      await createClient().from('pages').update({ is_shared: true, share_token: token }).eq('id', page.id)
       onUpdate({ is_shared: true, share_token: token } as any)
     } else {
-      await supabase.from('pages').update({ is_shared: false }).eq('id', page.id)
+      await createClient().from('pages').update({ is_shared: false }).eq('id', page.id)
       onUpdate({ is_shared: false } as any)
     }
     setLoading(false)
@@ -40,50 +50,62 @@ export default function ShareButton({ page, onUpdate }: { page: Page & { is_shar
   }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setShowPanel(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-600 transition-colors"
-      >
-        <span>{isShared ? '🔗' : '🔒'}</span>
-        <span className="hidden sm:inline">{isShared ? 'Partagé' : 'Partager'}</span>
+    <>
+      <button type="button" onClick={() => setShowPanel(true)}
+        className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors text-left"
+        style={{ color: 'var(--text-secondary)', background: 'transparent' }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
+        <span style={{ opacity: 0.55 }}><IconLink /></span>
+        <span className="flex-1">Partager</span>
+        {isShared && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
+            Actif
+          </span>
+        )}
       </button>
 
-      {showPanel && (
-        <div className="absolute right-0 top-full mt-2 bg-white border rounded-xl shadow-xl p-4 w-72 z-50">
-          <p className="text-sm font-medium text-gray-800 mb-1">Partage public</p>
-          <p className="text-xs text-gray-400 mb-3">
-            {isShared ? 'Toute personne avec le lien peut lire cette page.' : 'Activez le partage pour obtenir un lien public.'}
-          </p>
-
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-gray-600">{isShared ? 'Activé' : 'Désactivé'}</span>
-            <button
-  onClick={toggleShare}
-  disabled={loading}
-  className={`relative inline-flex w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${isShared ? 'bg-black' : 'bg-gray-200'}`}
->
-  <span className={`inline-block w-5 h-5 mt-0.5 rounded-full bg-white shadow transform transition-transform ${isShared ? 'translate-x-5' : 'translate-x-0.5'}`} />
-</button>
-          </div>
-
-          {isShared && shareUrl && (
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={shareUrl}
-                className="flex-1 text-xs border rounded-lg px-2 py-1.5 text-gray-500 bg-gray-50 outline-none truncate"
-              />
-              <button
-                onClick={copyLink}
-                className="px-2 py-1.5 text-xs bg-black text-white rounded-lg hover:bg-gray-800 flex-shrink-0"
-              >
-                {copied ? '✓' : 'Copier'}
+      {showPanel && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setShowPanel(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 shadow-xl"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-1">
+              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Partage public</p>
+              <button onClick={() => setShowPanel(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-md transition-opacity hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+              {isShared ? 'Toute personne avec le lien peut lire cette page.' : 'Activez le partage pour obtenir un lien public.'}
+            </p>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isShared ? 'Activé' : 'Désactivé'}</span>
+              <button onClick={toggleShare} disabled={loading}
+                className="relative inline-flex w-11 h-6 rounded-full transition-colors disabled:opacity-50"
+                style={{ background: isShared ? 'var(--btn-primary-bg)' : 'var(--selected-bg)' }}>
+                <span className="inline-block w-5 h-5 mt-0.5 rounded-full shadow transition-transform"
+                  style={{ background: 'white', transform: isShared ? 'translateX(20px)' : 'translateX(2px)' }} />
               </button>
             </div>
-          )}
-        </div>
+            {isShared && shareUrl && (
+              <div className="flex items-center gap-2">
+                <input readOnly value={shareUrl}
+                  className="flex-1 text-xs rounded-lg px-2 py-1.5 outline-none truncate"
+                  style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }} />
+                <button onClick={copyLink}
+                  className="px-2 py-1.5 text-xs rounded-lg flex-shrink-0 transition-colors"
+                  style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
+                  {copied ? '✓' : 'Copier'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
