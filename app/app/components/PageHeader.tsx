@@ -170,7 +170,7 @@ function CoverModal({ page, userId, onApply, onClose }: {
   )
 }
 
-function Cover({ page, userId, onCoverUpdate }: {
+export function Cover({ page, userId, onCoverUpdate }: {
   page: Page
   userId: string
   onCoverUpdate?: (coverUrl: string | null) => void
