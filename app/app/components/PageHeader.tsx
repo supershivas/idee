@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
@@ -170,7 +170,7 @@ function CoverModal({ page, userId, onApply, onClose }: {
   )
 }
 
-function Cover({ page, userId, onCoverUpdate }: {
+export function Cover({ page, userId, onCoverUpdate }: {
   page: Page
   userId: string
   onCoverUpdate?: (coverUrl: string | null) => void
@@ -185,8 +185,8 @@ function Cover({ page, userId, onCoverUpdate }: {
   }
 
   return (
-<div className="group/cover w-full h-28 md:h-44 overflow-hidden">
-  <div
+    <div className="relative group/cover w-full h-28 md:h-44 overflow-hidden">
+      <div
         className="absolute inset-0"
         style={{ backgroundImage: `url("${coverBackground(page)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
@@ -307,7 +307,7 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
     <div className="px-6 pb-3 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
       <MetaRow label="Créé le">
         <button
-          onClick={() => createdInputRef.current?.showPicker ? createdInputRef.current.showPicker() : createdInputRef.current?.click()}
+          onClick={() => createdInputRef.current?.showPicker?.() ?? createdInputRef.current?.click()}
           className="transition-opacity hover:opacity-70"
           title="Modifier la date"
         >
@@ -399,7 +399,7 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: {
   )
 }
 
-export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onCoverUpdate }: {
+export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate }: {
   page: Page
   pages: Page[]
   userId: string
@@ -417,7 +417,6 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void
   onSummaryUpdate?: (summary: string | null) => void
-  onCoverUpdate?: (coverUrl: string | null) => void
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const isJournal = page.type === 'journal'
@@ -425,10 +424,8 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
 
   return (
     <div className="flex-shrink-0">
-      {/* Couverture */}
-      <Cover page={page} userId={userId} onCoverUpdate={onCoverUpdate} /><div className="relative z-10 -mt-5 rounded-t-2xl flex flex-col" style={{ background: 'var(--card-bg)' }}>
-      
-        {/* Barre supérieure : breadcrumb/retour + actions */}
+
+      {/* Barre supérieure : breadcrumb/retour + actions */}
       <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
         {isJournal ? (
           <button
@@ -502,7 +499,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
         </div>
       </div>
 
-      {/* Tags + Métadonnées */}
+      {/* Tags */}
       <div className="px-6 pt-1">
         <MetaRow label="Tags">
           <TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} compact />
@@ -515,7 +512,6 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
         onCreatedAtChange={onCreatedAtChange}
         onSummaryUpdate={onSummaryUpdate}
       />
-      </div>
     </div>
   )
 }
