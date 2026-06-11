@@ -190,7 +190,7 @@ export function Cover({ page, userId, onCoverUpdate }: {
         className="absolute inset-0"
         style={{ backgroundImage: `url("${coverBackground(page)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
-      <div className="absolute bottom-2 right-3 flex items-center gap-2 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+      <div className="absolute top-2 right-3 flex items-center gap-2 opacity-0 group-hover/cover:opacity-100 transition-opacity">
         <button
           onClick={() => setShowModal(true)}
           className="text-xs px-2.5 py-1 rounded-md transition-opacity hover:opacity-90"
