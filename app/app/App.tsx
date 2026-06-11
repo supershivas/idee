@@ -436,7 +436,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               />
             </div>
             {/* Card contenu qui chevauche la cover */}
-            <div className="page-card -mt-8 relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
+            <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ marginTop: '-32px', boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
               <MobileTopBar
                 onBack={() => {
                   if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
