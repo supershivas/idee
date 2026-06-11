@@ -5,7 +5,7 @@ import Editor from './Editor'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { Page } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
-import { SearchBar } from './components/SearchBar'
+import { SearchBar, type SearchBarHandle } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
 import { PageTree, FavoritesSection } from './components/PageTree'
 import { SubpagesList } from './components/SubpagesList'
@@ -43,6 +43,9 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const [overId, setOverId] = useState<string | null>(null)
   const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
   const lastSaveRef = useRef(0)
+  const searchBarRef = useRef<SearchBarHandle>(null)
+  const mainScrollRef = useRef<HTMLDivElement>(null)
+  const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
   const SIDEBAR_MIN = 180
@@ -122,6 +125,33 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     const toOpen = hasChildren ? [selected.id, ...ancestorIds] : ancestorIds
     if (toOpen.length > 0) setOpenMap(prev => { const next = { ...prev }; toOpen.forEach(id => { next[id] = true }); return next })
   }, [])
+
+  // Scroll detection for sticky header
+  useEffect(() => {
+    const el = mainScrollRef.current
+    if (!el) return
+    const handler = () => setScrolledPast(el.scrollTop > 150)
+    el.addEventListener('scroll', handler, { passive: true })
+    return () => el.removeEventListener('scroll', handler)
+  }, [])
+
+  // Reset scroll & sticky on page change
+  useEffect(() => {
+    setScrolledPast(false)
+    if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0
+  }, [selected?.id])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey)) return
+      if (e.key === 'k') { e.preventDefault(); searchBarRef.current?.focus() }
+      if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); addPage(null) }
+      if ((e.key === 'j' || e.key === 'J') && e.shiftKey) { e.preventDefault(); addJournalEntry() }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [addPage, addJournalEntry])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
@@ -284,7 +314,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             title="Paramètres"
           >⚙️</button>
         </div>
-        <SearchBar pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
+        <SearchBar ref={searchBarRef} pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
         <div className="flex px-2 pt-1 pb-1 gap-1 flex-shrink-0">
           <button
             onClick={() => { setShowJournal(false); setShowTags(false); setSelected(s => s?.type === 'journal' ? null : s) }}
@@ -421,7 +451,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
       )}
 
       {/* ── Contenu principal ── */}
-      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
+      <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
         {selected ? (
           <>
             {/* Cover pleine largeur, sticky derrière le contenu */}
@@ -437,6 +467,24 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             </div>
             {/* Card contenu qui chevauche la cover */}
             <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ marginTop: '-32px', boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
+              {/* Sticky mini header – appears when title scrolls past */}
+              {!isMobile && (
+                <div
+                  className="sticky top-0 z-20 flex items-center gap-2 px-5 flex-shrink-0 transition-all duration-150"
+                  style={{
+                    height: scrolledPast ? '44px' : '0px',
+                    overflow: 'hidden',
+                    background: 'var(--card-bg)',
+                    borderBottom: scrolledPast ? '1px solid var(--border)' : '1px solid transparent',
+                    opacity: scrolledPast ? 1 : 0,
+                  }}
+                >
+                  <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
+                  <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                    {selected.title || 'Sans titre'}
+                  </span>
+                </div>
+              )}
               <MobileTopBar
                 onBack={() => {
                   if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
@@ -475,7 +523,6 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
               {selected.type !== 'journal' && (
                 <SubpagesList
                   subpages={subpages}
-                  page={selected}
                   onSelect={selectPage}
                   onReorder={(a, o, p) => reorderSiblings(a, o, p)}
                   isMobile={isMobile}
