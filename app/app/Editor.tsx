@@ -348,6 +348,11 @@ Image.extend({
     onUpdate: ({ editor: ed }) => { onUpdate(ed.getHTML()); updateStats(ed) },
   })
 
+  // Initialise les stats dès que l'éditeur est prêt (plus fiable qu'onCreate seul)
+  useEffect(() => {
+    if (editor) updateStats(editor)
+  }, [editor]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (editor && editor.getHTML() !== (page.content || '')) {
       editor.commands.setContent(page.content || '', false)
