@@ -58,12 +58,106 @@ export default function ExportButton({ page }: { page: Page }) {
     setOpen(false)
     const w = window.open('', '_blank')
     if (!w) return
-    w.document.write(`<!DOCTYPE html><html><head><title>${page.title || 'Sans titre'}</title>
-      <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:800px;margin:40px auto;padding:0 24px;color:#1f2937;line-height:1.7}h1{font-size:2rem;font-weight:700}h2{font-size:1.5rem;font-weight:600;margin-top:1.5rem}p{margin:.5rem 0}ul,ol{padding-left:1.5rem}blockquote{border-left:3px solid #d1d5db;padding-left:1rem;color:#6b7280;font-style:italic}code{background:#f3f4f6;padding:.1rem .3rem;border-radius:4px}pre{background:#1e1e2e;color:#cdd6f4;padding:1rem;border-radius:8px}img{max-width:100%;border-radius:8px}.title-row{display:flex;align-items:center;gap:12px;margin-bottom:2rem;border-bottom:1px solid #e5e7eb;padding-bottom:1rem}.icon{font-size:2.5rem}</style>
-      </head><body>
-      <div class="title-row"><span class="icon">${page.icon || '📄'}</span><h1>${page.title || 'Sans titre'}</h1></div>
-      ${page.content || '<p>Page vide.</p>'}
-      <script>window.onload=()=>{window.print();window.close()}<\/script></body></html>`)
+
+    const date = new Date().toLocaleDateString('fr-FR', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    })
+
+    const css = `
+      @page { margin: 2cm 2.5cm; size: A4; }
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 11pt;
+        line-height: 1.7;
+        color: #111;
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+      }
+      .doc-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding-bottom: 14pt;
+        margin-bottom: 20pt;
+        border-bottom: 1.5pt solid #222;
+      }
+      .doc-icon { font-size: 26pt; line-height: 1.1; flex-shrink: 0; }
+      .doc-title { font-size: 20pt; font-weight: 700; margin: 0 0 3pt; line-height: 1.2; font-family: -apple-system, Arial, sans-serif; }
+      .doc-meta { font-size: 9pt; color: #777; margin: 0; }
+      h1 { font-size: 17pt; font-weight: 700; margin: 18pt 0 6pt; page-break-after: avoid; line-height: 1.3; }
+      h2 { font-size: 14pt; font-weight: 700; margin: 14pt 0 5pt; page-break-after: avoid; line-height: 1.3; }
+      h3 { font-size: 12pt; font-weight: 700; margin: 12pt 0 4pt; page-break-after: avoid; }
+      p { margin: 0 0 7pt; orphans: 3; widows: 3; }
+      ul, ol { padding-left: 1.5em; margin: 3pt 0 8pt; }
+      li { margin-bottom: 3pt; page-break-inside: avoid; }
+      blockquote {
+        margin: 6pt 0 8pt;
+        padding: 5pt 10pt;
+        border-left: 2.5pt solid #999;
+        color: #444;
+        font-style: italic;
+        page-break-inside: avoid;
+      }
+      blockquote p { margin: 0; }
+      code {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 9pt;
+        background: #f4f4f4;
+        padding: 1pt 3pt;
+        border: 0.5pt solid #ddd;
+        border-radius: 2pt;
+      }
+      pre {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 9pt;
+        background: #f4f4f4;
+        border: 0.5pt solid #ddd;
+        padding: 8pt 10pt;
+        border-radius: 3pt;
+        white-space: pre-wrap;
+        word-break: break-all;
+        page-break-inside: avoid;
+        margin: 6pt 0 10pt;
+        line-height: 1.5;
+      }
+      pre code { background: none; border: none; padding: 0; font-size: inherit; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 6pt 0 10pt;
+        font-size: 10pt;
+        page-break-inside: avoid;
+      }
+      th, td { border: 0.5pt solid #bbb; padding: 4pt 8pt; text-align: left; vertical-align: top; }
+      th { background: #f0f0f0; font-weight: 700; }
+      img { max-width: 100%; height: auto; display: block; margin: 8pt 0; page-break-inside: avoid; }
+      hr { border: none; border-top: 0.5pt solid #ccc; margin: 12pt 0; }
+      a { color: #1a1a1a; text-decoration: underline; }
+      input[type="checkbox"] { margin-right: 4pt; }
+      s, del { text-decoration: line-through; color: #666; }
+    `
+
+    w.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>${page.title || 'Sans titre'}</title>
+  <style>${css}</style>
+</head>
+<body>
+  <div class="doc-header">
+    <span class="doc-icon">${page.icon || '📄'}</span>
+    <div>
+      <p class="doc-title">${page.title || 'Sans titre'}</p>
+      <p class="doc-meta">Exporté le ${date}</p>
+    </div>
+  </div>
+  ${page.content || '<p><em>Page vide.</em></p>'}
+  <script>window.onload = () => { window.print(); window.close(); }<\/script>
+</body>
+</html>`)
     w.document.close()
   }
 
