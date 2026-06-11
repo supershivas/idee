@@ -185,8 +185,8 @@ function Cover({ page, userId, onCoverUpdate }: {
   }
 
   return (
-    <div className="relative group/cover w-full h-28 md:h-44 overflow-hidden">
-      <div
+<div className="sticky top-0 z-0 group/cover w-full h-28 md:h-44 overflow-hidden">
+  <div
         className="absolute inset-0"
         style={{ backgroundImage: `url("${coverBackground(page)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
@@ -426,9 +426,9 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   return (
     <div className="flex-shrink-0">
       {/* Couverture */}
-      <Cover page={page} userId={userId} onCoverUpdate={onCoverUpdate} />
-
-      {/* Barre supérieure : breadcrumb/retour + actions */}
+      <Cover page={page} userId={userId} onCoverUpdate={onCoverUpdate} /><div className="relative z-10 flex flex-col" style={{ background: 'var(--card-bg)' }}>
+      
+        {/* Barre supérieure : breadcrumb/retour + actions */}
       <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
         {isJournal ? (
           <button
@@ -510,11 +510,13 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
       </div>
 
       {/* Métadonnées : dates + résumé */}
+// APRÈS
       <MetaSection
         page={page}
         onCreatedAtChange={onCreatedAtChange}
         onSummaryUpdate={onSummaryUpdate}
       />
+      </div>
     </div>
   )
 }
