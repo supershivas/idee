@@ -1,14 +1,18 @@
 'use client'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from './App'
 
-type Snapshot = {
-  id: string
-  title: string
-  content: string
-  created_at: string
-}
+const IconClock = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="6.5" cy="6.5" r="5" />
+    <path d="M6.5 3.5v3l2 1.5" />
+  </svg>
+)
+
+type Snapshot = { id: string; title: string; content: string; created_at: string }
 
 export default function HistoryButton({ page, onRestore }: { page: Page, onRestore: (title: string, content: string) => void }) {
   const [showPanel, setShowPanel] = useState(false)
@@ -19,9 +23,7 @@ export default function HistoryButton({ page, onRestore }: { page: Page, onResto
 
   async function loadHistory() {
     setLoading(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('page_history')
+    const { data } = await createClient().from('page_history')
       .select('id, title, content, created_at')
       .eq('page_id', page.id)
       .order('created_at', { ascending: false })
@@ -30,99 +32,84 @@ export default function HistoryButton({ page, onRestore }: { page: Page, onResto
     setLoading(false)
   }
 
-  function open() {
-    setShowPanel(true)
-    loadHistory()
+  function open() { setShowPanel(true); loadHistory() }
+
+  async function restore(snap: Snapshot) {
+    setRestoring(snap.id)
+    onRestore(snap.title, snap.content)
+    await createClient().from('pages').update({ title: snap.title, content: snap.content, updated_at: new Date().toISOString() }).eq('id', page.id)
+    setRestoring(null); setShowPanel(false); setPreview(null)
   }
 
-  async function restore(snapshot: Snapshot) {
-    setRestoring(snapshot.id)
-    onRestore(snapshot.title, snapshot.content)
-    const supabase = createClient()
-    await supabase.from('pages').update({
-      title: snapshot.title,
-      content: snapshot.content,
-      updated_at: new Date().toISOString()
-    }).eq('id', page.id)
-    setRestoring(null)
-    setShowPanel(false)
-    setPreview(null)
-  }
-
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleString('fr-FR', {
-      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-    })
+  function fmt(iso: string) {
+    return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   }
 
   return (
     <>
-      <button
-        onClick={open}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-600 transition-colors"
-      >
-        <span>🕐</span>
-        <span className="hidden sm:inline">Historique</span>
+      <button type="button" onClick={open}
+        className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors text-left"
+        style={{ color: 'var(--text-secondary)', background: 'transparent' }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
+        <span style={{ opacity: 0.55 }}><IconClock /></span>
+        <span>Historique</span>
       </button>
 
-      {showPanel && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="font-semibold text-gray-800">Historique des modifications</h2>
-              <button onClick={() => { setShowPanel(false); setPreview(null) }} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      {showPanel && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', maxHeight: '80vh' }}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Historique</h2>
+              <button onClick={() => { setShowPanel(false); setPreview(null) }}
+                className="w-7 h-7 flex items-center justify-center rounded-md transition-opacity hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}>✕</button>
             </div>
-
             <div className="flex flex-1 overflow-hidden">
-              {/* Liste */}
-              <div className="w-48 border-r overflow-y-auto flex-shrink-0">
-                {loading && <p className="text-sm text-gray-400 p-4">Chargement...</p>}
-                {!loading && history.length === 0 && (
-                  <p className="text-sm text-gray-400 p-4">Aucun historique.</p>
-                )}
+              <div className="w-48 overflow-y-auto flex-shrink-0" style={{ borderRight: '1px solid var(--border)' }}>
+                {loading && <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>Chargement…</p>}
+                {!loading && history.length === 0 && <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>Aucun historique.</p>}
                 {history.map((snap, i) => (
-                  <button
-                    key={snap.id}
-                    onClick={() => setPreview(snap)}
-                    className={`w-full text-left px-4 py-3 border-b hover:bg-gray-50 transition-colors ${preview?.id === snap.id ? 'bg-gray-100' : ''}`}
-                  >
-                    <p className="text-xs font-medium text-gray-700">{i === 0 ? 'Version actuelle' : formatDate(snap.created_at)}</p>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{snap.title || 'Sans titre'}</p>
+                  <button key={snap.id} onClick={() => setPreview(snap)}
+                    className="w-full text-left px-4 py-3 transition-colors"
+                    style={{ borderBottom: '1px solid var(--border)', background: preview?.id === snap.id ? 'var(--selected-bg)' : 'transparent' }}
+                    onMouseEnter={e => { if (preview?.id !== snap.id) e.currentTarget.style.background = 'var(--hover-bg)' }}
+                    onMouseLeave={e => { if (preview?.id !== snap.id) e.currentTarget.style.background = 'transparent' }}>
+                    <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{i === 0 ? 'Version actuelle' : fmt(snap.created_at)}</p>
+                    <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{snap.title || 'Sans titre'}</p>
                   </button>
                 ))}
               </div>
-
-              {/* Preview */}
               <div className="flex-1 overflow-y-auto p-6">
                 {preview ? (
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="font-semibold text-gray-800">{preview.title || 'Sans titre'}</p>
-                        <p className="text-xs text-gray-400">{formatDate(preview.created_at)}</p>
+                        <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{preview.title || 'Sans titre'}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{fmt(preview.created_at)}</p>
                       </div>
-                      <button
-                        onClick={() => restore(preview)}
-                        disabled={restoring === preview.id}
-                        className="px-3 py-1.5 bg-black text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50"
-                      >
-                        {restoring === preview.id ? 'Restauration...' : 'Restaurer'}
+                      <button onClick={() => restore(preview)} disabled={restoring === preview.id}
+                        className="px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50"
+                        style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}>
+                        {restoring === preview.id ? 'Restauration…' : 'Restaurer'}
                       </button>
                     </div>
-                    <div
-                      className="prose max-w-none text-sm border rounded-lg p-4 bg-gray-50"
-                      dangerouslySetInnerHTML={{ __html: preview.content || '<p class="text-gray-400">Vide</p>' }}
-                    />
+                    <div className="prose max-w-none text-sm rounded-lg p-4"
+                      style={{ border: '1px solid var(--border)', background: 'var(--hover-bg)' }}
+                      dangerouslySetInnerHTML={{ __html: preview.content || '<p>Vide</p>' }} />
                   </>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400">
-                    <p className="text-sm">Sélectionne une version pour la prévisualiser</p>
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Sélectionne une version pour prévisualiser</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
