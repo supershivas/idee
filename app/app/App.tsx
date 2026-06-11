@@ -427,7 +427,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
       )}
 
       {/* ── Contenu principal ── */}
-      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0`}>
+      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
         {selected ? (
           <>
             {/* Cover pleine largeur, sticky derrière le contenu */}
