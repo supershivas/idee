@@ -263,25 +263,18 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           <img src="/apple-touch-icon.png" alt="Idée" className="w-7 h-7 rounded-xl flex-shrink-0" />
           <span className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>Idée</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowSearch(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl"
-            style={{ color: 'var(--text-muted)', background: 'var(--selected-bg)' }}
-          >🔍</button>
-          <button
-            onClick={onShowTrash}
-            className="relative w-9 h-9 flex items-center justify-center rounded-xl"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            🗑
-            {trashedCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">
-                {trashedCount}
-              </span>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={onShowTrash}
+          className="relative w-9 h-9 flex items-center justify-center rounded-xl"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          🗑
+          {trashedCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">
+              {trashedCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="flex px-3 gap-1 pb-2 flex-shrink-0">
@@ -338,17 +331,30 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         )}
       </div>
 
+      {/* Bottom nav — deux actions */}
       <div
-        className="flex-shrink-0 flex items-center gap-2 px-3 py-2"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)', borderTop: '1px solid var(--border)', background: 'var(--app-bg)' }}
+        className="flex-shrink-0 flex items-stretch gap-2 px-3 pt-2"
+        style={{
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+          borderTop: '1px solid var(--border)',
+          background: 'var(--app-bg)',
+        }}
       >
         <button
           onClick={tab === 'journal' ? onAddJournalEntry : onAdd}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors"
           style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
         >
           <span>{tab === 'journal' ? '✏️' : '+'}</span>
           <span>{tab === 'journal' ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+        </button>
+        <button
+          onClick={() => setShowSearch(true)}
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex-shrink-0"
+          style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}
+        >
+          <span>🔍</span>
+          <span>Rechercher</span>
         </button>
       </div>
     </div>
