@@ -44,6 +44,8 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
   const lastSaveRef = useRef(0)
   const pointerYRef = useRef(0)
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hoverOverIdRef = useRef<string | null>(null)
   const searchBarRef = useRef<{ focus: () => void }>(null)
   const mainScrollRef = useRef<HTMLDivElement>(null)
   const [scrolledPast, setScrolledPast] = useState(false)
@@ -284,22 +286,43 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   function handleDragStart(e: DragStartEvent) { setActiveDragId(e.active.id as string) }
   function handleDragOver(e: DragOverEvent) {
     const { over, active } = e
-    if (!over || over.id === active.id) { setOverId(null); setOverPosition(null); return }
-    setOverId(over.id as string)
+    if (!over || over.id === active.id) {
+      setOverId(null); setOverPosition(null)
+      if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null }
+      hoverOverIdRef.current = null
+      return
+    }
+    const overId = over.id as string
+    setOverId(overId)
     const r = over.rect
-    if (r) {
-      // pointerYRef.current = position réelle du pointeur via pointermove global
-      const relY = pointerYRef.current - r.top
-      const ratio = relY / r.height
-      // Zones : 25% haut = before, 50% milieu = inside, 25% bas = after
-      if (ratio < 0.25) setOverPosition('before')
-      else if (ratio > 0.75) setOverPosition('after')
-      else setOverPosition('inside')
+    if (!r) return
+
+    // Position before/after selon Y — affiché immédiatement
+    const relY = pointerYRef.current - r.top
+    const ratio = relY / r.height
+    const immediatePos = ratio < 0.5 ? 'before' : 'after'
+
+    // Si on entre sur un nouvel item, lancer le timer "inside"
+    if (hoverOverIdRef.current !== overId) {
+      hoverOverIdRef.current = overId
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+      setOverPosition(immediatePos)
+      hoverTimerRef.current = setTimeout(() => {
+        // Après 600ms sur le même item → inside
+        if (hoverOverIdRef.current === overId) {
+          setOverPosition('inside')
+        }
+      }, 600)
+    } else {
+      // Même item — si pas encore "inside", mettre à jour before/after
+      setOverPosition(prev => prev === 'inside' ? 'inside' : immediatePos)
     }
   }
   async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e
     const finalPosition = overPosition
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null }
+    hoverOverIdRef.current = null
     setActiveDragId(null); setOverId(null); setOverPosition(null)
     if (!over || active.id === over.id) return
     await reorderSiblings(active.id as string, over.id as string, finalPosition || 'after')
