@@ -344,17 +344,44 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
         <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-400 transition-colors" title="Redimensionner">
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
         </div>
-        <div className="px-4 flex items-center justify-between" style={{ minHeight: '48px', borderBottom: '1px solid var(--border)' }}>
-          <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Idée</span>
+
+        {/* Header */}
+        <div className="px-3 flex items-center justify-between gap-2" style={{ minHeight: '52px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-2 min-w-0">
+            <img src="/apple-touch-icon.png" alt="Idée" className="w-6 h-6 rounded-lg flex-shrink-0" />
+            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', lineHeight: 1 }}>
+              Idée
+            </span>
+          </div>
           <button
             onClick={() => setShowSettings(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0"
+            style={{ color: 'var(--text-muted)', background: 'transparent' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
             title="Paramètres"
-          >⚙️</button>
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="7.5" cy="7.5" r="2" />
+              <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.7 2.7l1.1 1.1M11.2 11.2l1.1 1.1M11.2 2.7l-1.1 1.1M3.8 11.2l-1.1 1.1" />
+            </svg>
+          </button>
         </div>
+
+        {/* Bouton nouvelle page — au dessus de la recherche */}
+        <div className="px-2 pt-2 pb-1">
+          <button
+            onClick={() => showJournal ? addJournalEntry() : addPage(null)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
+          >
+            <span>{showJournal ? '✏️' : '+'}</span>
+            <span>{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+          </button>
+        </div>
+
         <SearchBar ref={searchBarRef} pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
         <div className="flex px-2 pt-1 pb-1 gap-1 flex-shrink-0">
           <button
@@ -443,16 +470,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
             <span>🗑</span><span className="flex-1 text-left">Corbeille</span>
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{trashedPages.length}</span>}
           </button>
-          <button
-            onClick={() => showJournal ? addJournalEntry() : addPage(null)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
-            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
-          >
-            <span>{showJournal ? '✏️' : '+'}</span>
-            <span>{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
-          </button>
+
         </div>
       </div>
 
