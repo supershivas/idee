@@ -29,10 +29,16 @@
   --selected-bg:     #e5e7eb;
   --selected-bg-60:  rgba(229,231,235,0.6);
 
-  /* Sidebar bottom btn */
-  --btn-primary-bg:  #111827;
-  --btn-primary-fg:  #ffffff;
-  --btn-primary-hover: #374151;
+  /* ── Boutons primaires — brun favicon ── */
+  --btn-primary-bg:    #6b4f3a;
+  --btn-primary-fg:    #fdf6ee;
+  --btn-primary-hover: #5a4030;
+
+  /* ── Accent — jaune ampoule ── */
+  --accent:            #f5c842;
+  --accent-fg:         #3b2a0e;
+  --accent-hover:      #e6b82e;
+  --accent-muted:      rgba(245,200,66,0.15);
 
   /* Prose */
   --prose-color:     #2d2620;
@@ -46,15 +52,15 @@
   --prose-pre-fg:    #f5e6c8;
   --prose-table-th:  #f7f2ec;
   --prose-table-border: #e8ddd0;
-  --prose-link:      #78716c;
-  --prose-link-hover:#1a1714;
+  --prose-link:      #6b4f3a;
+  --prose-link-hover:#3b2a0e;
   --prose-row-hover: #fdf9f5;
 
   /* Page link */
-  --pagelink-bg:     #f0ebe4;
-  --pagelink-fg:     #57534e;
-  --pagelink-border: #d9cfc4;
-  --pagelink-hover:  #e5ddd6;
+  --pagelink-bg:     #f5ede4;
+  --pagelink-fg:     #6b4f3a;
+  --pagelink-border: #ddd0c4;
+  --pagelink-hover:  #ecddd0;
 
   /* Scrollbar */
   --scrollbar-thumb: #d4c5b0;
@@ -66,6 +72,9 @@
   /* Empty state */
   --empty-fg:        #9ca3af;
   --empty-title:     #6b7280;
+
+  /* Search highlight */
+  --search-highlight: #f5c842;
 
   /* Drag handle */
   --drag-handle-offset: 44px;
@@ -90,9 +99,16 @@ html.dark {
   --selected-bg:     rgba(255,255,255,0.1);
   --selected-bg-60:  rgba(255,255,255,0.06);
 
-  --btn-primary-bg:  #e8e4df;
-  --btn-primary-fg:  #141414;
-  --btn-primary-hover: #ccc8c3;
+  /* ── Boutons primaires — brun clair en dark ── */
+  --btn-primary-bg:    #8c6448;
+  --btn-primary-fg:    #fdf6ee;
+  --btn-primary-hover: #7a5540;
+
+  /* ── Accent — jaune ampoule ── */
+  --accent:            #f5c842;
+  --accent-fg:         #1a1200;
+  --accent-hover:      #e6b82e;
+  --accent-muted:      rgba(245,200,66,0.12);
 
   --prose-color:     #d4cfc9;
   --prose-h-color:   #e8e4df;
@@ -105,14 +121,14 @@ html.dark {
   --prose-pre-fg:    #f5e6c8;
   --prose-table-th:  #252220;
   --prose-table-border: #333030;
-  --prose-link:      #a8a29e;
-  --prose-link-hover:#e8e4df;
+  --prose-link:      #c49a78;
+  --prose-link-hover:#f5e6c8;
   --prose-row-hover: #262220;
 
-  --pagelink-bg:     #2a2420;
-  --pagelink-fg:     #a8a29e;
+  --pagelink-bg:     #2e2118;
+  --pagelink-fg:     #c49a78;
   --pagelink-border: #3d3530;
-  --pagelink-hover:  #332e28;
+  --pagelink-hover:  #3d2a1e;
 
   --scrollbar-thumb: #3d3530;
 
@@ -121,6 +137,8 @@ html.dark {
 
   --empty-fg:        #6b6560;
   --empty-title:     #8c8680;
+
+  --search-highlight: rgba(245,200,66,0.35);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
@@ -308,6 +326,9 @@ html, body {
 .prose a.page-link { border-bottom: none; padding: 8px 6px; }
 .prose a.page-link:hover { background: var(--pagelink-hover); }
 
+/* ─── Favoris — étoile accent ────────────────────────────────────────────────*/
+.favorite-star { color: var(--accent); }
+
 /* ─── Sidebar scrollbar ──────────────────────────────────────────────────────*/
 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -351,8 +372,8 @@ input::placeholder, textarea::placeholder {
 .sidebar-item-hover { background: transparent; }
 .sidebar-item-hover:hover { background: var(--selected-bg-60); }
 .sidebar-drop-inside {
-  background: rgba(96,165,250,0.08) !important;
-  box-shadow: 0 0 0 1px rgba(96,165,250,0.4);
+  background: var(--accent-muted) !important;
+  box-shadow: 0 0 0 1px var(--accent);
 }
 .sidebar-icon-btn { color: var(--text-muted); background: transparent; }
 .sidebar-icon-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
