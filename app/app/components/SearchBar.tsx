@@ -12,7 +12,7 @@ function tiptapToText(content: any): string {
   try {
     const doc = typeof content === 'string' ? JSON.parse(content) : content
     const parts: string[] = []
-    function walk(node: any) {
+    const walk = (node: any) => {
       if (!node) return
       if (node.type === 'text' && node.text) parts.push(node.text)
       if (Array.isArray(node.content)) node.content.forEach(walk)
