@@ -276,20 +276,26 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   function handleDragStart(e: DragStartEvent) { setActiveDragId(e.active.id as string) }
   function handleDragOver(e: DragOverEvent) {
     const { over, active } = e
-    if (!over || over.id === active.id) { setOverId(null); return }
+    if (!over || over.id === active.id) { setOverId(null); setOverPosition(null); return }
     setOverId(over.id as string)
-    const r = e.over?.rect
-    if (r && e.activatorEvent) {
-      const cy = (e.activatorEvent as PointerEvent).clientY + ((e.delta?.y) || 0)
-      const ratio = (cy - r.top) / r.height
-      setOverPosition(ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside')
+    // Utilise over.rect (position actuelle de l'élément cible) + delta du drag
+    const r = over.rect
+    if (r) {
+      const pointerY = (e.activatorEvent as PointerEvent).clientY + (e.delta?.y || 0)
+      const relY = pointerY - r.top
+      const ratio = relY / r.height
+      // Zones : 0-30% = before, 30-70% = inside, 70-100% = after
+      if (ratio < 0.30) setOverPosition('before')
+      else if (ratio > 0.70) setOverPosition('after')
+      else setOverPosition('inside')
     }
   }
   async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e
+    const finalPosition = overPosition
     setActiveDragId(null); setOverId(null); setOverPosition(null)
     if (!over || active.id === over.id) return
-    await reorderSiblings(active.id as string, over.id as string, overPosition || 'after')
+    await reorderSiblings(active.id as string, over.id as string, finalPosition || 'after')
   }
 
   const activeDragPage = pages.find(p => p.id === activeDragId)
