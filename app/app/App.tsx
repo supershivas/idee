@@ -278,15 +278,14 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     const { over, active } = e
     if (!over || over.id === active.id) { setOverId(null); setOverPosition(null); return }
     setOverId(over.id as string)
-    // Utilise over.rect (position actuelle de l'élément cible) + delta du drag
     const r = over.rect
     if (r) {
       const pointerY = (e.activatorEvent as PointerEvent).clientY + (e.delta?.y || 0)
       const relY = pointerY - r.top
       const ratio = relY / r.height
-      // Zones : 0-30% = before, 30-70% = inside, 70-100% = after
-      if (ratio < 0.30) setOverPosition('before')
-      else if (ratio > 0.70) setOverPosition('after')
+      // Zones : 25% haut = before, 25% bas = after, 50% milieu = inside
+      if (ratio < 0.25) setOverPosition('before')
+      else if (ratio > 0.75) setOverPosition('after')
       else setOverPosition('inside')
     }
   }
