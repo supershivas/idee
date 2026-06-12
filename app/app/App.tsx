@@ -43,11 +43,19 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const [overId, setOverId] = useState<string | null>(null)
   const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
   const lastSaveRef = useRef(0)
+  const pointerYRef = useRef(0)
   const searchBarRef = useRef<{ focus: () => void }>(null)
   const mainScrollRef = useRef<HTMLDivElement>(null)
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
+
+  // Track pointer Y globally — fiable pendant le drag
+  useEffect(() => {
+    function onPointerMove(e: PointerEvent) { pointerYRef.current = e.clientY }
+    window.addEventListener('pointermove', onPointerMove)
+    return () => window.removeEventListener('pointermove', onPointerMove)
+  }, [])
   const SIDEBAR_MIN = 180
   const SIDEBAR_MAX = 400
   const SIDEBAR_DEFAULT = 240
@@ -280,10 +288,10 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
     setOverId(over.id as string)
     const r = over.rect
     if (r) {
-      const pointerY = (e.activatorEvent as PointerEvent).clientY + (e.delta?.y || 0)
-      const relY = pointerY - r.top
+      // pointerYRef.current = position réelle du pointeur via pointermove global
+      const relY = pointerYRef.current - r.top
       const ratio = relY / r.height
-      // Zones : 25% haut = before, 25% bas = after, 50% milieu = inside
+      // Zones : 25% haut = before, 50% milieu = inside, 25% bas = after
       if (ratio < 0.25) setOverPosition('before')
       else if (ratio > 0.75) setOverPosition('after')
       else setOverPosition('inside')
