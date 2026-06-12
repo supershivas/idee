@@ -6,20 +6,19 @@ import { CSS } from '@dnd-kit/utilities'
 import { Page } from '../types'
 
 // ─── SortablePageItem ─────────────────────────────────────────────────────────
-export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
+export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, dropIndicator, isMobile, onRename, onToggleFavorite }: {
   page: Page, pages: Page[], depth: number, selectedId: string | null,
   onSelect: (p: Page) => void, onAdd: (id: string) => void,
   onToggle: (id: string) => void, isOpen: boolean,
-  overId: string | null, overPosition: 'before' | 'after' | 'inside' | null,
+  dropIndicator: { position: 'before' | 'after' | 'inside' } | null,
   isMobile: boolean,
   onRename: (id: string, title: string) => void,
   onToggleFavorite: (id: string) => void,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }
   const hasChildren = pages.some(p => p.parent_id === page.id && !p.deleted_at)
   const isSelected = selectedId === page.id
-  const isOver = overId === page.id
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState(page.title)
   const renameRef = useRef<HTMLInputElement>(null)
@@ -34,12 +33,23 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
 
   return (
     <div ref={setNodeRef} style={style}>
-      {isOver && overPosition === 'before' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
+      {/* Indicateur BEFORE */}
+      {dropIndicator?.position === 'before' && (
+        <div className="flex items-center gap-1 mx-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 6}px` }}>
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--prose-link, #60a5fa)' }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: 'var(--prose-link, #60a5fa)' }} />
+        </div>
+      )}
+
       <div
         className={`flex items-center gap-1 pr-1 rounded-md cursor-pointer group transition-colors
           ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}
-          ${isOver && overPosition === 'inside' ? 'sidebar-drop-inside' : ''}`}
-        style={{ paddingLeft: `${depth * 14 + 6}px`, minHeight: isMobile ? '48px' : '32px' }}
+          ${dropIndicator?.position === 'inside' ? 'ring-2 ring-blue-400 ring-inset' : ''}`}
+        style={{
+          paddingLeft: `${depth * 14 + 6}px`,
+          minHeight: isMobile ? '48px' : '32px',
+          background: dropIndicator?.position === 'inside' ? 'var(--hover-bg)' : undefined,
+        }}
       >
         {!isMobile && (
           <button {...attributes} {...listeners}
@@ -87,7 +97,14 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
           </div>
         )}
       </div>
-      {isOver && overPosition === 'after' && <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5" />}
+
+      {/* Indicateur AFTER */}
+      {dropIndicator?.position === 'after' && (
+        <div className="flex items-center gap-1 mx-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 6}px` }}>
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--prose-link, #60a5fa)' }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: 'var(--prose-link, #60a5fa)' }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -114,7 +131,8 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
           <SortablePageItem
             page={page} pages={pages} depth={depth} selectedId={selectedId}
             onSelect={onSelect} onAdd={onAdd} onToggle={onToggle}
-            isOpen={!!openMap[page.id]} overId={overId} overPosition={overPosition}
+            isOpen={!!openMap[page.id]}
+            dropIndicator={overId === page.id && overPosition ? { position: overPosition } : null}
             isMobile={isMobile} onRename={onRename}
             onToggleFavorite={onToggleFavorite}
           />
