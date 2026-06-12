@@ -6,7 +6,7 @@ export interface SearchBarHandle {
   focus: () => void
 }
 
-// ── Tiptap JSON → plain text ──────────────────────────────────────────────────
+// Parse Tiptap JSON récursivement → texte brut
 function tiptapToText(content: any): string {
   if (!content) return ''
   try {
@@ -20,24 +20,22 @@ function tiptapToText(content: any): string {
     walk(doc)
     return parts.join(' ')
   } catch {
-    // Fallback: strip HTML/JSON tags and return raw string
-    if (typeof content === 'string') return content.replace(/<[^>]+>/g, ' ').replace(/\{[^}]+\}/g, ' ')
+    if (typeof content === 'string') return content.replace(/<[^>]+>/g, ' ')
     return ''
   }
 }
 
-// ── Extract a ~120-char snippet around the first match ───────────────────────
+// Extrait ~120 chars autour du premier match
 function getSnippet(text: string, query: string): string | null {
   const lower = text.toLowerCase()
   const idx = lower.indexOf(query.toLowerCase())
   if (idx === -1) return null
   const start = Math.max(0, idx - 40)
   const end = Math.min(text.length, idx + query.length + 80)
-  const snippet = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
-  return snippet
+  return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
 }
 
-// ── Highlight query term inside a string ─────────────────────────────────────
+// Highlight du terme cherché
 function Highlighted({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>
   const idx = text.toLowerCase().indexOf(query.toLowerCase())
@@ -45,7 +43,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark style={{ background: 'var(--search-highlight, #fde68a)', color: 'inherit', borderRadius: '2px', padding: '0 1px' }}>
+      <mark className="search-highlight">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}
@@ -53,7 +51,6 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: (p: Page) => void }>(
   function SearchBar({ pages, onSelect }, ref) {
     const [query, setQuery] = useState('')
@@ -64,7 +61,6 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
       focus: () => { inputRef.current?.focus(); inputRef.current?.select() },
     }))
 
-    // Pre-compute plain text once per page list change
     const pageTexts = useMemo(() =>
       pages.map(p => ({ page: p, text: tiptapToText(p.content) })),
       [pages]
@@ -79,10 +75,7 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
           text.toLowerCase().includes(q)
         )
         .map(({ page, text }) => {
-          const titleMatch = (page.title || '').toLowerCase().includes(q)
-          const snippet = !titleMatch || !text.toLowerCase().includes(q)
-            ? getSnippet(text, query)
-            : null
+          const snippet = getSnippet(text, query)
           return { page, snippet }
         })
         .slice(0, 8)
@@ -92,13 +85,8 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
 
     return (
       <div className="relative px-2 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors"
-          style={{
-            background: 'var(--selected-bg)',
-            outline: focused ? '1.5px solid var(--border)' : '1.5px solid transparent',
-          }}
-        >
+        <style>{`.search-highlight { background: var(--search-highlight, #fde68a); color: inherit; border-radius: 2px; padding: 0 1px; }`}</style>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--selected-bg)' }}>
           <span className="text-sm flex-shrink-0" style={{ color: 'var(--text-muted)' }}>🔍</span>
           <input
             ref={inputRef}
@@ -111,57 +99,47 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
             style={{ color: 'var(--text-primary)' }}
           />
           {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0"
-              style={{ color: 'var(--text-muted)' }}
-            >✕</button>
+            <button onClick={() => setQuery('')}
+              className="w-6 h-6 flex items-center justify-center text-sm flex-shrink-0"
+              style={{ color: 'var(--text-muted)' }}>✕</button>
           )}
         </div>
-
-        {isOpen && (
-          <div
-            className="absolute left-2 right-2 top-full mt-1 rounded-xl shadow-xl z-50 overflow-hidden"
-            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}
-          >
-            {results.length === 0 ? (
-              <p className="text-sm text-center py-4 px-3" style={{ color: 'var(--text-muted)' }}>
-                Aucun résultat pour «&nbsp;{query}&nbsp;»
-              </p>
-            ) : (
-              <>
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                  {results.length} résultat{results.length > 1 ? 's' : ''}
-                </p>
-                {results.map(({ page, snippet }) => (
-                  <button
-                    key={page.id}
-                    onClick={() => { onSelect(page); setQuery('') }}
-                    className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors"
-                    style={{ borderTop: '1px solid var(--border-light)' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <span className="flex-shrink-0 mt-0.5 text-base">{page.icon || '📄'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                        <Highlighted text={page.title || 'Sans titre'} query={query} />
-                      </p>
-                      {snippet && (
-                        <p className="text-xs mt-0.5 leading-relaxed line-clamp-2" style={{ color: 'var(--text-muted)' }}>
-                          <Highlighted text={snippet} query={query} />
-                        </p>
-                      )}
-                      {page.type === 'journal' && (
-                        <span className="inline-block text-[10px] mt-0.5 px-1.5 py-0.5 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-faint)' }}>
-                          Journal
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
+        {isOpen && results.length > 0 && (
+          <div className="absolute left-2 right-2 top-full mt-1 rounded-lg shadow-xl z-50 overflow-hidden"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+            <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              {results.length} résultat{results.length > 1 ? 's' : ''}
+            </p>
+            {results.map(({ page, snippet }) => (
+              <button key={page.id} onClick={() => { onSelect(page); setQuery('') }}
+                className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors"
+                style={{ borderTop: '1px solid var(--border-light)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <span className="flex-shrink-0 text-base mt-0.5">{page.icon || '📄'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                    <Highlighted text={page.title || 'Sans titre'} query={query} />
+                  </p>
+                  {snippet && (
+                    <p className="text-xs mt-0.5 leading-relaxed line-clamp-2" style={{ color: 'var(--text-muted)' }}>
+                      <Highlighted text={snippet} query={query} />
+                    </p>
+                  )}
+                  {page.type === 'journal' && (
+                    <span className="inline-block text-[10px] mt-0.5 px-1.5 py-0.5 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-faint)' }}>
+                      Journal
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {isOpen && results.length === 0 && (
+          <div className="absolute left-2 right-2 top-full mt-1 rounded-lg shadow-xl z-50 p-3"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+            <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>Aucun résultat</p>
           </div>
         )}
       </div>
