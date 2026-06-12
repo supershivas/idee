@@ -56,7 +56,11 @@ function MobileSearchOverlay({ pages, onSelect, onClose }: {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 80)
+    // Double tentative : immédiat + délai pour iOS qui ignore le premier focus
+    inputRef.current?.focus()
+    const t1 = setTimeout(() => inputRef.current?.focus(), 50)
+    const t2 = setTimeout(() => inputRef.current?.focus(), 200)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [])
 
   useEffect(() => {
