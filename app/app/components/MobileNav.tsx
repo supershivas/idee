@@ -346,7 +346,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
       >
         <button
           onClick={tab === 'journal' ? onAddJournalEntry : onAdd}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-colors"
           style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
         >
           <span>{tab === 'journal' ? '✏️' : '+'}</span>
@@ -354,7 +354,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         </button>
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex-shrink-0"
+          className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
           style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}
         >
           <span>🔍</span>
