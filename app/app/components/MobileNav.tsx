@@ -380,8 +380,7 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite }: {
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
         className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
-        style={{ color: page.favorite ? '#f59e0b' : 'var(--text-faint)' }}
-      >
+style={{ color: page.favorite ? 'var(--accent)' : 'var(--text-faint)' }}      >
         {page.favorite ? '★' : '☆'}
       </button>
     </div>
