@@ -5,6 +5,9 @@ import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type Dra
 import { CSS } from '@dnd-kit/utilities'
 import { Page } from '../types'
 
+const BLUE = '#60a5fa'
+const BLUE_BG = 'rgba(96,165,250,0.12)'
+
 // ─── SortablePageItem ─────────────────────────────────────────────────────────
 export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, dropIndicator, isMobile, onRename, onToggleFavorite }: {
   page: Page, pages: Page[], depth: number, selectedId: string | null,
@@ -15,13 +18,15 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
   onRename: (id: string, title: string) => void,
   onToggleFavorite: (id: string) => void,
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }
   const hasChildren = pages.some(p => p.parent_id === page.id && !p.deleted_at)
   const isSelected = selectedId === page.id
+  const isInside = dropIndicator?.position === 'inside'
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState(page.title)
   const renameRef = useRef<HTMLInputElement>(null)
+  const dragAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { if (renaming) renameRef.current?.select() }, [renaming])
 
@@ -31,82 +36,103 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
     if (trimmed !== page.title) onRename(page.id, trimmed)
   }
 
-  const indicatorColor = 'var(--prose-link, #60a5fa)'
+  // On attache le drag handle à la zone draggable (tout sauf bouton +)
+  useEffect(() => {
+    if (dragAreaRef.current) setActivatorNodeRef(dragAreaRef.current)
+  }, [setActivatorNodeRef])
 
   return (
     <div ref={setNodeRef} style={style}>
-      {/* Indicateur BEFORE */}
+
+      {/* ── Indicateur BEFORE ── */}
       {dropIndicator?.position === 'before' && (
-        <div className="flex items-center gap-1 mx-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 6}px` }}>
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: indicatorColor }} />
-          <div className="flex-1 h-0.5 rounded" style={{ background: indicatorColor }} />
+        <div className="flex items-center gap-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 14}px`, paddingRight: '8px' }}>
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: BLUE }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: BLUE }} />
         </div>
       )}
 
-      {/* Row — listeners sur toute la ligne pour drag */}
+      {/* ── Row ── */}
       <div
-        {...(isMobile ? {} : { ...attributes, ...listeners })}
         className={`flex items-center gap-1 pr-1 rounded-md group transition-colors
-          ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}
-          ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}
-          ${dropIndicator?.position === 'inside' ? 'outline outline-2 outline-blue-400' : ''}`}
+          ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}`}
         style={{
           paddingLeft: `${depth * 14 + 6}px`,
           minHeight: isMobile ? '48px' : '32px',
-          background: dropIndicator?.position === 'inside' ? 'var(--hover-bg)' : undefined,
+          outline: isInside ? `2px solid ${BLUE}` : undefined,
+          outlineOffset: '-1px',
+          background: isInside ? BLUE_BG : undefined,
         }}
       >
-        {/* Chevron toggle — stoppe la propagation pour ne pas déclencher le drag */}
-        <button
-          onClick={e => { e.stopPropagation(); onToggle(page.id) }}
-          onPointerDown={e => e.stopPropagation()}
-          className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs cursor-pointer"
-          style={{ color: 'var(--text-muted)' }}>
-          {hasChildren ? (isOpen ? '▾' : '▸') : ''}
-        </button>
-        <span className="text-sm flex-shrink-0">{page.icon || '📄'}</span>
-        {renaming ? (
-          <input
-            ref={renameRef}
-            value={renameValue}
-            onChange={e => setRenameValue(e.target.value)}
-            onBlur={commitRename}
-            onPointerDown={e => e.stopPropagation()}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitRename()
-              if (e.key === 'Escape') { setRenameValue(page.title); setRenaming(false) }
-              e.stopPropagation()
-            }}
-            className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0 cursor-text"
-            style={{ background: 'var(--card-bg)', border: '1px solid #60a5fa', color: 'var(--text-primary)' }}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : (
-          <span
-            onClick={e => { e.stopPropagation(); onSelect(page) }}
-            onDoubleClick={e => { e.stopPropagation(); setRenameValue(page.title); setRenaming(true) }}
-            onPointerDown={e => e.stopPropagation()}
-            className="flex-1 text-sm truncate py-1 select-none cursor-pointer"
-            style={{ color: 'var(--text-secondary)' }}>
-            {page.title || 'Sans titre'}
-          </span>
-        )}
-        {!renaming && (
-          <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100">
-            <button
-              onClick={e => { e.stopPropagation(); onAdd(page.id) }}
-              onPointerDown={e => e.stopPropagation()}
-              className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn cursor-pointer"
-              title="Ajouter une sous-page">+</button>
+        {/* Zone draggable : chevron + icône + titre */}
+        <div
+          ref={dragAreaRef}
+          {...attributes}
+          {...listeners}
+          className="flex items-center gap-1 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
+          style={{ minHeight: 'inherit' }}
+          onClick={e => {
+            // Clic sur le chevron (premiers 16px)
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            const x = e.clientX - rect.left
+            if (x < 20 && hasChildren) { e.stopPropagation(); onToggle(page.id); return }
+            // Clic sur le titre : sélectionner
+            if (!renaming) { e.stopPropagation(); onSelect(page) }
+          }}
+          onDoubleClick={e => { e.stopPropagation(); setRenameValue(page.title); setRenaming(true) }}
+        >
+          {/* Chevron */}
+          <div
+            className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs"
+            style={{ color: 'var(--text-muted)', pointerEvents: 'none' }}
+          >
+            {hasChildren ? (isOpen ? '▾' : '▸') : ''}
           </div>
+          {/* Icône */}
+          <span className="text-sm flex-shrink-0" style={{ pointerEvents: 'none' }}>{page.icon || '📄'}</span>
+          {/* Titre ou input rename */}
+          {renaming ? (
+            <input
+              ref={renameRef}
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitRename()
+                if (e.key === 'Escape') { setRenameValue(page.title); setRenaming(false) }
+                e.stopPropagation()
+              }}
+              className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0 cursor-text"
+              style={{ background: 'var(--card-bg)', border: `1px solid ${BLUE}`, color: 'var(--text-primary)' }}
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <span
+              className="flex-1 text-sm truncate py-1 select-none"
+              style={{ color: 'var(--text-secondary)', pointerEvents: 'none' }}
+            >
+              {page.title || 'Sans titre'}
+            </span>
+          )}
+        </div>
+
+
+
+        {/* Bouton + sous-page */}
+        {!renaming && (
+          <button
+            onClick={e => { e.stopPropagation(); onAdd(page.id) }}
+            className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn flex-shrink-0 opacity-0 group-hover:opacity-100 cursor-pointer"
+            title="Ajouter une sous-page"
+          >+</button>
         )}
       </div>
 
-      {/* Indicateur AFTER */}
+      {/* ── Indicateur AFTER ── */}
       {dropIndicator?.position === 'after' && (
-        <div className="flex items-center gap-1 mx-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 6}px` }}>
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: indicatorColor }} />
-          <div className="flex-1 h-0.5 rounded" style={{ background: indicatorColor }} />
+        <div className="flex items-center gap-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 14}px`, paddingRight: '8px' }}>
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: BLUE }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: BLUE }} />
         </div>
       )}
     </div>
@@ -161,11 +187,7 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
   isDragOverlay?: boolean,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  }
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
 
   return (
     <div
@@ -237,25 +259,11 @@ export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite
       >
         <SortableContext items={favorites.map(p => p.id)} strategy={verticalListSortingStrategy}>
           {favorites.map(page => (
-            <SortableFavoriteItem
-              key={page.id}
-              page={page}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              onToggleFavorite={onToggleFavorite}
-            />
+            <SortableFavoriteItem key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
           ))}
         </SortableContext>
         <DragOverlay>
-          {activePage && (
-            <SortableFavoriteItem
-              page={activePage}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              onToggleFavorite={onToggleFavorite}
-              isDragOverlay
-            />
-          )}
+          {activePage && <SortableFavoriteItem page={activePage} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} isDragOverlay />}
         </DragOverlay>
       </DndContext>
       <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--border)' }} />
