@@ -234,7 +234,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
 
   const nonJournalPages = pages.filter(function(p) { return p.type !== 'journal' && !p.deleted_at })
   const journalEntries = pages.filter(function(p) { return p.type === 'journal' && !p.deleted_at })
-  const favorites = nonJournalPages.filter(function(p) { return p.favorite })
+  const favorites = nonJournalPages.filter(function(p) { return p.favorite }).sort(function(a, b) { return (a.favorite_position ?? 999) - (b.favorite_position ?? 999) })
 
   const sortedPages = [...nonJournalPages].sort(function(a, b) { return a.position - b.position })
   const sortedJournal = [...journalEntries].sort(function(a, b) {
