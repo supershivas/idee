@@ -307,9 +307,62 @@ export default function ExportButton({ page }: { page: Page }) {
 <head>
   <meta charset="UTF-8">
   <title>${page.title || 'Sans titre'}</title>
-  <style>${css}</style>
+  <style>
+    ${css}
+
+    /* ── Barre d'action (masquée à l'impression) ── */
+    @media print {
+      .print-bar { display: none !important; }
+      body { padding-top: 0 !important; }
+    }
+    .print-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 24px;
+      background: #1a1a1a;
+      color: #fff;
+      font-family: -apple-system, Arial, sans-serif;
+      font-size: 13px;
+    }
+    .print-bar-title {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.85;
+    }
+    .print-bar-hint {
+      opacity: 0.5;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .print-btn {
+      flex-shrink: 0;
+      padding: 7px 18px;
+      background: #fff;
+      color: #111;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: -apple-system, Arial, sans-serif;
+    }
+    .print-btn:hover { background: #f0f0f0; }
+    body { padding-top: 52px; }
+  </style>
 </head>
 <body>
+  <div class="print-bar">
+    <span class="print-bar-title">${page.icon || '📄'} ${page.title || 'Sans titre'}</span>
+    <span class="print-bar-hint">Dans la boîte d'impression, choisir « Enregistrer en PDF »</span>
+    <button class="print-btn" onclick="window.print()">🖨 Imprimer / PDF</button>
+  </div>
   <div class="doc-header">
     <span class="doc-icon">${page.icon || '📄'}</span>
     <div>
@@ -320,7 +373,6 @@ export default function ExportButton({ page }: { page: Page }) {
   <div class="doc-body">
     ${cleanContent || '<p><em>Page vide.</em></p>'}
   </div>
-  <script>window.onload = () => { window.print(); window.close(); }<\/script>
 </body>
 </html>`)
     w.document.close()
