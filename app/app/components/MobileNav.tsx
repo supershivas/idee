@@ -190,21 +190,23 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
       className={`flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors mobile-row-hover ${selectedId === entry.id ? 'mobile-row-selected' : ''}`}
     >
       <span className="text-xl flex-shrink-0">{entry.icon || '📝'}</span>
-      <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{entry.title || 'Sans titre'}</span>
-      {(entry.tags || []).length > 0 && (
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {(entry.tags || []).slice(0, 2).map(function(tag) {
-            return (
-              <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
-                {tag}
-              </span>
-            )
-          })}
-          {(entry.tags || []).length > 2 && (
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>+{(entry.tags || []).length - 2}</span>
-          )}
-        </div>
-      )}
+      <div className="flex-1 min-w-0">
+        <span className="block text-sm truncate" style={{ color: 'var(--text-primary)' }}>{entry.title || 'Sans titre'}</span>
+        {(entry.tags || []).length > 0 && (
+          <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
+            {(entry.tags || []).slice(0, 2).map(function(tag) {
+              return (
+                <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+                  {tag}
+                </span>
+              )
+            })}
+            {(entry.tags || []).length > 2 && (
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>+{(entry.tags || []).length - 2}</span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -361,10 +363,10 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite }: {
   return (
     <div
       onClick={() => onSelect(page)}
-      className={`flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors mobile-row-hover ${selectedId === page.id ? 'mobile-row-selected' : ''}`}
+      className={`flex items-center gap-2 px-3 py-3 rounded-xl cursor-pointer transition-colors mobile-row-hover ${selectedId === page.id ? 'mobile-row-selected' : ''}`}
     >
       <span className="text-xl flex-shrink-0">{page.icon || '📄'}</span>
-      <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</span>
+      <span className="flex-1 min-w-0 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</span>
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
         className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
