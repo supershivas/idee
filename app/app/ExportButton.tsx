@@ -41,6 +41,20 @@ function htmlToMarkdown(html: string): string {
     .trim()
 }
 
+// Nettoie les styles inline Tiptap qui écrasent le CSS d'impression
+function cleanHtmlForPrint(html: string): string {
+  return html
+    // Supprimer tous les attributs style inline
+    .replace(/\s*style="[^"]*"/gi, '')
+    // Supprimer classes Tiptap/ProseMirror
+    .replace(/\s*class="[^"]*"/gi, '')
+    // Supprimer data-attributes
+    .replace(/\s*data-[^=]*="[^"]*"/gi, '')
+    // Checkbox tiptap → HTML natif
+    .replace(/<input[^>]*type="checkbox"[^>]*checked[^>]*>/gi, '<input type="checkbox" checked disabled>')
+    .replace(/<input[^>]*type="checkbox"[^>]*>/gi, '<input type="checkbox" disabled>')
+}
+
 export default function ExportButton({ page }: { page: Page }) {
   const [open, setOpen] = useState(false)
 
@@ -63,56 +77,169 @@ export default function ExportButton({ page }: { page: Page }) {
       day: 'numeric', month: 'long', year: 'numeric',
     })
 
+    const cleanContent = cleanHtmlForPrint(page.content || '')
+
     const css = `
-      @page { margin: 2cm 2.5cm; size: A4; }
-      *, *::before, *::after { box-sizing: border-box; }
+      @page {
+        margin: 2cm 2.5cm;
+        size: A4;
+      }
+
+      /* Reset total — neutralise tout style inline résiduel */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        color: inherit;
+        margin: 0;
+        padding: 0;
+      }
+
       body {
         font-family: Georgia, 'Times New Roman', serif;
         font-size: 11pt;
-        line-height: 1.7;
+        line-height: 1.75;
         color: #111;
-        margin: 0;
-        padding: 0;
-        max-width: 100%;
       }
+
+      /* ── En-tête ── */
       .doc-header {
         display: flex;
         align-items: flex-start;
-        gap: 14px;
-        padding-bottom: 14pt;
-        margin-bottom: 20pt;
+        gap: 12pt;
+        padding-bottom: 12pt;
+        margin-bottom: 18pt;
         border-bottom: 1.5pt solid #222;
       }
-      .doc-icon { font-size: 26pt; line-height: 1.1; flex-shrink: 0; }
-      .doc-title { font-size: 20pt; font-weight: 700; margin: 0 0 3pt; line-height: 1.2; font-family: -apple-system, Arial, sans-serif; }
-      .doc-meta { font-size: 9pt; color: #777; margin: 0; }
-      h1 { font-size: 17pt; font-weight: 700; margin: 18pt 0 6pt; page-break-after: avoid; line-height: 1.3; }
-      h2 { font-size: 14pt; font-weight: 700; margin: 14pt 0 5pt; page-break-after: avoid; line-height: 1.3; }
-      h3 { font-size: 12pt; font-weight: 700; margin: 12pt 0 4pt; page-break-after: avoid; }
-      p { margin: 0 0 7pt; orphans: 3; widows: 3; }
-      ul, ol { padding-left: 1.5em; margin: 3pt 0 8pt; }
-      li { margin-bottom: 3pt; page-break-inside: avoid; }
-      blockquote {
-        margin: 6pt 0 8pt;
-        padding: 5pt 10pt;
-        border-left: 2.5pt solid #999;
-        color: #444;
-        font-style: italic;
+      .doc-icon {
+        font-size: 24pt;
+        line-height: 1.1;
+        flex-shrink: 0;
+      }
+      .doc-title {
+        font-size: 22pt;
+        font-weight: 700;
+        line-height: 1.2;
+        font-family: -apple-system, Arial, sans-serif;
+        color: #111;
+        margin-bottom: 3pt;
+      }
+      .doc-meta {
+        font-size: 8.5pt;
+        color: #888;
+        font-family: -apple-system, Arial, sans-serif;
+      }
+
+      /* ── Corps ── */
+      p {
+        font-size: 11pt;
+        line-height: 1.75;
+        margin-bottom: 7pt;
+        orphans: 3;
+        widows: 3;
+      }
+
+      /* Paragraphe vide → espace vertical discret */
+      p:empty {
+        margin-bottom: 4pt;
+      }
+
+      /* ── Titres — proportionnels à 11pt ── */
+      h1 {
+        font-size: 20pt;
+        font-weight: 700;
+        line-height: 1.25;
+        margin-top: 20pt;
+        margin-bottom: 7pt;
+        page-break-after: avoid;
+        font-family: -apple-system, Arial, sans-serif;
+      }
+      h2 {
+        font-size: 16pt;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-top: 16pt;
+        margin-bottom: 6pt;
+        page-break-after: avoid;
+        font-family: -apple-system, Arial, sans-serif;
+      }
+      h3 {
+        font-size: 13pt;
+        font-weight: 700;
+        line-height: 1.35;
+        margin-top: 13pt;
+        margin-bottom: 5pt;
+        page-break-after: avoid;
+        font-family: -apple-system, Arial, sans-serif;
+      }
+      h4, h5, h6 {
+        font-size: 11pt;
+        font-weight: 700;
+        margin-top: 10pt;
+        margin-bottom: 4pt;
+        page-break-after: avoid;
+      }
+
+      /* ── Listes ── */
+      ul, ol {
+        font-size: 11pt;
+        padding-left: 1.6em;
+        margin-top: 2pt;
+        margin-bottom: 8pt;
+      }
+      li {
+        margin-bottom: 3pt;
+        line-height: 1.6;
         page-break-inside: avoid;
       }
-      blockquote p { margin: 0; }
+      li p { margin-bottom: 2pt; }
+
+      /* ── Todo list ── */
+      ul[data-type="taskList"],
+      .task-list {
+        list-style: none;
+        padding-left: 0.2em;
+      }
+      li[data-type="taskItem"],
+      .task-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 5pt;
+      }
+      input[type="checkbox"] {
+        margin-top: 3pt;
+        flex-shrink: 0;
+        width: 9pt;
+        height: 9pt;
+      }
+
+      /* ── Citation ── */
+      blockquote {
+        margin: 8pt 0;
+        padding: 6pt 12pt;
+        border-left: 2.5pt solid #aaa;
+        color: #555;
+        font-style: italic;
+        font-size: 11pt;
+        page-break-inside: avoid;
+      }
+      blockquote p { margin-bottom: 2pt; }
+
+      /* ── Code ── */
       code {
         font-family: 'Courier New', Courier, monospace;
         font-size: 9pt;
-        background: #f4f4f4;
+        background: #f3f3f3;
         padding: 1pt 3pt;
         border: 0.5pt solid #ddd;
         border-radius: 2pt;
+        color: #c7254e;
       }
       pre {
         font-family: 'Courier New', Courier, monospace;
         font-size: 9pt;
-        background: #f4f4f4;
+        background: #f3f3f3;
         border: 0.5pt solid #ddd;
         padding: 8pt 10pt;
         border-radius: 3pt;
@@ -121,22 +248,58 @@ export default function ExportButton({ page }: { page: Page }) {
         page-break-inside: avoid;
         margin: 6pt 0 10pt;
         line-height: 1.5;
+        color: #111;
       }
-      pre code { background: none; border: none; padding: 0; font-size: inherit; }
+      pre code {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 9pt;
+        color: inherit;
+      }
+
+      /* ── Tableau ── */
       table {
         width: 100%;
         border-collapse: collapse;
-        margin: 6pt 0 10pt;
+        margin: 8pt 0 12pt;
         font-size: 10pt;
         page-break-inside: avoid;
       }
-      th, td { border: 0.5pt solid #bbb; padding: 4pt 8pt; text-align: left; vertical-align: top; }
-      th { background: #f0f0f0; font-weight: 700; }
-      img { max-width: 100%; height: auto; display: block; margin: 8pt 0; page-break-inside: avoid; }
-      hr { border: none; border-top: 0.5pt solid #ccc; margin: 12pt 0; }
-      a { color: #1a1a1a; text-decoration: underline; }
-      input[type="checkbox"] { margin-right: 4pt; }
+      th, td {
+        border: 0.5pt solid #bbb;
+        padding: 4pt 8pt;
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.5;
+      }
+      th {
+        background: #f0f0f0;
+        font-weight: 700;
+        font-size: 10pt;
+      }
+
+      /* ── Misc ── */
+      img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 8pt 0;
+        page-break-inside: avoid;
+      }
+      hr {
+        border: none;
+        border-top: 0.5pt solid #ccc;
+        margin: 14pt 0;
+      }
+      a {
+        color: #1a1a1a;
+        text-decoration: underline;
+      }
+      strong, b { font-weight: 700; }
+      em, i { font-style: italic; }
       s, del { text-decoration: line-through; color: #666; }
+      u { text-decoration: underline; }
     `
 
     w.document.write(`<!DOCTYPE html>
@@ -154,7 +317,9 @@ export default function ExportButton({ page }: { page: Page }) {
       <p class="doc-meta">Exporté le ${date}</p>
     </div>
   </div>
-  ${page.content || '<p><em>Page vide.</em></p>'}
+  <div class="doc-body">
+    ${cleanContent || '<p><em>Page vide.</em></p>'}
+  </div>
   <script>window.onload = () => { window.print(); window.close(); }<\/script>
 </body>
 </html>`)
