@@ -209,7 +209,7 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
-        style={{ color: '#f59e0b' }}
+        style={{ color: 'var(--accent)' }}
         title="Retirer des favoris"
       >★</button>
     </div>
