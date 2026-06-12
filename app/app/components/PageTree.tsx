@@ -31,35 +31,36 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
     if (trimmed !== page.title) onRename(page.id, trimmed)
   }
 
+  const indicatorColor = 'var(--prose-link, #60a5fa)'
+
   return (
     <div ref={setNodeRef} style={style}>
       {/* Indicateur BEFORE */}
       {dropIndicator?.position === 'before' && (
         <div className="flex items-center gap-1 mx-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 6}px` }}>
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--prose-link, #60a5fa)' }} />
-          <div className="flex-1 h-0.5 rounded" style={{ background: 'var(--prose-link, #60a5fa)' }} />
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: indicatorColor }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: indicatorColor }} />
         </div>
       )}
 
+      {/* Row — listeners sur toute la ligne pour drag */}
       <div
-        className={`flex items-center gap-1 pr-1 rounded-md cursor-pointer group transition-colors
+        {...(isMobile ? {} : { ...attributes, ...listeners })}
+        className={`flex items-center gap-1 pr-1 rounded-md group transition-colors
+          ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}
           ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}
-          ${dropIndicator?.position === 'inside' ? 'ring-2 ring-blue-400 ring-inset' : ''}`}
+          ${dropIndicator?.position === 'inside' ? 'outline outline-2 outline-blue-400' : ''}`}
         style={{
           paddingLeft: `${depth * 14 + 6}px`,
           minHeight: isMobile ? '48px' : '32px',
           background: dropIndicator?.position === 'inside' ? 'var(--hover-bg)' : undefined,
         }}
       >
-        {!isMobile && (
-          <button {...attributes} {...listeners}
-            className="w-4 h-full flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
-            style={{ color: 'var(--text-muted)' }}>
-            ⠿
-          </button>
-        )}
-        <button onClick={() => onToggle(page.id)}
-          className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs"
+        {/* Chevron toggle — stoppe la propagation pour ne pas déclencher le drag */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggle(page.id) }}
+          onPointerDown={e => e.stopPropagation()}
+          className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs cursor-pointer"
           style={{ color: 'var(--text-muted)' }}>
           {hasChildren ? (isOpen ? '▾' : '▸') : ''}
         </button>
@@ -70,29 +71,32 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
             value={renameValue}
             onChange={e => setRenameValue(e.target.value)}
             onBlur={commitRename}
+            onPointerDown={e => e.stopPropagation()}
             onKeyDown={e => {
               if (e.key === 'Enter') commitRename()
               if (e.key === 'Escape') { setRenameValue(page.title); setRenaming(false) }
               e.stopPropagation()
             }}
-            className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0"
+            className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0 cursor-text"
             style={{ background: 'var(--card-bg)', border: '1px solid #60a5fa', color: 'var(--text-primary)' }}
             onClick={e => e.stopPropagation()}
           />
         ) : (
           <span
-            onClick={() => onSelect(page)}
-            onDoubleClick={() => { setRenameValue(page.title); setRenaming(true) }}
-            className="flex-1 text-sm truncate py-1 select-none"
-            style={{ color: 'var(--text-secondary)' }}
-            title={isMobile ? undefined : 'Double-clic pour renommer'}>
+            onClick={e => { e.stopPropagation(); onSelect(page) }}
+            onDoubleClick={e => { e.stopPropagation(); setRenameValue(page.title); setRenaming(true) }}
+            onPointerDown={e => e.stopPropagation()}
+            className="flex-1 text-sm truncate py-1 select-none cursor-pointer"
+            style={{ color: 'var(--text-secondary)' }}>
             {page.title || 'Sans titre'}
           </span>
         )}
         {!renaming && (
-          <div className={`flex items-center gap-0.5 flex-shrink-0 ${isMobile ? '' : 'opacity-0 group-hover:opacity-100'}`}>
-            <button onClick={() => onAdd(page.id)}
-              className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn"
+          <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100">
+            <button
+              onClick={e => { e.stopPropagation(); onAdd(page.id) }}
+              onPointerDown={e => e.stopPropagation()}
+              className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn cursor-pointer"
               title="Ajouter une sous-page">+</button>
           </div>
         )}
@@ -101,8 +105,8 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
       {/* Indicateur AFTER */}
       {dropIndicator?.position === 'after' && (
         <div className="flex items-center gap-1 mx-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 6}px` }}>
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--prose-link, #60a5fa)' }} />
-          <div className="flex-1 h-0.5 rounded" style={{ background: 'var(--prose-link, #60a5fa)' }} />
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: indicatorColor }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: indicatorColor }} />
         </div>
       )}
     </div>
