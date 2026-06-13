@@ -142,8 +142,8 @@ export function SubpagesList({ page, subpages, onSelect, onReorder, isMobile, on
   const compactAddBtn = (
     <button
       onClick={onAddSubpage}
-      className="flex-shrink-0 flex items-center gap-2 rounded-xl px-3 transition-colors"
-      style={{ minHeight: '44px', border: '1px dashed var(--border)', color: 'var(--text-muted)' }}
+      className="flex-shrink-0 flex items-center gap-2 rounded-xl px-5 transition-colors"
+      style={{ minHeight: '52px', paddingTop: '12px', paddingBottom: '12px', border: '1px dashed var(--border)', color: 'var(--text-muted)' }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = 'var(--text-muted)'
         e.currentTarget.style.color = 'var(--text-secondary)'
@@ -194,7 +194,7 @@ export function SubpagesList({ page, subpages, onSelect, onReorder, isMobile, on
   // ── Compact mode (note with subpages) ─────────────────────────────────────
   if (sorted.length === 0) {
     return (
-      <div className="px-6 pb-4">
+      <div className="px-6 pb-4 mt-4">
         {compactAddBtn}
       </div>
     )
