@@ -16,36 +16,49 @@ export default function Error({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '16px',
+        gap: '12px',
         background: '#f0f0ec',
         fontFamily: 'system-ui, sans-serif',
+        padding: '24px',
       }}
     >
       <img
         src="/apple-touch-icon.png"
         alt="Idée"
-        style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: '18px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-        }}
+        style={{ width: '48px', height: '48px', borderRadius: '14px' }}
       />
-      <p
-        style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontSize: '22px',
-          fontWeight: 700,
-          color: '#1a1714',
-          letterSpacing: '-0.01em',
-          margin: 0,
-        }}
-      >
-        Idée
+      <p style={{ fontWeight: 700, fontSize: '16px', color: '#1a1714', margin: 0 }}>
+        Erreur
       </p>
-      <p style={{ color: '#6b4f3a', fontSize: '14px', margin: 0 }}>
-        Une erreur est survenue.
+      <p style={{
+        color: '#6b4f3a',
+        fontSize: '13px',
+        margin: 0,
+        textAlign: 'center',
+        wordBreak: 'break-word',
+        maxWidth: '320px',
+        background: '#fff',
+        padding: '10px 14px',
+        borderRadius: '8px',
+        border: '1px solid #e0d8d0',
+      }}>
+        {error?.message || 'Erreur inconnue'}
       </p>
+      {error?.stack && (
+        <pre style={{
+          fontSize: '10px',
+          color: '#999',
+          maxWidth: '320px',
+          overflow: 'auto',
+          maxHeight: '120px',
+          background: '#fff',
+          padding: '8px',
+          borderRadius: '6px',
+          border: '1px solid #e0d8d0',
+        }}>
+          {error.stack}
+        </pre>
+      )}
       <button
         onClick={reset}
         style={{
