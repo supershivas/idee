@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
@@ -21,6 +21,8 @@ function coverBackground(page: Page): string {
 }
 
 function CoverModal({ page, userId, onApply, onClose }: { page: Page; userId: string; onApply: (value: string | null) => Promise<void>; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const [tab, setTab] = useState<'abstract' | 'unsplash' | 'upload'>('abstract')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<any[]>([])
@@ -51,6 +53,7 @@ function CoverModal({ page, userId, onApply, onClose }: { page: Page; userId: st
       if (data?.publicUrl) await onApply(data.publicUrl)
     } catch { setError("Erreur lors de l'envoi") } finally { setUploading(false) }
   }
+  if (!mounted || typeof document === 'undefined') return null
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
       <div className="w-full max-w-xl rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
