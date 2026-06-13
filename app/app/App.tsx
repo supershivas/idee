@@ -29,7 +29,7 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
-export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
+export default function App({ initialPages, userId, userEmail }: { initialPages: Page[], userId: string, userEmail?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
@@ -37,6 +37,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showTags, setShowTags] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const { theme, setTheme } = useTheme()
+  const [sidebarHidden, setSidebarHidden] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
@@ -61,14 +62,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const SIDEBAR_MIN = 180
   const SIDEBAR_MAX = 400
   const SIDEBAR_DEFAULT = 240
-  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    try {
-      setSidebarWidth(parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10))
-    } catch {}
-    setMounted(true)
-  }, [])
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window === 'undefined') return SIDEBAR_DEFAULT
+    return parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10)
+  })
   const isResizing = useRef(false)
 
   function startResize(e: React.MouseEvent) {
@@ -96,21 +93,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   const [selected, setSelected] = useState<Page | null>(() => {
-    if (initialPageId) {
-      const fromUrl = initialPages.find(p => p.id === initialPageId && !p.deleted_at)
-      if (fromUrl) return fromUrl
-    }
-    return null
+    if (typeof window === 'undefined') return null
+    const lastId = localStorage.getItem(lastPageKey(userId))
+    return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
   })
-
-  useEffect(() => {
-    if (initialPageId) return
-    try {
-      const lastId = localStorage.getItem(lastPageKey(userId))
-      const page = initialPages.find(p => p.id === lastId && !p.deleted_at)
-      if (page) setSelected(page)
-    } catch {}
-  }, [])
 
   useEffect(() => {
     document.title = selected ? `Idée · ${selected.title || 'Sans titre'}` : 'Idée'
@@ -124,25 +110,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
   }, [pages])
 
-  function slugify(title: string) {
-    return title
-      .toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      || 'sans-titre'
-  }
-
   const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
-    if (page) {
-      const slug = `${slugify(page.title || 'sans-titre')}--${page.id}`
-      try { window.history.replaceState({}, '', `/app/p/${slug}`) } catch {}
-      try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
-    } else {
-      try { window.history.replaceState({}, '', '/app') } catch {}
-    }
     if (!page) return
+    try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
     setOpenMap(() => {
       const allPages = [...pages, ...initialPages]
       const current = allPages.find(p => p.id === page.id)
@@ -191,6 +162,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     function onKeyDown(e: KeyboardEvent) {
       if (!(e.metaKey || e.ctrlKey)) return
       if (e.key === '/') { e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus() }
+      if (e.key === '\\') { e.preventDefault(); setSidebarHidden(v => !v) }
       if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); addPage(null) }
       if ((e.key === 'j' || e.key === 'J') && e.shiftKey) { e.preventDefault(); addJournalEntry() }
     }
@@ -363,17 +335,19 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
 
-  if (!mounted) {
-    return <div style={{ position: 'fixed', inset: 0, background: '#f0f0ec' }} />
-  }
-
   return (
     <div className="flex w-full h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
 
       {/* ── Sidebar desktop ── */}
       <div
-        className="hidden md:flex flex-col flex-shrink-0 relative"
-        style={{ width: `${sidebarWidth}px`, background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}
+        className="hidden md:flex flex-col flex-shrink-0 relative overflow-hidden"
+        style={{
+          width: sidebarHidden ? 0 : `${sidebarWidth}px`,
+          background: 'var(--sidebar-bg)',
+          borderRight: sidebarHidden ? 'none' : '1px solid var(--border)',
+          transition: 'width 220ms cubic-bezier(0.4,0,0.2,1)',
+          minWidth: 0,
+        }}
       >
         <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-400 transition-colors" title="Redimensionner">
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
@@ -533,7 +507,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} onNavigate={p => { selectPage(p); setShowSettings(false); setShowJournal(p.type === 'journal') }} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
 
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
@@ -549,7 +523,32 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
       )}
 
-      {/* ── Contenu principal ── */}
+      {/* ── Bouton toggle sidebar (focus mode) ── */}
+      {!isMobile && (
+        <button
+          onClick={() => setSidebarHidden(v => !v)}
+          title={sidebarHidden ? 'Afficher la sidebar (⌘\\)' : 'Masquer la sidebar (⌘\\)'}
+          className="hidden md:flex fixed bottom-5 left-5 z-30 items-center justify-center w-8 h-8 rounded-full shadow-md transition-all"
+          style={{
+            background: 'var(--card-bg)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+            opacity: sidebarHidden ? 1 : 0,
+            pointerEvents: sidebarHidden ? 'auto' : 'none',
+            transform: sidebarHidden ? 'translateX(0)' : 'translateX(-4px)',
+            transition: 'opacity 180ms ease, transform 180ms ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--card-bg)' }}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+            <rect x="1" y="1" width="11" height="11" rx="2" />
+            <path d="M4 1v11" />
+          </svg>
+        </button>
+      )}
+
+      {/* ── Contenu principal ── */}}
       <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
         {selected ? (
           <>
