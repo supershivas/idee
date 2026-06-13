@@ -169,8 +169,8 @@ export function ConfirmTrashModal({ page, onConfirm, onCancel }: {
             Annuler
           </button>
           <button onClick={onConfirm}
-            className="flex-1 py-2.5 text-sm text-white bg-red-500 hover:bg-red-600 rounded-xl font-medium transition-colors">
-            Mettre à la corbeille
+            className="flex-1 py-2.5 px-3 text-sm text-white bg-red-500 hover:bg-red-600 rounded-xl font-medium transition-colors leading-tight">
+            Corbeille
           </button>
         </div>
         <div className="md:hidden" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
