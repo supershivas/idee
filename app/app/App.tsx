@@ -29,7 +29,7 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
-export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
+export default function App({ initialPages, userId, userEmail }: { initialPages: Page[], userId: string, userEmail?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
@@ -63,7 +63,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const SIDEBAR_DEFAULT = 240
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window === 'undefined') return SIDEBAR_DEFAULT
-    return parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10)
+    try { return parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10) } catch { return SIDEBAR_DEFAULT }
   })
   const isResizing = useRef(false)
 
@@ -99,8 +99,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
     // Priorité 2 : dernière page visitée (localStorage)
     if (typeof window === 'undefined') return null
-    const lastId = localStorage.getItem(lastPageKey(userId))
-    return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
+    try {
+      const lastId = localStorage.getItem(lastPageKey(userId))
+      return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
+    } catch { return null }
   })
 
   useEffect(() => {
@@ -127,11 +129,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
     if (page) {
-      const slug = `${slugify(page.title || 'sans-titre')}--${page.id}`
-      window.history.replaceState({}, '', `/app/p/${slug}`)
+      const slug = \`\${slugify(page.title || 'sans-titre')}--\${page.id}\`
+      try { window.history.replaceState({}, '', `/app/p/${slug}`) } catch {}
       try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
     } else {
-      window.history.replaceState({}, '', '/app')
+      try { window.history.replaceState({}, '', '/app') } catch {}
     }
     if (!page) return
     setOpenMap(() => {
