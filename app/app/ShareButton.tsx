@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from './App'
@@ -20,6 +20,8 @@ export default function ShareButton({ page, onUpdate }: {
   page: Page & { is_shared?: boolean; share_token?: string }
   onUpdate: (updates: Partial<Page>) => void
 }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
@@ -65,7 +67,7 @@ export default function ShareButton({ page, onUpdate }: {
         )}
       </button>
 
-      {showPanel && createPortal(
+      {showPanel && mounted && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.4)' }}
           onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}
