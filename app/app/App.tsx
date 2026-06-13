@@ -29,7 +29,7 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
-export default function App({ initialPages, userId, userEmail }: { initialPages: Page[], userId: string, userEmail?: string }) {
+export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
