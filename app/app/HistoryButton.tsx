@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from './App'
@@ -15,6 +15,8 @@ const IconClock = () => (
 type Snapshot = { id: string; title: string; content: string; created_at: string }
 
 export default function HistoryButton({ page, onRestore }: { page: Page, onRestore: (title: string, content: string) => void }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const [showPanel, setShowPanel] = useState(false)
   const [history, setHistory] = useState<Snapshot[]>([])
   const [loading, setLoading] = useState(false)
@@ -56,7 +58,7 @@ export default function HistoryButton({ page, onRestore }: { page: Page, onResto
         <span>Historique</span>
       </button>
 
-      {showPanel && createPortal(
+      {showPanel && mounted && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }} onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}>
           <div className="rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', maxHeight: '80vh' }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
