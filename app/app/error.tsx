@@ -1,5 +1,12 @@
 'use client'
-export default function Loading() {
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
   return (
     <div
       style={{
@@ -36,29 +43,25 @@ export default function Loading() {
       >
         Idée
       </p>
-      <div style={{ display: 'flex', gap: '6px' }}>
-        <span style={{
-          display: 'inline-block', width: '7px', height: '7px',
-          borderRadius: '50%', background: '#6b4f3a',
-          animation: 'idee-bounce 1.2s ease-in-out 0s infinite',
-        }} />
-        <span style={{
-          display: 'inline-block', width: '7px', height: '7px',
-          borderRadius: '50%', background: '#6b4f3a',
-          animation: 'idee-bounce 1.2s ease-in-out 0.2s infinite',
-        }} />
-        <span style={{
-          display: 'inline-block', width: '7px', height: '7px',
-          borderRadius: '50%', background: '#6b4f3a',
-          animation: 'idee-bounce 1.2s ease-in-out 0.4s infinite',
-        }} />
-      </div>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes idee-bounce {
-          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-          40% { transform: scale(1); opacity: 1; }
-        }
-      `}} />
+      <p style={{ color: '#6b4f3a', fontSize: '14px', margin: 0 }}>
+        Une erreur est survenue.
+      </p>
+      <button
+        onClick={reset}
+        style={{
+          marginTop: '4px',
+          padding: '8px 20px',
+          borderRadius: '10px',
+          background: '#6b4f3a',
+          color: '#fff',
+          fontSize: '14px',
+          fontWeight: 500,
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        Réessayer
+      </button>
     </div>
   )
 }
