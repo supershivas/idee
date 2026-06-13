@@ -92,7 +92,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   const [selected, setSelected] = useState<Page | null>(() => {
-    // Priorité 1 : page passée via URL (?page=id) — bookmarkable
+    // Priorité 1 : page passée via URL (/app/p/slug--id)
     if (initialPageId) {
       const fromUrl = initialPages.find(p => p.id === initialPageId && !p.deleted_at)
       if (fromUrl) return fromUrl
@@ -115,18 +115,23 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
   }, [pages])
 
+  function slugify(title: string) {
+    return title
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      || 'sans-titre'
+  }
+
   const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
-    // Mettre à jour l'URL sans rechargement (bookmarkable)
     if (page) {
-      const url = new URL(window.location.href)
-      url.searchParams.set('page', page.id)
-      window.history.replaceState({}, '', url.toString())
+      const slug = `${slugify(page.title || 'sans-titre')}--${page.id}`
+      window.history.replaceState({}, '', `/app/p/${slug}`)
       try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
     } else {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('page')
-      window.history.replaceState({}, '', url.toString())
+      window.history.replaceState({}, '', '/app')
     }
     if (!page) return
     setOpenMap(() => {
