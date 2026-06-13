@@ -124,12 +124,12 @@ function JournalRow({ entry, selectedId, onSelect }: { entry: Page; selectedId: 
   return (
     <button
       onClick={() => onSelect(entry)}
-      className={`w-full text-left flex items-center gap-3 px-4 md:px-6 py-3 transition-colors journal-entry-row ${selectedId === entry.id ? 'journal-entry-selected' : ''}`}
+      className={`w-full text-left flex items-start gap-3 px-4 md:px-6 py-3 transition-colors journal-entry-row ${selectedId === entry.id ? 'journal-entry-selected' : ''}`}
       style={{ borderBottom: '1px solid var(--border-light)' }}
     >
-      <span className="text-xl flex-shrink-0">{entry.icon || '📝'}</span>
+      <span className="text-xl flex-shrink-0 mt-0.5">{entry.icon || '📝'}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+        <p className="text-sm font-medium md:truncate" style={{ color: 'var(--text-primary)', wordBreak: 'break-word' }}>
           {entry.title || 'Sans titre'}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -161,7 +161,7 @@ function JournalRow({ entry, selectedId, onSelect }: { entry: Page; selectedId: 
           )}
         </div>
       )}
-      <span className="text-xs flex-shrink-0 ml-1" style={{ color: 'var(--text-faint)' }}>→</span>
+      <span className="text-xs flex-shrink-0 mt-0.5" style={{ color: 'var(--text-faint)' }}>→</span>
     </button>
   )
 }
