@@ -1,118 +1,329 @@
 'use client'
-import { useState, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { Page, formatSubtitle } from '../types'
+import EmojiPicker from '../EmojiPicker'
+import { TagsInput } from './TagsView'
+import { useRelativeTime } from './JournalView'
+import { ActionsMenu } from './ActionsMenu'
+import HistoryButton from '../HistoryButton'
+import ExportButton from '../ExportButton'
+import ShareButton from '../ShareButton'
+import { toast } from './Toast'
 import { createClient } from '@/lib/supabase/client'
-import { Page } from './App'
+import { coverDataUri, coverSeeds } from '@/lib/coverGen'
 
-const IconClock = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="6.5" cy="6.5" r="5" />
-    <path d="M6.5 3.5v3l2 1.5" />
-  </svg>
-)
+function coverBackground(page: Page): string {
+  const cv = page.cover_url
+  if (!cv) return coverDataUri(page.id)
+  if (cv.startsWith('svg:')) return coverDataUri(cv.slice(4))
+  return cv
+}
 
-type Snapshot = { id: string; title: string; content: string; created_at: string }
-
-export default function HistoryButton({ page, onRestore }: { page: Page, onRestore: (title: string, content: string) => void }) {
+function CoverModal({ page, userId, onApply, onClose }: { page: Page; userId: string; onApply: (value: string | null) => Promise<void>; onClose: () => void }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
-  const [showPanel, setShowPanel] = useState(false)
-  const [history, setHistory] = useState<Snapshot[]>([])
+  const [tab, setTab] = useState<'abstract' | 'unsplash' | 'upload'>('abstract')
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const seeds = coverSeeds(page.id, 12)
+  async function searchUnsplash() {
+    const q = query.trim(); if (!q) return
+    setSearching(true); setError('')
+    try {
+      const res = await fetch(`/api/unsplash?query=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      if (data.error) setError(data.error)
+      setResults(data.results || []); setSearched(true)
+    } catch { setError('Erreur de recherche') } finally { setSearching(false) }
+  }
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    setUploading(true); setError('')
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      const path = `${userId}/${page.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await createClient().storage.from('covers').upload(path, file, { upsert: true })
+      if (upErr) { setError(upErr.message); return }
+      const { data } = createClient().storage.from('covers').getPublicUrl(path)
+      if (data?.publicUrl) await onApply(data.publicUrl)
+    } catch { setError("Erreur lors de l'envoi") } finally { setUploading(false) }
+  }
+  if (!mounted || typeof document === 'undefined') return null
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
+      <div className="w-full max-w-xl rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1 px-3 pt-3 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
+          {(['abstract', 'unsplash', 'upload'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)} className="text-sm px-3 py-1.5 rounded-md transition-colors"
+              style={{ background: tab === t ? 'var(--hover-bg)' : 'transparent', color: tab === t ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+              {t === 'abstract' ? 'Abstrait' : t === 'unsplash' ? 'Unsplash' : 'Upload'}
+            </button>
+          ))}
+          <button onClick={onClose} className="ml-auto w-7 h-7 flex items-center justify-center rounded-md text-lg transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>×</button>
+        </div>
+        <div className="p-4 overflow-y-auto">
+          {tab === 'abstract' && (
+            <div className="grid grid-cols-3 gap-2">
+              {seeds.map(seed => (
+                <button key={seed} onClick={() => onApply('svg:' + seed)} className="aspect-video rounded-lg overflow-hidden transition-opacity hover:opacity-80"
+                  style={{ backgroundImage: `url("${coverDataUri(seed)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              ))}
+            </div>
+          )}
+          {tab === 'unsplash' && (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') searchUnsplash() }}
+                  placeholder="Rechercher sur Unsplash…" autoFocus className="flex-1 text-sm rounded-lg px-3 py-2 outline-none"
+                  style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
+                <button onClick={searchUnsplash} disabled={searching} className="text-sm px-3 py-2 rounded-lg transition-opacity disabled:opacity-50"
+                  style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>{searching ? '…' : 'Chercher'}</button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {results.map(r => (
+                  <button key={r.id} onClick={() => onApply(r.regular)} title={r.author ? `© ${r.author}` : undefined}
+                    className="aspect-video rounded-lg overflow-hidden transition-opacity hover:opacity-80"
+                    style={{ backgroundImage: `url("${r.small || r.thumb}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                ))}
+              </div>
+              {searched && !searching && results.length === 0 && <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>Aucun résultat.</p>}
+            </div>
+          )}
+          {tab === 'upload' && (
+            <label className="flex flex-col items-center justify-center gap-2 py-10 rounded-xl cursor-pointer transition-colors" style={{ border: '1px dashed var(--border)', color: 'var(--text-muted)' }}>
+              <span className="text-2xl">⬆️</span>
+              <span className="text-sm">{uploading ? 'Envoi…' : 'Choisir une image'}</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+            </label>
+          )}
+          {error && <p className="text-xs mt-3" style={{ color: '#ef4444' }}>{error}</p>}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+export function Cover({ page, userId, onCoverUpdate }: { page: Page; userId: string; onCoverUpdate?: (coverUrl: string | null) => void }) {
+  const [showModal, setShowModal] = useState(false)
+  const hasCustom = !!page.cover_url
+  async function applyCover(value: string | null) {
+    await createClient().from('pages').update({ cover_url: value }).eq('id', page.id)
+    onCoverUpdate?.(value); setShowModal(false)
+  }
+  return (
+    <div className="relative group/cover w-full h-28 md:h-44 overflow-hidden">
+      <div className="absolute inset-0" style={{ backgroundImage: `url("${coverBackground(page)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div className="absolute top-2 right-3 flex items-center gap-2 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+        <button onClick={() => setShowModal(true)} className="text-xs px-2.5 py-1 rounded-md transition-opacity hover:opacity-90"
+          style={{ background: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(4px)' }}>Modifier la couverture</button>
+        {hasCustom && (
+          <button onClick={() => applyCover(null)} className="text-xs px-2.5 py-1 rounded-md transition-opacity hover:opacity-90"
+            style={{ background: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(4px)' }}>Supprimer</button>
+        )}
+      </div>
+      {showModal && <CoverModal page={page} userId={userId} onApply={applyCover} onClose={() => setShowModal(false)} />}
+    </div>
+  )
+}
+
+function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], selected: Page | null, onSelect: (p: Page) => void }) {
+  if (!selected) return null
+  const crumbs: Page[] = []
+  let current: Page | undefined = selected
+  while (current) { crumbs.unshift(current); current = pages.find(p => p.id === current!.parent_id) }
+  const ancestors = crumbs.slice(0, -1)
+  if (ancestors.length === 0) return <div className="flex-1 min-w-0" />
+  return (
+    <div className="flex items-center gap-1 text-xs flex-1 min-w-0 overflow-x-auto" style={{ color: 'var(--text-muted)' }}>
+      {ancestors.map((crumb, i) => (
+        <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
+          {i > 0 && <span style={{ color: 'var(--text-faint)' }}>/</span>}
+          <button onClick={() => onSelect(crumb)} className="transition-opacity hover:opacity-70 flex items-center gap-1 py-1">
+            <span>{crumb.icon || '📄'}</span>
+            <span className="whitespace-nowrap">{crumb.title || 'Sans titre'}</span>
+          </button>
+        </span>
+      ))}
+      <span style={{ color: 'var(--text-faint)' }} className="flex-shrink-0">/</span>
+    </div>
+  )
+}
+
+function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 py-1.5">
+      <span className="text-xs w-24 flex-shrink-0 pt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <div className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{children}</div>
+    </div>
+  )
+}
+
+function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page; onCreatedAtChange?: (iso: string) => void; onSummaryUpdate?: (summary: string | null) => void }) {
   const [loading, setLoading] = useState(false)
-  const [restoring, setRestoring] = useState<string | null>(null)
-  const [preview, setPreview] = useState<Snapshot | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(page.summary || '')
+  const createdInputRef = useRef<HTMLInputElement>(null)
+  const relativeModified = useRelativeTime(page.updated_at && page.updated_at !== page.created_at ? page.updated_at : null)
 
-  async function loadHistory() {
+  function handleCreatedChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.value || !onCreatedAtChange) return
+    const existing = new Date(page.created_at)
+    const [y, m, d] = e.target.value.split('-').map(Number)
+    existing.setFullYear(y, m - 1, d)
+    onCreatedAtChange(existing.toISOString())
+  }
+
+  async function generateSummary() {
+    if (!page.content) return
     setLoading(true)
-    const { data } = await createClient().from('page_history')
-      .select('id, title, content, created_at')
-      .eq('page_id', page.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    setHistory(data || [])
-    setLoading(false)
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: page.content, title: page.title }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast(data.error || 'Erreur lors de la génération', 'error')
+        return
+      }
+      if (data.summary) {
+        await createClient().from('pages').update({ summary: data.summary }).eq('id', page.id)
+        onSummaryUpdate?.(data.summary)
+        setEditValue(data.summary)
+        setEditing(false)
+        toast('Résumé généré', 'success')
+      }
+    } catch {
+      toast('Erreur lors de la génération', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function open() { setShowPanel(true); loadHistory() }
-
-  async function restore(snap: Snapshot) {
-    setRestoring(snap.id)
-    onRestore(snap.title, snap.content)
-    await createClient().from('pages').update({ title: snap.title, content: snap.content, updated_at: new Date().toISOString() }).eq('id', page.id)
-    setRestoring(null); setShowPanel(false); setPreview(null)
+  async function saveSummary() {
+    const trimmed = editValue.trim()
+    await createClient().from('pages').update({ summary: trimmed || null }).eq('id', page.id)
+    onSummaryUpdate?.(trimmed || null); setEditing(false)
   }
 
-  function fmt(iso: string) {
-    return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  async function deleteSummary() {
+    await createClient().from('pages').update({ summary: null }).eq('id', page.id)
+    onSummaryUpdate?.(null); setEditValue(''); setEditing(false)
   }
 
   return (
-    <>
-      <button type="button" onClick={open}
-        className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors text-left"
-        style={{ color: 'var(--text-secondary)', background: 'transparent' }}
-        onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
-        <span style={{ opacity: 0.55 }}><IconClock /></span>
-        <span>Historique</span>
-      </button>
-
-      {showPanel && mounted && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }} onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', maxHeight: '80vh' }}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-              <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Historique</h2>
-              <button onClick={() => { setShowPanel(false); setPreview(null) }}
-                className="w-7 h-7 flex items-center justify-center rounded-md transition-opacity hover:opacity-70"
-                style={{ color: 'var(--text-muted)' }}>✕</button>
-            </div>
-            <div className="flex flex-1 overflow-hidden">
-              <div className="w-48 overflow-y-auto flex-shrink-0" style={{ borderRight: '1px solid var(--border)' }}>
-                {loading && <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>Chargement…</p>}
-                {!loading && history.length === 0 && <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>Aucun historique.</p>}
-                {history.map((snap, i) => (
-                  <button key={snap.id} onClick={() => setPreview(snap)}
-                    className="w-full text-left px-4 py-3 transition-colors"
-                    style={{ borderBottom: '1px solid var(--border)', background: preview?.id === snap.id ? 'var(--selected-bg)' : 'transparent' }}
-                    onMouseEnter={e => { if (preview?.id !== snap.id) e.currentTarget.style.background = 'var(--hover-bg)' }}
-                    onMouseLeave={e => { if (preview?.id !== snap.id) e.currentTarget.style.background = 'transparent' }}>
-                    <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{i === 0 ? 'Version actuelle' : fmt(snap.created_at)}</p>
-                    <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{snap.title || 'Sans titre'}</p>
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                {preview ? (
-                  <>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{preview.title || 'Sans titre'}</p>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{fmt(preview.created_at)}</p>
-                      </div>
-                      <button onClick={() => restore(preview)} disabled={restoring === preview.id}
-                        className="px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50"
-                        style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}>
-                        {restoring === preview.id ? 'Restauration…' : 'Restaurer'}
-                      </button>
-                    </div>
-                    <div className="prose max-w-none text-sm rounded-lg p-4"
-                      style={{ border: '1px solid var(--border)', background: 'var(--hover-bg)' }}
-                      dangerouslySetInnerHTML={{ __html: preview.content || '<p>Vide</p>' }} />
-                  </>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Sélectionne une version pour prévisualiser</p>
-                  </div>
-                )}
-              </div>
+    <div className="px-6 pb-3 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
+      <MetaRow label="Créé le">
+        <button onClick={() => createdInputRef.current?.showPicker ? createdInputRef.current.showPicker() : createdInputRef.current?.click()}
+          className="transition-opacity hover:opacity-70" title="Modifier la date">
+          {formatSubtitle(page.created_at)} ✎
+        </button>
+        <input ref={createdInputRef} type="date" value={page.created_at ? page.created_at.slice(0, 10) : ''} onChange={handleCreatedChange} className="sr-only" tabIndex={-1} />
+      </MetaRow>
+      <MetaRow label="Modifié le">{relativeModified || formatSubtitle(page.updated_at)}</MetaRow>
+      <MetaRow label="Résumé">
+        {editing ? (
+          <div className="flex flex-col gap-1.5 w-full">
+            <textarea value={editValue} onChange={e => setEditValue(e.target.value)} autoFocus rows={3}
+              className="w-full text-xs rounded-lg px-2 py-1.5 outline-none resize-none"
+              style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
+            <div className="flex items-center gap-2">
+              <button onClick={saveSummary} className="text-xs px-2 py-1 rounded-md transition-colors" style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>Enregistrer</button>
+              <button onClick={() => { setEditing(false); setEditValue(page.summary || '') }} className="text-xs transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>Annuler</button>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
-    </>
+        ) : page.summary ? (
+          <div className="flex flex-col gap-1">
+            <p className="leading-relaxed">{page.summary}</p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <button onClick={generateSummary} disabled={loading} className="flex items-center gap-1 text-xs transition-opacity disabled:opacity-40 opacity-50 hover:opacity-100" style={{ color: 'var(--text-muted)' }}>
+                <span className={loading ? 'animate-spin inline-block' : ''}>↻</span>{loading ? 'Génération…' : 'Régénérer'}
+              </button>
+              <button onClick={() => { setEditValue(page.summary || ''); setEditing(true) }} className="text-xs transition-opacity opacity-50 hover:opacity-100" style={{ color: 'var(--text-muted)' }}>✎ Modifier</button>
+              <button onClick={deleteSummary} className="text-xs transition-opacity opacity-50 hover:opacity-100" style={{ color: 'var(--text-muted)' }}>× Supprimer</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={generateSummary} disabled={loading || !page.content} className="transition-colors disabled:opacity-40" style={{ color: 'var(--text-faint)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}>
+            {loading ? 'Génération…' : '+ Générer un résumé'}
+          </button>
+        )}
+      </MetaRow>
+    </div>
+  )
+}
+
+export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate }: {
+  page: Page; pages: Page[]; userId: string; saving: boolean; isMobile: boolean
+  onBack: () => void; onSelectPage: (p: Page) => void; onTitleChange: (v: string) => void
+  onIconChange: (emoji: string) => void; onTagsChange: (tags: string[]) => void
+  onToggleFavorite: (id: string) => void; onDelete: () => void; onConvertToJournal: () => void
+  onCreatedAtChange?: (iso: string) => void; onRestore: (title: string, content: string) => void
+  onShareUpdate: (updates: Partial<Page>) => void; onSummaryUpdate?: (summary: string | null) => void
+}) {
+  const [showIconPicker, setShowIconPicker] = useState(false)
+  const isJournal = page.type === 'journal'
+  const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [] as string[]))).sort() as string[]
+
+  return (
+    <div className="flex-shrink-0">
+      <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
+        {isJournal ? (
+          <button onClick={onBack} className="flex items-center gap-1 text-xs transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>← Journal</button>
+        ) : (
+          <BreadcrumbInline pages={pages} selected={page} onSelect={onSelectPage} />
+        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+          </span>
+          <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>
+            <HistoryButton page={page} onRestore={onRestore} />
+            <ExportButton page={page} />
+            <ShareButton page={page as any} onUpdate={onShareUpdate} />
+          </ActionsMenu>
+        </div>
+      </div>
+
+      <div className="px-6 pt-2 pb-1">
+        <div className="flex items-start gap-3 group/title">
+          <div className="relative flex-shrink-0">
+            <button onClick={() => setShowIconPicker(v => !v)} className="text-4xl hover:opacity-70 transition-opacity"
+              style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {page.icon || (isJournal ? '📝' : '📄')}
+            </button>
+            {showIconPicker && (
+              <div className={isMobile ? 'fixed inset-x-4 top-20 z-50' : 'absolute top-full left-0 z-50'}>
+                <EmojiPicker onSelect={emoji => { onIconChange(emoji); setShowIconPicker(false) }} onClose={() => setShowIconPicker(false)} />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <input className="page-title w-full text-2xl md:text-3xl outline-none bg-transparent"
+              style={{ caretColor: 'var(--text-primary)', minHeight: '44px' }}
+              value={page.title} onChange={e => onTitleChange(e.target.value)} placeholder="Sans titre" />
+          </div>
+          <button onClick={() => onToggleFavorite(page.id)}
+            className={`flex-shrink-0 mt-2 text-xl transition-all ${page.favorite ? 'opacity-100' : 'opacity-0 group-hover/title:opacity-100 hover:!opacity-100'}`}
+            style={{ color: page.favorite ? '#f59e0b' : 'var(--text-faint)' }}
+            title={page.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
+            {page.favorite ? '★' : '☆'}
+          </button>
+        </div>
+      </div>
+
+      <div className="px-6 pt-1">
+        <MetaRow label="Tags"><TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} compact /></MetaRow>
+      </div>
+      <MetaSection page={page} onCreatedAtChange={onCreatedAtChange} onSummaryUpdate={onSummaryUpdate} />
+    </div>
   )
 }
