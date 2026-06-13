@@ -2,10 +2,11 @@
   "name": "Idée",
   "short_name": "Idée",
   "description": "Une app de prise de note perso",
-  "start_url": "/",
+  "start_url": "/app",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#ffffff",
+  "background_color": "#f0f0ec",
+  "theme_color": "#f0f0ec",
   "orientation": "portrait",
   "icons": [
     {
