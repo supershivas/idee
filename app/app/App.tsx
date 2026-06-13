@@ -129,7 +129,7 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
     if (page) {
-      const slug = \`\${slugify(page.title || 'sans-titre')}--\${page.id}\`
+      const slug = `${slugify(page.title || 'sans-titre')}--${page.id}`
       try { window.history.replaceState({}, '', `/app/p/${slug}`) } catch {}
       try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
     } else {
