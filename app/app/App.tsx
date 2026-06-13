@@ -96,7 +96,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   const [selected, setSelected] = useState<Page | null>(() => {
-    // Priorité 1 : page passée via URL (/app/p/slug--id)
     if (initialPageId) {
       const fromUrl = initialPages.find(p => p.id === initialPageId && !p.deleted_at)
       if (fromUrl) return fromUrl
@@ -104,7 +103,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     return null
   })
 
-  // Priorité 2 : restaurer depuis localStorage après montage (évite mismatch hydratation)
   useEffect(() => {
     if (initialPageId) return
     try {
@@ -366,9 +364,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const showingTagsDesktop = !isMobile && showTags && !selected
 
   if (!mounted) {
-    return (
-      <div style={{ position: 'fixed', inset: 0, background: '#f0f0ec' }} />
-    )
+    return <div style={{ position: 'fixed', inset: 0, background: '#f0f0ec' }} />
   }
 
   return (
@@ -537,7 +533,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} onNavigate={p => { selectPage(p); setShowSettings(false); setShowJournal(p.type === 'journal') }} />}
 
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
