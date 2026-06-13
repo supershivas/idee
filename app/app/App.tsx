@@ -61,10 +61,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const SIDEBAR_MIN = 180
   const SIDEBAR_MAX = 400
   const SIDEBAR_DEFAULT = 240
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    if (typeof window === 'undefined') return SIDEBAR_DEFAULT
-    try { return parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10) } catch { return SIDEBAR_DEFAULT }
-  })
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    try {
+      setSidebarWidth(parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10))
+    } catch {}
+    setMounted(true)
+  }, [])
   const isResizing = useRef(false)
 
   function startResize(e: React.MouseEvent) {
@@ -97,13 +101,18 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       const fromUrl = initialPages.find(p => p.id === initialPageId && !p.deleted_at)
       if (fromUrl) return fromUrl
     }
-    // Priorité 2 : dernière page visitée (localStorage)
-    if (typeof window === 'undefined') return null
+    return null
+  })
+
+  // Priorité 2 : restaurer depuis localStorage après montage (évite mismatch hydratation)
+  useEffect(() => {
+    if (initialPageId) return
     try {
       const lastId = localStorage.getItem(lastPageKey(userId))
-      return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
-    } catch { return null }
-  })
+      const page = initialPages.find(p => p.id === lastId && !p.deleted_at)
+      if (page) setSelected(page)
+    } catch {}
+  }, [])
 
   useEffect(() => {
     document.title = selected ? `Idée · ${selected.title || 'Sans titre'}` : 'Idée'
@@ -355,6 +364,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
+
+  if (!mounted) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: '#f0f0ec' }} />
+    )
+  }
 
   return (
     <div className="flex w-full h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
