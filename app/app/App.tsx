@@ -62,6 +62,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const SIDEBAR_MAX = 400
   const SIDEBAR_DEFAULT = 240
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT)
+  const [sidebarHidden, setSidebarHidden] = useState(false)
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
     try { setSidebarWidth(parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10)) } catch {}
@@ -189,6 +190,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     function onKeyDown(e: KeyboardEvent) {
       if (!(e.metaKey || e.ctrlKey)) return
       if (e.key === '/') { e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus() }
+      if (e.key === '\\') { e.preventDefault(); setSidebarHidden(v => !v) }
       if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); addPage(null) }
       if ((e.key === 'j' || e.key === 'J') && e.shiftKey) { e.preventDefault(); addJournalEntry() }
     }
@@ -370,8 +372,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
 
       {/* ── Sidebar desktop ── */}
       <div
-        className="hidden md:flex flex-col flex-shrink-0 relative"
-        style={{ width: `${sidebarWidth}px`, background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}
+        className="hidden md:flex flex-col flex-shrink-0 relative overflow-hidden"
+        style={{
+          width: sidebarHidden ? 0 : `${sidebarWidth}px`,
+          background: 'var(--sidebar-bg)',
+          borderRight: sidebarHidden ? 'none' : '1px solid var(--border)',
+          transition: 'width 220ms cubic-bezier(0.4,0,0.2,1)',
+          minWidth: 0,
+        }}
       >
         <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-400 transition-colors" title="Redimensionner">
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
@@ -563,7 +571,32 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
       )}
 
-      {/* ── Contenu principal ── */}
+      {/* ── Bouton toggle sidebar (focus mode) ── */}
+      {!isMobile && (
+        <button
+          onClick={() => setSidebarHidden(v => !v)}
+          title={sidebarHidden ? 'Afficher la sidebar (⌘\\)' : 'Masquer la sidebar (⌘\\)'}
+          className="hidden md:flex fixed bottom-5 left-5 z-30 items-center justify-center w-8 h-8 rounded-full shadow-md"
+          style={{
+            background: 'var(--card-bg)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+            opacity: sidebarHidden ? 1 : 0,
+            pointerEvents: sidebarHidden ? 'auto' : 'none',
+            transform: sidebarHidden ? 'translateX(0)' : 'translateX(-4px)',
+            transition: 'opacity 180ms ease, transform 180ms ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--card-bg)' }}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+            <rect x="1" y="1" width="11" height="11" rx="2" />
+            <path d="M4 1v11" />
+          </svg>
+        </button>
+      )}
+
+      {/* ── Contenu principal ── */}}
       <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
         {selected ? (
           <>
