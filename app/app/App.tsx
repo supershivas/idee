@@ -596,7 +596,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </button>
       )}
 
-      {/* ── Contenu principal ── */}}
+      {/* ── Contenu principal ── */}
       <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
         {selected ? (
           <>
