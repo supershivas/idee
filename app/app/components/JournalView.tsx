@@ -72,7 +72,7 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
 
   return (
     <div className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
-      <div className="page-card my-2 md:my-4 overflow-hidden">
+      <div className="page-card my-2 md:my-4" style={{ overflow: "visible" }}>
         {/* Header — empilé sur mobile, horizontal sur desktop */}
         <div className="px-4 md:px-6 pt-5 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3 min-w-0">
@@ -129,7 +129,7 @@ function JournalRow({ entry, selectedId, onSelect }: { entry: Page; selectedId: 
     >
       <span className="text-xl flex-shrink-0 mt-0.5">{entry.icon || '📝'}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium md:truncate" style={{ color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+        <p className="text-sm font-medium md:truncate" style={{ color: 'var(--text-primary)', overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'normal' }}>
           {entry.title || 'Sans titre'}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -161,7 +161,7 @@ function JournalRow({ entry, selectedId, onSelect }: { entry: Page; selectedId: 
           )}
         </div>
       )}
-      <span className="text-xs flex-shrink-0 mt-0.5" style={{ color: 'var(--text-faint)' }}>→</span>
+      <span className="hidden md:inline text-xs flex-shrink-0 mt-0.5" style={{ color: 'var(--text-faint)' }}>→</span>
     </button>
   )
 }
