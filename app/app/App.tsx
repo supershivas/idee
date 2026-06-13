@@ -29,7 +29,7 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
-export default function App({ initialPages, userId, userEmail }: { initialPages: Page[], userId: string, userEmail?: string }) {
+export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
@@ -92,6 +92,12 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
   const trashedPages = pages.filter(p => !!p.deleted_at)
 
   const [selected, setSelected] = useState<Page | null>(() => {
+    // Priorité 1 : page passée via URL (?page=id) — bookmarkable
+    if (initialPageId) {
+      const fromUrl = initialPages.find(p => p.id === initialPageId && !p.deleted_at)
+      if (fromUrl) return fromUrl
+    }
+    // Priorité 2 : dernière page visitée (localStorage)
     if (typeof window === 'undefined') return null
     const lastId = localStorage.getItem(lastPageKey(userId))
     return initialPages.find(p => p.id === lastId && !p.deleted_at) || null
@@ -111,8 +117,18 @@ export default function App({ initialPages, userId, userEmail }: { initialPages:
 
   const selectPage = useCallback((page: Page | null) => {
     setSelected(page)
+    // Mettre à jour l'URL sans rechargement (bookmarkable)
+    if (page) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('page', page.id)
+      window.history.replaceState({}, '', url.toString())
+      try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
+    } else {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('page')
+      window.history.replaceState({}, '', url.toString())
+    }
     if (!page) return
-    try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
     setOpenMap(() => {
       const allPages = [...pages, ...initialPages]
       const current = allPages.find(p => p.id === page.id)
