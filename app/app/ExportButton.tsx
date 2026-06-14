@@ -360,7 +360,7 @@ export default function ExportButton({ page }: { page: Page }) {
 <body>
   <div class="print-bar">
     <span class="print-bar-title">${page.icon || '📄'} ${page.title || 'Sans titre'}</span>
-    <span class="print-bar-hint">Dans la boîte d'impression, choisir « Enregistrer en PDF »</span>
+    <span class="print-bar-hint">Choisir « Enregistrer en PDF » dans la boîte d'impression</span>
     <button class="print-btn" onclick="window.print()">🖨 Imprimer / PDF</button>
   </div>
   <div class="doc-header">
@@ -373,6 +373,14 @@ export default function ExportButton({ page }: { page: Page }) {
   <div class="doc-body">
     ${cleanContent || '<p><em>Page vide.</em></p>'}
   </div>
+  <script>
+    // Auto-déclenche l'impression une fois les polices chargées
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function() { setTimeout(function() { window.print() }, 300) })
+    } else {
+      window.onload = function() { setTimeout(function() { window.print() }, 300) }
+    }
+  </script>
 </body>
 </html>`)
     w.document.close()

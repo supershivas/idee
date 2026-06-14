@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import App from '../../App'
 
 function slugify(title: string) {
@@ -27,7 +27,7 @@ export default async function PageSlugRoute({ params }: { params: { slug: string
 
   // Vérifier que la page existe et appartient à l'utilisateur
   const page = (pages || []).find(p => p.id === pageId && !p.deleted_at)
-  if (!page) redirect('/app')
+  if (!page) notFound()
 
   // Canonicaliser l'URL si le slug du titre a changé
   const canonical = `${slugify(page.title || 'sans-titre')}--${page.id}`

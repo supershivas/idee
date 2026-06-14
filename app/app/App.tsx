@@ -15,6 +15,7 @@ import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
 import { PageHeader, Cover } from './components/PageHeader'
+import { toast } from './components/Toast'
 
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
@@ -52,6 +53,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
+
+  // Offline / online detection
+  useEffect(() => {
+    function onOffline() { toast('Connexion perdue — les modifications ne sont pas sauvegardées.', 'error') }
+    function onOnline()  { toast('Connexion rétablie.', 'success') }
+    window.addEventListener('offline', onOffline)
+    window.addEventListener('online',  onOnline)
+    return () => { window.removeEventListener('offline', onOffline); window.removeEventListener('online', onOnline) }
+  }, [])
 
   // Track pointer Y globally — throttled via rAF to avoid layout thrashing
   useEffect(() => {
@@ -240,8 +250,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     if (!selected) return
     const updated = { ...selected, title: value, updated_at: new Date().toISOString() }
     setSelected(updated); setPages(prev => prev.map(p => p.id === updated.id ? updated : p)); setSaving(true)
-    await createClient().from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
-    setSaving(false)
+    try {
+      const { error } = await createClient().from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
+      if (error) throw error
+    } catch {
+      toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function updateIcon(id: string, icon: string) {
@@ -274,13 +290,19 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     setSelected(prev => prev ? { ...prev, content, updated_at: updated.updated_at } : null)
     setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
     setSaving(true)
-    await createClient().from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
-    const now = Date.now()
-    if (now - lastSaveRef.current > 2 * 60 * 1000) {
-      lastSaveRef.current = now
-      await createClient().from('page_history').insert({ page_id: selected.id, user_id: userId, title: selected.title, content })
+    try {
+      const { error } = await createClient().from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
+      if (error) throw error
+      const now = Date.now()
+      if (now - lastSaveRef.current > 2 * 60 * 1000) {
+        lastSaveRef.current = now
+        await createClient().from('page_history').insert({ page_id: selected.id, user_id: userId, title: selected.title, content })
+      }
+    } catch {
+      toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   async function deletePage(id: string) {
