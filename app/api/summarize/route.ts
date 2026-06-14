@@ -2,14 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // In-memory rate limiter: 10 req/min par IP
 const rateMap = new Map<string, number[]>()
+const RATE_WINDOW = 60_000
+const RATE_LIMIT = 10
 
 function checkRate(ip: string): boolean {
   const now = Date.now()
-  const window = 60_000
-  const limit = 10
-  const hits = (rateMap.get(ip) || []).filter(t => now - t < window)
-  if (hits.length >= limit) return false
-  rateMap.set(ip, [...hits, now])
+  const hits = (rateMap.get(ip) || []).filter(t => now - t < RATE_WINDOW)
+  if (hits.length >= RATE_LIMIT) return false
+  hits.push(now)
+  rateMap.set(ip, hits)
+  // Purge entries older than the window to prevent unbounded growth
+  if (rateMap.size > 5000) {
+    for (const [key, times] of rateMap) {
+      if (times.every(t => now - t >= RATE_WINDOW)) rateMap.delete(key)
+    }
+  }
   return true
 }
 

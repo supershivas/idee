@@ -13,7 +13,7 @@ const IconLink = () => (
 )
 
 function generateToken() {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+  return crypto.randomUUID().replace(/-/g, '')
 }
 
 export default function ShareButton({ page, onUpdate }: {
