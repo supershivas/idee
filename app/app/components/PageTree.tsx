@@ -190,18 +190,14 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
   return (
     <div
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={{ ...style, minHeight: '30px', background: isDragOverlay ? 'var(--drag-bg)' : undefined }}
       onClick={() => onSelect(page)}
-      className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
+      className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-grab active:cursor-grabbing group transition-colors text-sm
         ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}
         ${isDragOverlay ? 'shadow-lg' : ''}`}
     >
-      <button
-        {...attributes} {...listeners}
-        onClick={e => e.stopPropagation()}
-        className="w-4 h-4 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
-        style={{ color: 'var(--text-muted)' }}
-      >⠿</button>
       <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
       <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
       <button
