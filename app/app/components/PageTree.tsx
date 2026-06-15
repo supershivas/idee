@@ -82,7 +82,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
           {/* Chevron */}
           <div
             className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs"
-            style={{ color: 'var(--text-muted)', pointerEvents: 'none' }}
+            style={{ color: 'var(--sidebar-muted)', pointerEvents: 'none' }}
           >
             {hasChildren ? (isOpen ? '▾' : '▸') : ''}
           </div>
@@ -101,13 +101,13 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
                 e.stopPropagation()
               }}
               className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0 cursor-text"
-              style={{ background: 'var(--card-bg)', border: '1px solid var(--drop-indicator)', color: 'var(--text-primary)' }}
+              style={{ background: 'var(--card-bg)', border: '1px solid var(--drop-indicator)', color: 'var(--sidebar-fg)' }}
               onClick={e => e.stopPropagation()}
             />
           ) : (
             <span
               className="flex-1 text-sm truncate py-1 select-none"
-              style={{ color: 'var(--text-secondary)', pointerEvents: 'none' }}
+              style={{ color: 'var(--sidebar-fg)', pointerEvents: 'none' }}
             >
               {page.title || 'Sans titre'}
             </span>
@@ -199,7 +199,7 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
         ${isDragOverlay ? 'shadow-lg' : ''}`}
     >
       <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
-      <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
+      <span className="flex-1 truncate text-sm" style={{ color: 'var(--sidebar-fg)' }}>{page.title || 'Sans titre'}</span>
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
@@ -244,7 +244,7 @@ export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite
 
   return (
     <div className="mb-1">
-      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider select-none" style={{ color: 'var(--text-muted)' }}>Favoris</div>
+      <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider select-none" style={{ color: 'var(--sidebar-muted)' }}>Favoris</div>
       <DndContext
         sensors={sensors}
         onDragStart={e => setActiveDragId(e.active.id as string)}
