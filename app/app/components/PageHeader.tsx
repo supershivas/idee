@@ -190,9 +190,10 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: page.content, title: page.title }),
       })
-      const data = await res.json()
+      let data: any = {}
+      try { data = await res.json() } catch { data = {} }
       if (!res.ok) {
-        toast(data.error || 'Erreur lors de la génération', 'error')
+        toast(data.error || `Erreur serveur (${res.status})`, 'error')
         return
       }
       if (data.summary) {
@@ -200,10 +201,12 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
         onSummaryUpdate?.(data.summary)
         setEditValue(data.summary)
         setEditing(false)
-        toast('Résumé généré', 'success')
+        toast('Résumé généré ✓', 'success')
+      } else {
+        toast(data.error || 'Résumé vide reçu de Mistral', 'error')
       }
-    } catch {
-      toast('Erreur lors de la génération', 'error')
+    } catch (err) {
+      toast(`Erreur réseau : ${err instanceof Error ? err.message : String(err)}`, 'error')
     } finally {
       setLoading(false)
     }
