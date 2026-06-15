@@ -29,6 +29,11 @@ export async function POST(req: NextRequest) {
   const { content, title } = await req.json()
   if (!content) return NextResponse.json({ error: 'No content' }, { status: 400 })
 
+  if (!process.env.MISTRAL_API_KEY) {
+    console.error('MISTRAL_API_KEY is not set')
+    return NextResponse.json({ error: 'Résumé IA non configuré (clé API manquante).' }, { status: 503 })
+  }
+
   const text = content
     .replace(/<\/p>/gi, '\n')
     .replace(/<\/h[1-6]>/gi, '\n')

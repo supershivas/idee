@@ -16,6 +16,10 @@ import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
 import { PageHeader, Cover } from './components/PageHeader'
 import { toast } from './components/Toast'
+import TemplateModal, { Template } from './components/TemplateModal'
+import QuickCapture from './components/QuickCapture'
+import RecentView from './components/RecentView'
+import ReviewMode from './components/ReviewMode'
 
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
@@ -37,6 +41,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showJournal, setShowJournal] = useState(false)
   const [showTags, setShowTags] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [focusMode, setFocusMode] = useState(false)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [showQuickCapture, setShowQuickCapture] = useState(false)
+  const [showRecent, setShowRecent] = useState(false)
+  const [showReview, setShowReview] = useState(false)
   const { theme, setTheme } = useTheme()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
@@ -208,6 +217,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (e.key === '\\') { e.preventDefault(); setSidebarHidden(v => !v) }
       if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); addPage(null) }
       if ((e.key === 'j' || e.key === 'J') && e.shiftKey) { e.preventDefault(); addJournalEntry() }
+      if (e.shiftKey && e.key === 'F') { e.preventDefault(); setFocusMode(v => !v) }
+      if (e.shiftKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); setShowQuickCapture(true) }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -216,14 +227,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
 
-  async function addPage(parentId: string | null) {
+  async function addPage(parentId: string | null, template?: Template) {
     if (addingPageRef.current) return
     addingPageRef.current = true
     try {
       const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
-      const icon = icons[Math.floor(Math.random() * icons.length)]
+      const icon = template?.icon || icons[Math.floor(Math.random() * icons.length)]
       const { data } = await createClient().from('pages')
-        .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
+        .insert({ title: template?.title || 'Sans titre', content: template?.content || '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
         .select().single()
       if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
     } finally {
@@ -395,10 +406,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
+  const showingRecentDesktop = !isMobile && showRecent && !selected
+  const showingReviewDesktop = !isMobile && showReview && !selected
 
   if (!mounted) {
     return <div style={{ position: 'fixed', inset: 0, background: '#f0f0ec' }} />
   }
+
+  const sidebarHiddenEff = sidebarHidden || focusMode
 
   return (
     <div className="flex w-full h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
@@ -407,9 +422,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       <div
         className="hidden md:flex flex-col flex-shrink-0 relative overflow-hidden"
         style={{
-          width: sidebarHidden ? 0 : `${sidebarWidth}px`,
+          width: sidebarHiddenEff ? 0 : `${sidebarWidth}px`,
           background: 'var(--sidebar-bg)',
-          borderRight: sidebarHidden ? 'none' : '1px solid var(--border)',
+          borderRight: sidebarHiddenEff ? 'none' : '1px solid var(--border)',
           transition: 'width 220ms cubic-bezier(0.4,0,0.2,1)',
           minWidth: 0,
         }}
@@ -460,7 +475,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         {/* Bouton nouvelle page — au dessus de la recherche */}
         <div className="px-2 pt-2 pb-1">
           <button
-            onClick={() => showJournal ? addJournalEntry() : addPage(null)}
+            onClick={() => showJournal ? addJournalEntry() : setShowTemplateModal(true)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
@@ -474,19 +489,19 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         <SearchBar ref={searchBarRef} pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
         <div className="flex px-2 pt-1 pb-1 gap-1 flex-shrink-0">
           <button
-            onClick={() => { setShowJournal(false); setShowTags(false); setSelected(s => s?.type === 'journal' ? null : s) }}
+            onClick={() => { setShowJournal(false); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(s => s?.type === 'journal' ? null : s) }}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
-              background: !showJournal && !showTags ? 'var(--selected-bg)' : 'transparent',
-              color: !showJournal && !showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: !showJournal && !showTags && !showRecent && !showReview ? 'var(--selected-bg)' : 'transparent',
+              color: !showJournal && !showTags && !showRecent && !showReview ? 'var(--text-primary)' : 'var(--text-secondary)',
             }}
-            onMouseEnter={e => { if (showJournal || showTags) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = !showJournal && !showTags ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (showJournal || showTags || showRecent || showReview) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = !showJournal && !showTags && !showRecent && !showReview ? 'var(--selected-bg)' : 'transparent' }}
           >
             <span>📄</span><span>Notes</span>
           </button>
           <button
-            onClick={() => { setShowJournal(true); setShowTags(false); setSelected(null) }}
+            onClick={() => { setShowJournal(true); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
               background: showJournal ? 'var(--selected-bg)' : 'transparent',
@@ -548,7 +563,31 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
           <button
-            onClick={() => { setShowTags(true); setShowJournal(false); setSelected(null) }}
+            onClick={() => { setShowRecent(true); setShowReview(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{
+              background: showRecent ? 'var(--selected-bg)' : 'transparent',
+              color: showRecent ? 'var(--text-primary)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { if (!showRecent) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showRecent ? 'var(--selected-bg)' : 'transparent' }}
+          >
+            <span>🕘</span><span className="flex-1 text-left">Vue récente</span>
+          </button>
+          <button
+            onClick={() => { setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{
+              background: showReview ? 'var(--selected-bg)' : 'transparent',
+              color: showReview ? 'var(--text-primary)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { if (!showReview) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showReview ? 'var(--selected-bg)' : 'transparent' }}
+          >
+            <span>🔄</span><span className="flex-1 text-left">Réviser</span>
+          </button>
+          <button
+            onClick={() => { setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showTags ? 'var(--selected-bg)' : 'transparent',
@@ -620,19 +659,33 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
       )}
 
+      {/* ── Desktop : vue récente ── */}
+      {showingRecentDesktop && (
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <RecentView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowRecent(false); if (p.type === 'journal') setShowJournal(true) }} />
+        </div>
+      )}
+
+      {/* ── Desktop : mode révision ── */}
+      {showingReviewDesktop && (
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <ReviewMode pages={[...activePages, ...journalEntries]} onNavigate={p => { selectPage(p); setShowReview(false) }} onClose={() => setShowReview(false)} />
+        </div>
+      )}
+
       {/* ── Bouton toggle sidebar (focus mode) ── */}
       {!isMobile && (
         <button
-          onClick={() => setSidebarHidden(v => !v)}
-          title={sidebarHidden ? 'Afficher la sidebar (⌘\\)' : 'Masquer la sidebar (⌘\\)'}
+          onClick={() => { setFocusMode(false); setSidebarHidden(v => !v) }}
+          title={sidebarHiddenEff ? 'Afficher la sidebar (⌘\\)' : 'Masquer la sidebar (⌘\\)'}
           className="hidden md:flex fixed bottom-5 left-5 z-30 items-center justify-center w-8 h-8 rounded-full shadow-md"
           style={{
             background: 'var(--card-bg)',
             border: '1px solid var(--border)',
             color: 'var(--text-muted)',
-            opacity: sidebarHidden ? 1 : 0,
-            pointerEvents: sidebarHidden ? 'auto' : 'none',
-            transform: sidebarHidden ? 'translateX(0)' : 'translateX(-4px)',
+            opacity: sidebarHiddenEff ? 1 : 0,
+            pointerEvents: sidebarHiddenEff ? 'auto' : 'none',
+            transform: sidebarHiddenEff ? 'translateX(0)' : 'translateX(-4px)',
             transition: 'opacity 180ms ease, transform 180ms ease',
           }}
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
@@ -646,7 +699,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {/* ── Contenu principal ── */}
-      <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
+      <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
         {selected ? (
           <>
             {/* Cover pleine largeur, sticky derrière le contenu */}
@@ -729,6 +782,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
                 userId={userId}
                 isMobile={isMobile}
+                focusMode={focusMode}
               />
             </div>
           </>
@@ -742,6 +796,22 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           </div>
         )}
       </div>
+
+      {showTemplateModal && (
+        <TemplateModal
+          onSelect={t => { addPage(null, t); setShowTemplateModal(false) }}
+          onClose={() => setShowTemplateModal(false)}
+        />
+      )}
+
+      {showQuickCapture && (
+        <QuickCapture
+          onSave={async (title, content) => {
+            await addPage(null, { icon: '⚡', title, content: content ? `<p>${content}</p>` : '' })
+          }}
+          onClose={() => setShowQuickCapture(false)}
+        />
+      )}
 
       {confirmDeleteId && (() => {
         const page = pages.find(p => p.id === confirmDeleteId)

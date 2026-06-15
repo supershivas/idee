@@ -128,6 +128,10 @@ const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Comma
     action: e => e.chain().focus().setHorizontalRule().run()
   },
   {
+    title: 'Callout', description: 'Bloc mis en valeur', icon: '📣', keywords: ['callout', 'note', 'encadré', 'info', 'warning'],
+    action: e => e.chain().focus().insertContent({ type: 'callout', attrs: { color: 'yellow', emoji: '💡' }, content: [{ type: 'text', text: 'Écris ici…' }] }).run()
+  },
+  {
     title: 'Image', description: 'Uploader une image', icon: '🖼️', keywords: ['image', 'photo', 'upload'],
     action: () => onUploadImage()
   },
@@ -155,7 +159,7 @@ function groupCommands(filtered: Command[]): Group[] {
   for (const cmd of filtered) {
     if (['Texte', 'Titre 1', 'Titre 2', 'Titre 3'].includes(cmd.title)) groups['Texte'].push(cmd)
     else if (['Liste à puces', 'Liste numérotée', 'Cases à cocher'].includes(cmd.title)) groups['Listes'].push(cmd)
-    else if (['Citation', 'Code', 'Tableau', 'Séparateur'].includes(cmd.title)) groups['Blocs'].push(cmd)
+    else if (['Citation', 'Code', 'Tableau', 'Séparateur', 'Callout'].includes(cmd.title)) groups['Blocs'].push(cmd)
     else if (['Image', 'Lien vers une page'].includes(cmd.title)) groups['Médias'].push(cmd)
     else groups['Pages'].push(cmd)
   }

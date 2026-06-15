@@ -17,6 +17,8 @@ import { Plugin } from '@tiptap/pm/state'
 import { SlashCommands } from './SlashCommands'
 import { DragHandleExtension } from './DragHandle'
 import { createSubpageExtension, insertSubpageBlock } from './SubpageNode'
+import { createWikiLinkExtension } from './WikiLinkExtension'
+import { CalloutExtension } from './CalloutNode'
 import { Backlinks } from './Backlinks'
 import { Page } from './types'
 import { useKeyboardOffset } from './hooks'
@@ -234,9 +236,10 @@ function onMouseLeave(e: MouseEvent) {
     </div>
   )
 }
-export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, userId, isMobile }: {
+export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, userId, isMobile, focusMode }: {
   page: Page, pages: Page[], onUpdate: (content: string) => void
   onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string, isMobile: boolean
+  focusMode?: boolean
 }) {
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [showTableSheet, setShowTableSheet] = useState(false)
@@ -249,6 +252,12 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
 
   const subpageExtension = useMemo(
     () => createSubpageExtension(pages, onNavigate),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pages.map(p => p.id + p.title + p.icon).join(',')]
+  )
+
+  const wikiLinkExtension = useMemo(
+    () => createWikiLinkExtension(pages, onNavigate),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pages.map(p => p.id + p.title + p.icon).join(',')]
   )
@@ -287,6 +296,8 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       Table.configure({ resizable: !isMobile }),
       TableHeader, TableCell, TableRow,
       subpageExtension,
+      wikiLinkExtension,
+      CalloutExtension,
 Image.extend({
   addAttributes() {
     return { ...this.parent?.(), class: { default: null } }
@@ -466,7 +477,7 @@ Image.extend({
   )
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className={`flex flex-col flex-1 overflow-hidden${focusMode ? ' focus-mode-content' : ''}`}>
       {showLinkModal && <LinkModal onConfirm={insertLink} onClose={() => setShowLinkModal(false)} />}
       {showTableSheet && isMobile && <TableBottomSheet editor={editor} onClose={() => setShowTableSheet(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
