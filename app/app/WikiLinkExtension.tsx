@@ -4,7 +4,7 @@ import Suggestion from '@tiptap/suggestion'
 import { PluginKey } from '@tiptap/pm/state'
 import { ReactRenderer } from '@tiptap/react'
 import tippy, { type Instance as TippyInstance } from 'tippy.js'
-import { forwardRef, useImperativeHandle, useState, useEffect } from 'react'
+import { forwardRef, useImperativeHandle, useState, useEffect, type MutableRefObject } from 'react'
 import { Page } from './types'
 
 const WikiLinkPluginKey = new PluginKey('wikiLink')
@@ -52,7 +52,7 @@ const WikiSuggestionList = forwardRef(function WikiSuggestionList(
   )
 })
 
-export function createWikiLinkExtension(pages: Page[], onNavigate: (p: Page) => void) {
+export function createWikiLinkExtension(pagesRef: MutableRefObject<Page[]>, onNavigate: (p: Page) => void) {
   return Extension.create({
     name: 'wikiLink',
     addProseMirrorPlugins() {
@@ -77,8 +77,8 @@ export function createWikiLinkExtension(pages: Page[], onNavigate: (p: Page) => 
               .run()
           },
           items: ({ query }) => {
-            return pages
-              .filter(p => (p.title || '').toLowerCase().includes(query.toLowerCase()))
+            return pagesRef.current
+              .filter(p => !p.deleted_at && (p.title || '').toLowerCase().includes(query.toLowerCase()))
               .slice(0, 8)
           },
           render: () => {

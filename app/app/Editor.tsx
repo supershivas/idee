@@ -256,11 +256,10 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     [pages.map(p => p.id + p.title + p.icon).join(',')]
   )
 
-  const wikiLinkExtension = useMemo(
-    () => createWikiLinkExtension(pages, onNavigate),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pages.map(p => p.id + p.title + p.icon).join(',')]
-  )
+  const wikiPagesRef = useRef(pages)
+  useEffect(() => { wikiPagesRef.current = pages }, [pages])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const wikiLinkExtension = useMemo(() => createWikiLinkExtension(wikiPagesRef, onNavigate), [])
 
   function updateStats(ed: any) {
     const text = ed.state.doc.textContent || ''
