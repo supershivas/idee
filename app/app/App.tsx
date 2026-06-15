@@ -14,7 +14,7 @@ import { ConfirmTrashModal } from './components/ActionsMenu'
 import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
-import { PageHeader, Cover } from './components/PageHeader'
+import { PageHeader } from './components/PageHeader'
 import { toast, Toaster } from './components/Toast'
 import TemplateModal, { Template } from './components/TemplateModal'
 import QuickCapture from './components/QuickCapture'
@@ -469,11 +469,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}
               title="Masquer la sidebar"
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-                <rect x="1" y="1" width="12" height="12" rx="2" />
-                <path d="M4.5 1v12" />
-                <path d="M7.5 5l-1.5 2 1.5 2" />
-              </svg>
+              <i className="ti ti-layout-sidebar-left-collapse" style={{ fontSize: '14px' }} />
             </button>
             <button
               onClick={() => setShowSettings(true)}
@@ -483,10 +479,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}
               title="Paramètres"
             >
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="7.5" cy="7.5" r="2" />
-                <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.7 2.7l1.1 1.1M11.2 11.2l1.1 1.1M11.2 2.7l-1.1 1.1M3.8 11.2l-1.1 1.1" />
-              </svg>
+              <i className="ti ti-settings" style={{ fontSize: '15px' }} />
             </button>
           </div>
         </div>
@@ -501,7 +494,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
             title={showJournal ? 'Nouvelle entrée — touche J' : 'Nouvelle page — touche N'}
           >
-            <span>{showJournal ? '✏️' : '+'}</span>
+            <span>{showJournal ? <i className="ti ti-pencil" style={{ fontSize: '15px' }} /> : '+'}</span>
             <span className="flex-1">{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
             <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono opacity-60" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
               {showJournal ? 'J' : 'N'}
@@ -521,7 +514,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (showJournal || showTags || showRecent || showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = !showJournal && !showTags && !showRecent && !showReview ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>📄</span><span>Notes</span>
+            <i className="ti ti-file-text" style={{ fontSize: '15px', flexShrink: 0 }} /><span>Notes</span>
           </button>
           <button
             onClick={() => { setShowJournal(true); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
@@ -533,7 +526,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showJournal) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showJournal ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>📓</span><span>Journal</span>
+            <i className="ti ti-book" style={{ fontSize: '15px', flexShrink: 0 }} /><span>Journal</span>
             {journalEntries.length > 0 && <span className="text-[10px] opacity-60">{journalEntries.length}</span>}
           </button>
         </div>
@@ -595,7 +588,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showRecent) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showRecent ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>🕘</span><span className="flex-1 text-left">Vue récente</span>
+            <i className="ti ti-clock-hour-9" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Vue récente</span>
           </button>
           <button
             onClick={() => { setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
@@ -607,7 +600,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showReview ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>🔄</span><span className="flex-1 text-left">Réviser</span>
+            <i className="ti ti-refresh" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Réviser</span>
           </button>
           <button
             onClick={() => { setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
@@ -619,7 +612,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showTags) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showTags ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>🏷️</span>
+            <i className="ti ti-tag" style={{ fontSize: '15px', flexShrink: 0 }} />
             <span className="flex-1 text-left">Tags</span>
             {Array.from(new Set([...activePages, ...journalEntries].flatMap(p => p.tags || []))).length > 0 && (
               <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
@@ -634,7 +627,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
-            <span>🗑</span><span className="flex-1 text-left">Corbeille</span>
+            <i className="ti ti-trash" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Corbeille</span>
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>{trashedPages.length}</span>}
           </button>
           <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '4px 0' }} />
@@ -649,7 +642,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--sidebar-selected)' : 'transparent' }}
             title="Mode focus — touche F"
           >
-            <span>🎯</span>
+            <i className="ti ti-focus-2" style={{ fontSize: '15px', flexShrink: 0 }} />
             <span className="flex-1 text-left">Mode focus</span>
             <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>F</kbd>
           </button>
@@ -661,7 +654,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             title="Capture rapide — touche Q"
           >
-            <span>⚡</span>
+            <i className="ti ti-bolt" style={{ fontSize: '15px', flexShrink: 0 }} />
             <span className="flex-1 text-left">Capture rapide</span>
             <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>Q</kbd>
           </button>
@@ -742,10 +735,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--card-bg)' }}
         >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-            <rect x="1" y="1" width="11" height="11" rx="2" />
-            <path d="M4 1v11" />
-          </svg>
+          <i className="ti ti-layout-sidebar" style={{ fontSize: '13px' }} />
         </button>
       )}
 
@@ -753,18 +743,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
         {selected ? (
           <>
-            {/* Cover pleine largeur, sticky derrière le contenu */}
-            <div className="sticky top-0 z-0 w-full">
-              <Cover
-                page={selected}
-                userId={userId}
-                onCoverUpdate={cover => {
-                  setSelected(prev => prev ? { ...prev, cover_url: cover } : null)
-                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, cover_url: cover } : p))
-                }}
-              />
-            </div>
-            {/* Sticky mini header — direct child of scroll container, not inside page-card */}
+            {/* Sticky mini header — apparaît quand le titre sort du viewport */}
             {scrolledPast && !isMobile && (
               <>
                 <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -777,8 +756,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 </div>
               </>
             )}
-            {/* Card contenu qui chevauche la cover */}
-            <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ marginTop: '-32px', boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
+            <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col">
               <MobileTopBar
                 onBack={() => {
                   if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }

@@ -92,7 +92,7 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
       <div className="relative px-2 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
         <style>{`.search-highlight{background:var(--search-highlight,#fde68a);color:inherit;border-radius:2px;padding:0 1px}`}</style>
         <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.10)' }}>
-          <span className="text-sm flex-shrink-0" style={{ color: 'var(--text-muted)' }}>🔍</span>
+          <i className="ti ti-search" style={{ fontSize: '14px', color: 'var(--sidebar-icon)', flexShrink: 0 }} />
           <input
             ref={inputRef}
             value={query}
