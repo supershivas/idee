@@ -1,11 +1,14 @@
 'use client'
 import { Extension } from '@tiptap/core'
 import Suggestion from '@tiptap/suggestion'
+import { PluginKey } from '@tiptap/pm/state'
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import { forwardRef, useImperativeHandle, useState, useRef, useEffect } from 'react'
 import 'tippy.js/dist/tippy.css'
 import { Page } from './types'
+
+const SlashCommandsPluginKey = new PluginKey('slashCommands')
 
 // ─── PagePicker ───────────────────────────────────────────────────────────────
 const PagePicker = forwardRef((props: {
@@ -322,6 +325,7 @@ export const SlashCommands = Extension.create({
   addProseMirrorPlugins() {
     const { onAddSubpage, onUploadImage, pages } = this.options
     return [Suggestion({
+      pluginKey: SlashCommandsPluginKey,
       editor: this.editor,
       ...this.options.suggestion,
       render: () => {

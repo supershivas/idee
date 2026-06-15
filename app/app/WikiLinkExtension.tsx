@@ -1,10 +1,13 @@
 'use client'
 import { Extension } from '@tiptap/core'
 import Suggestion from '@tiptap/suggestion'
+import { PluginKey } from '@tiptap/pm/state'
 import { ReactRenderer } from '@tiptap/react'
 import tippy, { type Instance as TippyInstance } from 'tippy.js'
 import { forwardRef, useImperativeHandle, useState, useEffect } from 'react'
 import { Page } from './types'
+
+const WikiLinkPluginKey = new PluginKey('wikiLink')
 
 const WikiSuggestionList = forwardRef(function WikiSuggestionList(
   props: { pages: Page[]; onSelect: (p: Page) => void; query: string },
@@ -55,6 +58,7 @@ export function createWikiLinkExtension(pages: Page[], onNavigate: (p: Page) => 
     addProseMirrorPlugins() {
       return [
         Suggestion({
+          pluginKey: WikiLinkPluginKey,
           editor: this.editor,
           char: '[[',
           allowSpaces: true,
