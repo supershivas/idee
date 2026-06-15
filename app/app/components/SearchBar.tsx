@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, forwardRef, useImperativeHandle, useMemo } from 'react'
+import { useState, useRef, forwardRef, useImperativeHandle, useMemo, useEffect } from 'react'
 import { Page } from '../types'
 
 export interface SearchBarHandle {
@@ -56,7 +56,10 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
   function SearchBar({ pages, onSelect }, ref) {
     const [query, setQuery] = useState('')
     const [focused, setFocused] = useState(false)
+    const [selectedIndex, setSelectedIndex] = useState(-1)
     const inputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => { setSelectedIndex(-1) }, [query])
 
     useImperativeHandle(ref, () => ({
       focus: () => {
@@ -96,6 +99,13 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
             onChange={e => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
+            onKeyDown={e => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, results.length - 1)) }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, -1)) }
+              else if (e.key === 'Enter' && selectedIndex >= 0 && results[selectedIndex]) {
+                e.preventDefault(); onSelect(results[selectedIndex].page); setQuery('')
+              }
+            }}
             placeholder="Rechercher…  ⌘K"
             className="flex-1 text-sm outline-none bg-transparent min-w-0"
             style={{ color: 'var(--text-primary)' }}
@@ -120,15 +130,14 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
                 <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   {results.length} résultat{results.length > 1 ? 's' : ''}
                 </p>
-                {results.map(function({ page, snippet }) {
+                {results.map(function({ page, snippet }, index) {
                   return (
                     <button
                       key={page.id}
                       onClick={() => { onSelect(page); setQuery('') }}
+                      onMouseEnter={() => setSelectedIndex(index)}
                       className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors"
-                      style={{ borderTop: '1px solid var(--border-light)' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      style={{ borderTop: '1px solid var(--border-light)', background: index === selectedIndex ? 'var(--hover-bg)' : 'transparent' }}
                     >
                       <span className="flex-shrink-0 text-base mt-0.5">{page.icon || '📄'}</span>
                       <div className="flex-1 min-w-0">

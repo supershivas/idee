@@ -60,6 +60,16 @@ useEffect(() => {
     onChange({ tags: next })
   }
 
+  const dueTag = tags.find(t => t.startsWith('due:'))
+  const dueDate = dueTag ? dueTag.slice(4) : ''
+
+  function setDueDate(dateStr: string) {
+    const withoutDue = tags.filter(t => !t.startsWith('due:'))
+    const next = dateStr ? [...withoutDue, `due:${dateStr}`] : withoutDue
+    setTags(next)
+    onChange({ tags: next })
+  }
+
   return (
     <div className="px-6 pb-2 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
       <MetaRow label="Tags">
@@ -87,6 +97,19 @@ useEffect(() => {
 
       <MetaRow label="Créé le">{formatDate(page.created_at)}</MetaRow>
       <MetaRow label="Modifié le">{formatDate(page.updated_at)}</MetaRow>
+
+      <MetaRow label="Échéance">
+        <input
+          type="date"
+          value={dueDate}
+          onChange={e => setDueDate(e.target.value)}
+          className="outline-none bg-transparent text-xs"
+          style={{ color: dueDate && new Date(dueDate) < new Date() ? '#ef4444' : 'var(--text-secondary)', colorScheme: 'light dark' }}
+        />
+        {dueDate && (
+          <button onClick={() => setDueDate('')} className="ml-2 opacity-50 hover:opacity-100 text-xs">×</button>
+        )}
+      </MetaRow>
 
       <MetaRow label="Résumé">
         {summary ? (
