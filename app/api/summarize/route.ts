@@ -66,12 +66,21 @@ export async function POST(req: NextRequest) {
     })
 
     if (!res.ok) {
-      console.error('Mistral error:', res.status, await res.text().catch(() => ''))
-      return NextResponse.json({ error: 'Erreur Mistral' }, { status: 502 })
+      const body = await res.text().catch(() => '')
+      console.error('Mistral error:', res.status, body)
+      let detail = ''
+      try { detail = JSON.parse(body)?.message || JSON.parse(body)?.error || '' } catch {}
+      return NextResponse.json(
+        { error: `Erreur Mistral (${res.status})${detail ? ` : ${detail}` : ''}` },
+        { status: 502 }
+      )
     }
 
     const data = await res.json()
     const summary = data.choices?.[0]?.message?.content?.trim() || ''
+    if (!summary) {
+      return NextResponse.json({ error: 'Mistral n\'a pas généré de résumé (contenu trop court ?)' }, { status: 422 })
+    }
     return NextResponse.json({ summary })
   } catch (err) {
     console.error('Summarize error:', err)
