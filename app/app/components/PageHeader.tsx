@@ -177,7 +177,12 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
   }
 
   async function generateSummary() {
-    if (!page.content) return
+    const textContent = (page.content || '')
+      .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+    if (!textContent) {
+      toast('La page est vide, rien à résumer.', 'error')
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch('/api/summarize', {
