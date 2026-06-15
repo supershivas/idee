@@ -14,7 +14,7 @@ import { ConfirmTrashModal } from './components/ActionsMenu'
 import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
-import { PageHeader, Cover } from './components/PageHeader'
+import { PageHeader } from './components/PageHeader'
 import { toast, Toaster } from './components/Toast'
 import TemplateModal, { Template } from './components/TemplateModal'
 import QuickCapture from './components/QuickCapture'
@@ -743,18 +743,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
         {selected ? (
           <>
-            {/* Cover pleine largeur, sticky derrière le contenu */}
-            <div className="sticky top-0 z-0 w-full">
-              <Cover
-                page={selected}
-                userId={userId}
-                onCoverUpdate={cover => {
-                  setSelected(prev => prev ? { ...prev, cover_url: cover } : null)
-                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, cover_url: cover } : p))
-                }}
-              />
-            </div>
-            {/* Sticky mini header — direct child of scroll container, not inside page-card */}
+            {/* Sticky mini header — apparaît quand le titre sort du viewport */}
             {scrolledPast && !isMobile && (
               <>
                 <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -767,8 +756,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 </div>
               </>
             )}
-            {/* Card contenu qui chevauche la cover */}
-            <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col rounded-t-2xl" style={{ marginTop: '-32px', boxShadow: '0 -6px 24px 0 rgba(0,0,0,0.10)' }}>
+            <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col">
               <MobileTopBar
                 onBack={() => {
                   if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
