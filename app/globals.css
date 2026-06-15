@@ -425,3 +425,15 @@ input::placeholder, textarea::placeholder {
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] { cursor: pointer; width: 1rem; height: 1rem; }
 .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
 .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { opacity: 0.6; text-decoration: line-through; }
+
+/* ─── Focus mode ─────────────────────────────────────────────────────────────*/
+.focus-mode-content .page-actions,
+.focus-mode-content .page-cover-btn,
+.focus-mode-content .subpages-section,
+.focus-mode-content .backlinks-section {
+  display: none;
+}
+.focus-mode-content .ProseMirror-focused {
+  max-width: 660px;
+  margin: 0 auto;
+}
