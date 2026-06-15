@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET() {
+  return NextResponse.json({ ok: true, groq: !!process.env.GROQ_API_KEY })
+}
+
 // In-memory rate limiter: 10 req/min par IP
 const rateMap = new Map<string, number[]>()
 const RATE_WINDOW = 60_000
