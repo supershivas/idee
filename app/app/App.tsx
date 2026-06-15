@@ -226,13 +226,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
       if (isTyping()) return
       if (e.key === 'n') { e.preventDefault(); addPage(null) }
+      if (e.key === 'j') { e.preventDefault(); addJournalEntry() }
       if (e.key === 'f') { e.preventDefault(); setFocusMode(v => !v) }
       if (e.key === 'q') { e.preventDefault(); setShowQuickCapture(true) }
       if (e.key === 'Escape') { setFocusMode(false) }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [addPage])
+  }, [addPage, addJournalEntry])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
@@ -498,13 +499,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
-            title={showJournal ? 'Nouvelle entrée' : 'Nouvelle page — touche N'}
+            title={showJournal ? 'Nouvelle entrée — touche J' : 'Nouvelle page — touche N'}
           >
             <span>{showJournal ? '✏️' : '+'}</span>
             <span className="flex-1">{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
-            {!showJournal && (
-              <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono opacity-60" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>N</kbd>
-            )}
+            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono opacity-60" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
+              {showJournal ? 'J' : 'N'}
+            </kbd>
           </button>
         </div>
 
