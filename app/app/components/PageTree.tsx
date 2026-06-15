@@ -5,9 +5,6 @@ import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type Dra
 import { CSS } from '@dnd-kit/utilities'
 import { Page } from '../types'
 
-const BLUE = '#60a5fa'
-const BLUE_BG = 'rgba(96,165,250,0.12)'
-
 // ─── SortablePageItem ─────────────────────────────────────────────────────────
 export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, dropIndicator, isMobile, onRename, onToggleFavorite }: {
   page: Page, pages: Page[], depth: number, selectedId: string | null,
@@ -46,9 +43,9 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
 
       {/* ── Indicateur BEFORE ── */}
       {dropIndicator?.position === 'before' && (
-        <div className="flex items-center gap-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 14}px`, paddingRight: '8px' }}>
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: BLUE }} />
-          <div className="flex-1 h-0.5 rounded" style={{ background: BLUE }} />
+        <div className="drop-line flex items-center gap-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 14}px`, paddingRight: '8px' }}>
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--drop-indicator)' }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: 'var(--drop-indicator)' }} />
         </div>
       )}
 
@@ -59,9 +56,10 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
         style={{
           paddingLeft: `${depth * 14 + 6}px`,
           minHeight: isMobile ? '48px' : '32px',
-          outline: isInside ? `2px solid ${BLUE}` : undefined,
+          outline: isInside ? '2px solid var(--drop-indicator)' : undefined,
           outlineOffset: '-1px',
-          background: isInside ? BLUE_BG : undefined,
+          background: isInside ? 'var(--drop-indicator-bg)' : undefined,
+          transition: 'outline 80ms ease, background 80ms ease',
         }}
       >
         {/* Zone draggable : chevron + icône + titre */}
@@ -103,7 +101,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
                 e.stopPropagation()
               }}
               className="flex-1 text-sm outline-none rounded px-1 py-0.5 min-w-0 cursor-text"
-              style={{ background: 'var(--card-bg)', border: `1px solid ${BLUE}`, color: 'var(--text-primary)' }}
+              style={{ background: 'var(--card-bg)', border: '1px solid var(--drop-indicator)', color: 'var(--text-primary)' }}
               onClick={e => e.stopPropagation()}
             />
           ) : (
@@ -130,9 +128,9 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
 
       {/* ── Indicateur AFTER ── */}
       {dropIndicator?.position === 'after' && (
-        <div className="flex items-center gap-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 14}px`, paddingRight: '8px' }}>
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: BLUE }} />
-          <div className="flex-1 h-0.5 rounded" style={{ background: BLUE }} />
+        <div className="drop-line flex items-center gap-1 my-0.5" style={{ paddingLeft: `${depth * 14 + 14}px`, paddingRight: '8px' }}>
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--drop-indicator)' }} />
+          <div className="flex-1 h-0.5 rounded" style={{ background: 'var(--drop-indicator)' }} />
         </div>
       )}
     </div>
@@ -192,18 +190,14 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
   return (
     <div
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={{ ...style, minHeight: '30px', background: isDragOverlay ? 'var(--drag-bg)' : undefined }}
       onClick={() => onSelect(page)}
-      className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer group transition-colors text-sm
+      className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-grab active:cursor-grabbing group transition-colors text-sm
         ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}
         ${isDragOverlay ? 'shadow-lg' : ''}`}
     >
-      <button
-        {...attributes} {...listeners}
-        onClick={e => e.stopPropagation()}
-        className="w-4 h-4 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
-        style={{ color: 'var(--text-muted)' }}
-      >⠿</button>
       <span className="flex-shrink-0 text-sm">{page.icon || '📄'}</span>
       <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
       <button

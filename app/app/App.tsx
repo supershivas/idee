@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { Page } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
 import { SearchBar } from './components/SearchBar'
@@ -15,6 +15,7 @@ import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
 import { PageHeader, Cover } from './components/PageHeader'
+import { toast } from './components/Toast'
 
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
@@ -43,6 +44,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [overId, setOverId] = useState<string | null>(null)
   const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
   const lastSaveRef = useRef(0)
+  const addingPageRef = useRef(false)
   const pointerYRef = useRef(0)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverOverIdRef = useRef<string | null>(null)
@@ -52,11 +54,24 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
 
-  // Track pointer Y globally — fiable pendant le drag
+  // Offline / online detection
   useEffect(() => {
-    function onPointerMove(e: PointerEvent) { pointerYRef.current = e.clientY }
-    window.addEventListener('pointermove', onPointerMove)
-    return () => window.removeEventListener('pointermove', onPointerMove)
+    function onOffline() { toast('Connexion perdue — les modifications ne sont pas sauvegardées.', 'error') }
+    function onOnline()  { toast('Connexion rétablie.', 'success') }
+    window.addEventListener('offline', onOffline)
+    window.addEventListener('online',  onOnline)
+    return () => { window.removeEventListener('offline', onOffline); window.removeEventListener('online', onOnline) }
+  }, [])
+
+  // Track pointer Y globally — throttled via rAF to avoid layout thrashing
+  useEffect(() => {
+    let frameId: number
+    function onPointerMove(e: PointerEvent) {
+      cancelAnimationFrame(frameId)
+      frameId = requestAnimationFrame(() => { pointerYRef.current = e.clientY })
+    }
+    window.addEventListener('pointermove', onPointerMove, { passive: true })
+    return () => { window.removeEventListener('pointermove', onPointerMove); cancelAnimationFrame(frameId) }
   }, [])
   const SIDEBAR_MIN = 180
   const SIDEBAR_MAX = 400
@@ -198,16 +213,22 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [addPage, addJournalEntry])
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
 
   async function addPage(parentId: string | null) {
-    const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
-    const icon = icons[Math.floor(Math.random() * icons.length)]
-    const { data } = await createClient().from('pages')
-      .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
-      .select().single()
-    if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
+    if (addingPageRef.current) return
+    addingPageRef.current = true
+    try {
+      const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
+      const icon = icons[Math.floor(Math.random() * icons.length)]
+      const { data } = await createClient().from('pages')
+        .insert({ title: 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
+        .select().single()
+      if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
+    } finally {
+      addingPageRef.current = false
+    }
   }
 
   async function addJournalEntry() {
@@ -229,8 +250,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     if (!selected) return
     const updated = { ...selected, title: value, updated_at: new Date().toISOString() }
     setSelected(updated); setPages(prev => prev.map(p => p.id === updated.id ? updated : p)); setSaving(true)
-    await createClient().from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
-    setSaving(false)
+    try {
+      const { error } = await createClient().from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
+      if (error) throw error
+    } catch {
+      toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function updateIcon(id: string, icon: string) {
@@ -263,13 +290,19 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     setSelected(prev => prev ? { ...prev, content, updated_at: updated.updated_at } : null)
     setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
     setSaving(true)
-    await createClient().from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
-    const now = Date.now()
-    if (now - lastSaveRef.current > 2 * 60 * 1000) {
-      lastSaveRef.current = now
-      await createClient().from('page_history').insert({ page_id: selected.id, user_id: userId, title: selected.title, content })
+    try {
+      const { error } = await createClient().from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
+      if (error) throw error
+      const now = Date.now()
+      if (now - lastSaveRef.current > 2 * 60 * 1000) {
+        lastSaveRef.current = now
+        await createClient().from('page_history').insert({ page_id: selected.id, user_id: userId, title: selected.title, content })
+      }
+    } catch {
+      toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   async function deletePage(id: string) {
@@ -338,11 +371,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
       setOverPosition(immediatePos)
       hoverTimerRef.current = setTimeout(() => {
-        // Après 600ms sur le même item → inside
+        // Après 400ms sur le même item → inside
         if (hoverOverIdRef.current === overId) {
           setOverPosition('inside')
         }
-      }, 600)
+      }, 400)
     } else {
       // Même item — si pas encore "inside", mettre à jour before/after
       setOverPosition(prev => prev === 'inside' ? 'inside' : immediatePos)
@@ -481,17 +514,33 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
             }}
           />
-          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            autoScroll={{ enabled: true, threshold: { x: 0, y: 0.12 } }}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
               onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
               overId={overId} overPosition={overPosition} isMobile={false}
               onRename={renamePage} onToggleFavorite={toggleFavorite} />
-            <DragOverlay>
+            <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
               {activeDragPage && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg text-sm opacity-90"
-                  style={{ background: 'var(--drag-bg)', border: '1px solid var(--drag-border)', color: 'var(--text-primary)' }}>
+                <div
+                  className="drag-overlay flex items-center gap-2 px-3 py-2 rounded-xl text-sm select-none"
+                  style={{
+                    background: 'var(--drag-bg)',
+                    border: '1px solid var(--drop-indicator)',
+                    color: 'var(--text-primary)',
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+                    minWidth: '120px',
+                    maxWidth: '220px',
+                  }}
+                >
                   <span>{activeDragPage.icon}</span>
-                  <span className="truncate max-w-32">{activeDragPage.title || 'Sans titre'}</span>
+                  <span className="truncate flex-1">{activeDragPage.title || 'Sans titre'}</span>
                 </div>
               )}
             </DragOverlay>

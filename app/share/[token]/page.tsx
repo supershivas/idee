@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import sanitizeHtml from 'sanitize-html'
 
 export default async function SharePage({ params }: { params: { token: string } }) {
   const supabase = await createClient()
@@ -12,6 +13,17 @@ export default async function SharePage({ params }: { params: { token: string } 
     .single()
 
   if (!page) notFound()
+
+  const safeContent = sanitizeHtml(page.content || '', {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'h3', 'u', 's', 'del', 'mark', 'details', 'summary', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'ul', 'ol', 'li', 'input', 'blockquote', 'pre', 'code']),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      img: ['src', 'alt', 'width', 'height', 'class'],
+      '*': ['class', 'type', 'checked', 'disabled'],
+      a: ['href', 'rel', 'target'],
+    },
+    allowedSchemes: ['https', 'http', 'data'],
+  })
 
   const { data: subpages } = await supabase
     .from('pages')
@@ -47,7 +59,7 @@ export default async function SharePage({ params }: { params: { token: string } 
 
       <div
         className="prose max-w-none"
-        dangerouslySetInnerHTML={{ __html: page.content || '<p class="text-gray-400">Page vide.</p>' }}
+        dangerouslySetInnerHTML={{ __html: safeContent || '<p class="text-gray-400">Page vide.</p>' }}
       />
 
       <div className="mt-12 pt-6 border-t border-gray-100 text-center">

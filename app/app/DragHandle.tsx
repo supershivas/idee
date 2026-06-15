@@ -1,20 +1,22 @@
 'use client'
-import { Extension } from '@tiptap/core'
+import { Extension, type Editor } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { TextSelection } from '@tiptap/pm/state'
 import { EditorView } from '@tiptap/pm/view'
 import { createRoot } from 'react-dom/client'
 import { useState, useEffect, useRef } from 'react'
 
-const TURN_INTO = [
-  { label: 'Texte',           icon: '¶',    action: (e: any) => e.chain().focus().setParagraph().run() },
-  { label: 'Titre 1',         icon: 'H1',   action: (e: any) => e.chain().focus().setHeading({ level: 1 }).run() },
-  { label: 'Titre 2',         icon: 'H2',   action: (e: any) => e.chain().focus().setHeading({ level: 2 }).run() },
-  { label: 'Titre 3',         icon: 'H3',   action: (e: any) => e.chain().focus().setHeading({ level: 3 }).run() },
-  { label: 'Liste à puces',   icon: '•',    action: (e: any) => e.chain().focus().toggleBulletList().run() },
-  { label: 'Liste numérotée', icon: '1.',   action: (e: any) => e.chain().focus().toggleOrderedList().run() },
-  { label: 'Citation',        icon: '❝',    action: (e: any) => e.chain().focus().toggleBlockquote().run() },
-  { label: 'Code',            icon: '</>',  action: (e: any) => e.chain().focus().toggleCodeBlock().run() },
+type TiptapEditor = Editor
+
+const TURN_INTO: { label: string; icon: string; action: (e: TiptapEditor) => void }[] = [
+  { label: 'Texte',           icon: '¶',    action: e => e.chain().focus().setParagraph().run() },
+  { label: 'Titre 1',         icon: 'H1',   action: e => e.chain().focus().setHeading({ level: 1 }).run() },
+  { label: 'Titre 2',         icon: 'H2',   action: e => e.chain().focus().setHeading({ level: 2 }).run() },
+  { label: 'Titre 3',         icon: 'H3',   action: e => e.chain().focus().setHeading({ level: 3 }).run() },
+  { label: 'Liste à puces',   icon: '•',    action: e => e.chain().focus().toggleBulletList().run() },
+  { label: 'Liste numérotée', icon: '1.',   action: e => e.chain().focus().toggleOrderedList().run() },
+  { label: 'Citation',        icon: '❝',    action: e => e.chain().focus().toggleBlockquote().run() },
+  { label: 'Code',            icon: '</>',  action: e => e.chain().focus().toggleCodeBlock().run() },
 ]
 
 function moveNode(view: EditorView, nodePos: number, direction: 'up' | 'down') {
@@ -45,7 +47,7 @@ function moveNode(view: EditorView, nodePos: number, direction: 'up' | 'down') {
 }
 
 function BlockMenu({ x, y, editor, nodePos, view, onClose }: {
-  x: number, y: number, editor: any, nodePos: number, view: EditorView, onClose: () => void
+  x: number, y: number, editor: TiptapEditor, nodePos: number, view: EditorView, onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -124,7 +126,7 @@ const BTN_SIZE = 24
 // 28px d'offset = bouton visible, jamais en dehors de la card.
 const BTN_OFFSET = 28
 
-function DragButton({ view, editor }: { view: EditorView, editor: any }) {
+function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }) {
   const [pos, setPos] = useState<{ top: number, left: number } | null>(null)
   const [menu, setMenu] = useState<{ x: number, y: number, nodePos: number } | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
