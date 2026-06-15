@@ -69,9 +69,12 @@ export async function POST(req: NextRequest) {
       const body = await res.text().catch(() => '')
       console.error('Mistral error:', res.status, body)
       let detail = ''
-      try { detail = JSON.parse(body)?.message || JSON.parse(body)?.error || '' } catch {}
+      try {
+        const parsed = JSON.parse(body)
+        detail = parsed?.message || parsed?.detail || parsed?.error || body.slice(0, 200)
+      } catch { detail = body.slice(0, 200) }
       return NextResponse.json(
-        { error: `Erreur Mistral (${res.status})${detail ? ` : ${detail}` : ''}` },
+        { error: `Mistral ${res.status}${detail ? ` : ${detail}` : ''}` },
         { status: 502 }
       )
     }
