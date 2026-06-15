@@ -443,7 +443,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         style={{
           width: sidebarHiddenEff ? 0 : `${sidebarWidth}px`,
           background: 'var(--sidebar-bg)',
-          borderRight: sidebarHiddenEff ? 'none' : '1px solid var(--border)',
+          borderRight: sidebarHiddenEff ? 'none' : '1px solid var(--sidebar-border)',
           transition: 'width 220ms cubic-bezier(0.4,0,0.2,1)',
           minWidth: 0,
         }}
@@ -453,10 +453,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
 
         {/* Header */}
-        <div className="px-3 flex items-center justify-between gap-2" style={{ minHeight: '52px', borderBottom: '1px solid var(--border)' }}>
+        <div className="px-3 flex items-center justify-between gap-2" style={{ minHeight: '52px', borderBottom: '1px solid var(--sidebar-border)' }}>
           <div className="flex items-center gap-2 min-w-0">
             <img src="/apple-touch-icon.png" alt="Idée" className="w-6 h-6 rounded-lg flex-shrink-0" />
-            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', lineHeight: 1 }}>
+            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 700, color: 'var(--sidebar-fg)', letterSpacing: '-0.01em', lineHeight: 1 }}>
               Idée
             </span>
           </div>
@@ -464,9 +464,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <button
               onClick={() => setSidebarHidden(true)}
               className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-              style={{ color: 'var(--text-muted)', background: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              style={{ color: 'var(--sidebar-icon)', background: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}
               title="Masquer la sidebar"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
@@ -478,9 +478,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <button
               onClick={() => setShowSettings(true)}
               className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-              style={{ color: 'var(--text-muted)', background: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              style={{ color: 'var(--sidebar-icon)', background: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}
               title="Paramètres"
             >
               <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
@@ -515,11 +515,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onClick={() => { setShowJournal(false); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(s => s?.type === 'journal' ? null : s) }}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
-              background: !showJournal && !showTags && !showRecent && !showReview ? 'var(--selected-bg)' : 'transparent',
-              color: !showJournal && !showTags && !showRecent && !showReview ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: !showJournal && !showTags && !showRecent && !showReview ? 'var(--sidebar-selected)' : 'transparent',
+              color: !showJournal && !showTags && !showRecent && !showReview ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
             }}
-            onMouseEnter={e => { if (showJournal || showTags || showRecent || showReview) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = !showJournal && !showTags && !showRecent && !showReview ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (showJournal || showTags || showRecent || showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = !showJournal && !showTags && !showRecent && !showReview ? 'var(--sidebar-selected)' : 'transparent' }}
           >
             <span>📄</span><span>Notes</span>
           </button>
@@ -527,11 +527,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onClick={() => { setShowJournal(true); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
-              background: showJournal ? 'var(--selected-bg)' : 'transparent',
-              color: showJournal ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: showJournal ? 'var(--sidebar-selected)' : 'transparent',
+              color: showJournal ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
             }}
-            onMouseEnter={e => { if (!showJournal) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showJournal ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (!showJournal) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showJournal ? 'var(--sidebar-selected)' : 'transparent' }}
           >
             <span>📓</span><span>Journal</span>
             {journalEntries.length > 0 && <span className="text-[10px] opacity-60">{journalEntries.length}</span>}
@@ -539,7 +539,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
         <div className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
           {activePages.filter(p => p.parent_id === null).length === 0 && (
-            <p className="text-xs px-3 py-3" style={{ color: 'var(--text-muted)' }}>Clique sur + pour créer une page.</p>
+            <p className="text-xs px-3 py-3" style={{ color: 'var(--sidebar-muted)' }}>Clique sur + pour créer une page.</p>
           )}
           <FavoritesSection
             pages={activePages}
@@ -584,16 +584,16 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             </DragOverlay>
           </DndContext>
         </div>
-        <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
           <button
             onClick={() => { setShowRecent(true); setShowReview(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
-              background: showRecent ? 'var(--selected-bg)' : 'transparent',
-              color: showRecent ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: showRecent ? 'var(--sidebar-selected)' : 'transparent',
+              color: showRecent ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
             }}
-            onMouseEnter={e => { if (!showRecent) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showRecent ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (!showRecent) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showRecent ? 'var(--sidebar-selected)' : 'transparent' }}
           >
             <span>🕘</span><span className="flex-1 text-left">Vue récente</span>
           </button>
@@ -601,11 +601,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onClick={() => { setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
-              background: showReview ? 'var(--selected-bg)' : 'transparent',
-              color: showReview ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: showReview ? 'var(--sidebar-selected)' : 'transparent',
+              color: showReview ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
             }}
-            onMouseEnter={e => { if (!showReview) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showReview ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (!showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showReview ? 'var(--sidebar-selected)' : 'transparent' }}
           >
             <span>🔄</span><span className="flex-1 text-left">Réviser</span>
           </button>
@@ -613,16 +613,16 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onClick={() => { setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
-              background: showTags ? 'var(--selected-bg)' : 'transparent',
-              color: showTags ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: showTags ? 'var(--sidebar-selected)' : 'transparent',
+              color: showTags ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
             }}
-            onMouseEnter={e => { if (!showTags) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showTags ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (!showTags) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = showTags ? 'var(--sidebar-selected)' : 'transparent' }}
           >
             <span>🏷️</span>
             <span className="flex-1 text-left">Tags</span>
             {Array.from(new Set([...activePages, ...journalEntries].flatMap(p => p.tags || []))).length > 0 && (
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
                 {Array.from(new Set([...activePages, ...journalEntries].flatMap(p => p.tags || []))).length}
               </span>
             )}
@@ -630,40 +630,40 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <button
             onClick={() => setShowTrash(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            style={{ color: 'var(--sidebar-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <span>🗑</span><span className="flex-1 text-left">Corbeille</span>
-            {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{trashedPages.length}</span>}
+            {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>{trashedPages.length}</span>}
           </button>
-          <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0' }} />
+          <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '4px 0' }} />
           <button
             onClick={() => setFocusMode(v => !v)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
-              background: focusMode ? 'var(--selected-bg)' : 'transparent',
-              color: focusMode ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: focusMode ? 'var(--sidebar-selected)' : 'transparent',
+              color: focusMode ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
             }}
-            onMouseEnter={e => { if (!focusMode) e.currentTarget.style.background = 'var(--hover-bg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--selected-bg)' : 'transparent' }}
+            onMouseEnter={e => { if (!focusMode) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--sidebar-selected)' : 'transparent' }}
             title="Mode focus — touche F"
           >
             <span>🎯</span>
             <span className="flex-1 text-left">Mode focus</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>F</kbd>
+            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>F</kbd>
           </button>
           <button
             onClick={() => setShowQuickCapture(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            style={{ color: 'var(--sidebar-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             title="Capture rapide — touche Q"
           >
             <span>⚡</span>
             <span className="flex-1 text-left">Capture rapide</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Q</kbd>
+            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>Q</kbd>
           </button>
 
         </div>

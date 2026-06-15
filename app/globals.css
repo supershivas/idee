@@ -7,7 +7,6 @@
 /* ─── Variables — Light ──────────────────────────────────────────────────────*/
 :root {
   --app-bg:          #f0f0ec;
-  --sidebar-bg:      #f7f7f5;
   --card-bg:         #ffffff;
   --card-shadow:     0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
   --font-title:      'Playfair Display', Georgia, serif;
@@ -29,16 +28,26 @@
   --selected-bg:     #e5e7eb;
   --selected-bg-60:  rgba(229,231,235,0.6);
 
-  /* ── Boutons primaires — brun favicon ── */
-  --btn-primary-bg:    #6b4f3a;
-  --btn-primary-fg:    #fdf6ee;
-  --btn-primary-hover: #5a4030;
+  /* Sidebar — toujours sombre */
+  --sidebar-bg:      #1C1C1E;
+  --sidebar-fg:      rgba(255,255,255,0.88);
+  --sidebar-muted:   rgba(255,255,255,0.40);
+  --sidebar-icon:    #8E8E93;
+  --sidebar-hover:   rgba(255,255,255,0.07);
+  --sidebar-selected:rgba(192,57,43,0.20);
+  --sidebar-selected-fg:#E8887E;
+  --sidebar-border:  rgba(255,255,255,0.07);
 
-  /* ── Accent — jaune ampoule ── */
-  --accent:            #f5c842;
-  --accent-fg:         #3b2a0e;
-  --accent-hover:      #e6b82e;
-  --accent-muted:      rgba(245,200,66,0.15);
+  /* ── Boutons primaires — cramoisi ── */
+  --btn-primary-bg:    #C0392B;
+  --btn-primary-fg:    #ffffff;
+  --btn-primary-hover: #9B2D22;
+
+  /* ── Accent — cramoisi ── */
+  --accent:            #C0392B;
+  --accent-fg:         #ffffff;
+  --accent-hover:      #9B2D22;
+  --accent-muted:      rgba(192,57,43,0.12);
 
   /* Prose */
   --prose-color:     #2d2620;
@@ -78,7 +87,7 @@
   --empty-title:     #6b7280;
 
   /* Search highlight */
-  --search-highlight: #f5c842;
+  --search-highlight: rgba(192,57,43,0.25);
 
   /* Drag handle */
   --drag-handle-offset: 44px;
@@ -87,7 +96,6 @@
 /* ─── Variables — Dark ───────────────────────────────────────────────────────*/
 html.dark {
   --app-bg:          #141414;
-  --sidebar-bg:      #1c1c1c;
   --card-bg:         #1f1f1f;
   --card-shadow:     0 2px 16px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.3);
 
@@ -103,16 +111,26 @@ html.dark {
   --selected-bg:     rgba(255,255,255,0.1);
   --selected-bg-60:  rgba(255,255,255,0.06);
 
-  /* ── Boutons primaires — brun clair en dark ── */
-  --btn-primary-bg:    #8c6448;
-  --btn-primary-fg:    #fdf6ee;
-  --btn-primary-hover: #7a5540;
+  /* Sidebar dark mode (idem, toujours sombre) */
+  --sidebar-bg:      #161618;
+  --sidebar-fg:      rgba(255,255,255,0.88);
+  --sidebar-muted:   rgba(255,255,255,0.40);
+  --sidebar-icon:    #8E8E93;
+  --sidebar-hover:   rgba(255,255,255,0.07);
+  --sidebar-selected:rgba(192,57,43,0.20);
+  --sidebar-selected-fg:#E8887E;
+  --sidebar-border:  rgba(255,255,255,0.07);
 
-  /* ── Accent — jaune ampoule ── */
-  --accent:            #f5c842;
-  --accent-fg:         #1a1200;
-  --accent-hover:      #e6b82e;
-  --accent-muted:      rgba(245,200,66,0.12);
+  /* ── Boutons primaires — cramoisi ── */
+  --btn-primary-bg:    #C0392B;
+  --btn-primary-fg:    #ffffff;
+  --btn-primary-hover: #9B2D22;
+
+  /* ── Accent — cramoisi ── */
+  --accent:            #C0392B;
+  --accent-fg:         #ffffff;
+  --accent-hover:      #9B2D22;
+  --accent-muted:      rgba(192,57,43,0.12);
 
   --prose-color:     #d4cfc9;
   --prose-h-color:   #e8e4df;
@@ -146,7 +164,7 @@ html.dark {
   --empty-fg:        #6b6560;
   --empty-title:     #8c8680;
 
-  --search-highlight: rgba(245,200,66,0.35);
+  --search-highlight: rgba(192,57,43,0.25);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
@@ -156,8 +174,14 @@ html, body {
   color: var(--text-primary);
 }
 
-/* Sidebar */
-.sidebar-bg { background: var(--sidebar-bg); }
+/* ─── Sidebar sombre (Bear-style) ─────────────── */
+.sidebar-bg { background: var(--sidebar-bg) !important; }
+.sidebar-text { color: var(--sidebar-fg); }
+.sidebar-text-muted { color: var(--sidebar-muted); }
+.sidebar-icon-color { color: var(--sidebar-icon); }
+.sidebar-item-hover:hover { background: var(--sidebar-hover) !important; }
+.sidebar-selected { background: var(--sidebar-selected) !important; color: var(--sidebar-selected-fg) !important; }
+.sidebar-border { border-color: var(--sidebar-border) !important; }
 
 /* ─── Titres page (input) ────────────────────────────────────────────────────*/
 .page-title {
@@ -398,15 +422,12 @@ input::placeholder, textarea::placeholder {
 .t-hover:hover { background: var(--hover-bg); }
 
 /* ─── Sidebar interactive states ─────────────────────────────────────────────*/
-.sidebar-selected { background: var(--selected-bg); }
-.sidebar-item-hover { background: transparent; }
-.sidebar-item-hover:hover { background: var(--selected-bg-60); }
 .sidebar-drop-inside {
   background: var(--accent-muted) !important;
   box-shadow: 0 0 0 1px var(--accent);
 }
-.sidebar-icon-btn { color: var(--text-muted); background: transparent; }
-.sidebar-icon-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+.sidebar-icon-btn { color: var(--sidebar-icon); background: transparent; }
+.sidebar-icon-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-fg); }
 
 /* ─── Journal entry rows ──────────────────────────────────────────────────────*/
 .journal-entry-row { border-bottom: 1px solid var(--border-light); }

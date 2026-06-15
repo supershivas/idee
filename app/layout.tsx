@@ -26,6 +26,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Idée" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+        {/* Tabler Icons */}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
       </head>
 
       <body className="bg-gray-50 text-gray-900">
