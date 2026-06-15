@@ -11,7 +11,6 @@ function checkRate(ip: string): boolean {
   if (hits.length >= RATE_LIMIT) return false
   hits.push(now)
   rateMap.set(ip, hits)
-  // Purge entries older than the window to prevent unbounded growth
   if (rateMap.size > 5000) {
     for (const [key, times] of rateMap) {
       if (times.every(t => now - t >= RATE_WINDOW)) rateMap.delete(key)
@@ -29,8 +28,8 @@ export async function POST(req: NextRequest) {
   const { content, title } = await req.json()
   if (!content) return NextResponse.json({ error: 'No content' }, { status: 400 })
 
-  if (!process.env.MISTRAL_API_KEY) {
-    console.error('MISTRAL_API_KEY is not set')
+  if (!process.env.GROQ_API_KEY) {
+    console.error('GROQ_API_KEY is not set')
     return NextResponse.json({ error: 'Résumé IA non configuré (clé API manquante).' }, { status: 503 })
   }
 
@@ -49,32 +48,32 @@ export async function POST(req: NextRequest) {
     .slice(0, 4000)
 
   try {
-    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'open-mistral-7b',
-        max_tokens: 120,
+        model: 'llama-3.1-8b-instant',
+        max_tokens: 150,
         messages: [{
           role: 'user',
-          content: `Tu es un assistant de prise de notes. Résume le contenu suivant en maximum 1-2 phrases directes en français. Commence directement par le contenu, sans introduction ni mention du mot "résumé".Titre : "${title}"\n\n${text}`,
+          content: `Tu es un assistant de prise de notes. Résume le contenu suivant en maximum 1-2 phrases directes en français. Commence directement par le contenu, sans introduction ni mention du mot "résumé". Titre : "${title}"\n\n${text}`,
         }],
       }),
     })
 
     if (!res.ok) {
       const body = await res.text().catch(() => '')
-      console.error('Mistral error:', res.status, body)
+      console.error('Groq error:', res.status, body)
       let detail = ''
       try {
         const parsed = JSON.parse(body)
-        detail = parsed?.message || parsed?.detail || parsed?.error || body.slice(0, 200)
+        detail = parsed?.error?.message || parsed?.message || parsed?.detail || body.slice(0, 200)
       } catch { detail = body.slice(0, 200) }
       return NextResponse.json(
-        { error: `Mistral ${res.status}${detail ? ` : ${detail}` : ''}` },
+        { error: `Groq ${res.status}${detail ? ` : ${detail}` : ''}` },
         { status: 502 }
       )
     }
@@ -82,11 +81,11 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
     const summary = data.choices?.[0]?.message?.content?.trim() || ''
     if (!summary) {
-      return NextResponse.json({ error: 'Mistral n\'a pas généré de résumé (contenu trop court ?)' }, { status: 422 })
+      return NextResponse.json({ error: 'Pas de résumé généré (contenu trop court ?)' }, { status: 422 })
     }
     return NextResponse.json({ summary })
   } catch (err) {
     console.error('Summarize error:', err)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json({ error: `Erreur serveur : ${err instanceof Error ? err.message : String(err)}` }, { status: 500 })
   }
 }
