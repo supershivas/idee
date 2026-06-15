@@ -469,11 +469,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}
               title="Masquer la sidebar"
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-                <rect x="1" y="1" width="12" height="12" rx="2" />
-                <path d="M4.5 1v12" />
-                <path d="M7.5 5l-1.5 2 1.5 2" />
-              </svg>
+              <i className="ti ti-layout-sidebar-left-collapse" style={{ fontSize: '14px' }} />
             </button>
             <button
               onClick={() => setShowSettings(true)}
@@ -483,10 +479,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}
               title="Paramètres"
             >
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="7.5" cy="7.5" r="2" />
-                <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.7 2.7l1.1 1.1M11.2 11.2l1.1 1.1M11.2 2.7l-1.1 1.1M3.8 11.2l-1.1 1.1" />
-              </svg>
+              <i className="ti ti-settings" style={{ fontSize: '15px' }} />
             </button>
           </div>
         </div>
@@ -742,10 +735,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--card-bg)' }}
         >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-            <rect x="1" y="1" width="11" height="11" rx="2" />
-            <path d="M4 1v11" />
-          </svg>
+          <i className="ti ti-layout-sidebar" style={{ fontSize: '13px' }} />
         </button>
       )}
 
