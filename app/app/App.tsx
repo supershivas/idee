@@ -15,7 +15,7 @@ import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
 import { TagsView } from './components/TagsView'
 import { PageHeader, Cover } from './components/PageHeader'
-import { toast } from './components/Toast'
+import { toast, Toaster } from './components/Toast'
 import TemplateModal, { Template } from './components/TemplateModal'
 import QuickCapture from './components/QuickCapture'
 import RecentView from './components/RecentView'
@@ -868,6 +868,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         if (!page) return null
         return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} />
       })()}
+      <Toaster />
     </div>
   )
 }
