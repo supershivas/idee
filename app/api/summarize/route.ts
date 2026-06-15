@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'mistral-small-latest',
+        model: 'open-mistral-7b',
         max_tokens: 120,
         messages: [{
           role: 'user',
