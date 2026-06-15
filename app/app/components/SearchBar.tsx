@@ -106,7 +106,7 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
                 e.preventDefault(); onSelect(results[selectedIndex].page); setQuery('')
               }
             }}
-            placeholder="Rechercher…  ⌘K"
+            placeholder="Rechercher…  ⌘/"
             className="flex-1 text-sm outline-none bg-transparent min-w-0"
             style={{ color: 'var(--text-primary)' }}
           />
