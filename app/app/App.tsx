@@ -209,16 +209,27 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0
   }, [selected?.id])
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — bare keys (only when not typing in a field/editor)
   useEffect(() => {
+    function isTyping() {
+      const el = document.activeElement as HTMLElement | null
+      if (!el) return false
+      const tag = el.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable
+    }
     function onKeyDown(e: KeyboardEvent) {
-      if (!(e.metaKey || e.ctrlKey)) return
-      if (e.key === '/') { e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus() }
-      if (e.key === '\\') { e.preventDefault(); setSidebarHidden(v => !v) }
-      if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); addPage(null) }
-      if ((e.key === 'j' || e.key === 'J') && e.shiftKey) { e.preventDefault(); addJournalEntry() }
-      if (e.shiftKey && e.key === 'F') { e.preventDefault(); setFocusMode(v => !v) }
-      if (e.shiftKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); setShowQuickCapture(true) }
+      // ⌘+/ → focus search (safe, no browser conflict)
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus(); return
+      }
+      // Bare keys — only when not in a text field
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
+      if (isTyping()) return
+      if (e.key === 'n') { e.preventDefault(); addPage(null) }
+      if (e.key === 'j') { e.preventDefault(); addJournalEntry() }
+      if (e.key === 'f') { e.preventDefault(); setFocusMode(v => !v) }
+      if (e.key === 'q') { e.preventDefault(); setShowQuickCapture(true) }
+      if (e.key === 'Escape') { setFocusMode(false) }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -448,7 +459,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               style={{ color: 'var(--text-muted)', background: 'transparent' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
-              title="Masquer la sidebar (⌘\)"
+              title="Masquer la sidebar"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
                 <rect x="1" y="1" width="12" height="12" rx="2" />
@@ -480,9 +491,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
+            title={showJournal ? 'Nouvelle entrée — touche J' : 'Nouvelle page — touche N'}
           >
             <span>{showJournal ? '✏️' : '+'}</span>
-            <span>{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+            <span className="flex-1">{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono opacity-60" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
+              {showJournal ? 'J' : 'N'}
+            </kbd>
           </button>
         </div>
 
@@ -614,6 +629,34 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <span>🗑</span><span className="flex-1 text-left">Corbeille</span>
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{trashedPages.length}</span>}
           </button>
+          <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0' }} />
+          <button
+            onClick={() => setFocusMode(v => !v)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{
+              background: focusMode ? 'var(--selected-bg)' : 'transparent',
+              color: focusMode ? 'var(--text-primary)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { if (!focusMode) e.currentTarget.style.background = 'var(--hover-bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--selected-bg)' : 'transparent' }}
+            title="Mode focus — touche F"
+          >
+            <span>🎯</span>
+            <span className="flex-1 text-left">Mode focus</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>F</kbd>
+          </button>
+          <button
+            onClick={() => setShowQuickCapture(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            title="Capture rapide — touche Q"
+          >
+            <span>⚡</span>
+            <span className="flex-1 text-left">Capture rapide</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Q</kbd>
+          </button>
 
         </div>
       </div>
@@ -677,7 +720,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {!isMobile && (
         <button
           onClick={() => { setFocusMode(false); setSidebarHidden(v => !v) }}
-          title={sidebarHiddenEff ? 'Afficher la sidebar (⌘\\)' : 'Masquer la sidebar (⌘\\)'}
+          title={sidebarHiddenEff ? 'Afficher la sidebar' : 'Masquer la sidebar'}
           className="hidden md:flex fixed bottom-5 left-5 z-30 items-center justify-center w-8 h-8 rounded-full shadow-md"
           style={{
             background: 'var(--card-bg)',
