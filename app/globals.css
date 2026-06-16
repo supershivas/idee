@@ -1,8 +1,9 @@
 /* Valeurs partagées avec La fabrique : voir design-tokens.json
    (couleurs accent fixe, radii, sidebar, kbd, search) — la
    source de vérité canonique est supershivas/design-system,
-   à récupérer via ./scripts/sync-tokens.sh. */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+   à récupérer via ./scripts/sync-tokens.sh.
+   Police chargée via <link> dans layout.tsx (plus fiable qu'un @import CSS
+   au premier paint, notamment sur /login). */
 
 @tailwind base;
 @tailwind components;
