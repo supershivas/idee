@@ -494,7 +494,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
             title={showJournal ? 'Nouvelle entrée — touche J' : 'Nouvelle page — touche N'}
           >
-            <span>{showJournal ? '✏️' : '+'}</span>
+            <span>{showJournal ? <i className="ti ti-pencil" style={{ fontSize: '15px' }} /> : '+'}</span>
             <span className="flex-1">{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
             <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono opacity-60" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
               {showJournal ? 'J' : 'N'}
@@ -514,7 +514,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (showJournal || showTags || showRecent || showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = !showJournal && !showTags && !showRecent && !showReview ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>📄</span><span>Notes</span>
+            <i className="ti ti-file-text" style={{ fontSize: '15px', flexShrink: 0 }} /><span>Notes</span>
           </button>
           <button
             onClick={() => { setShowJournal(true); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
@@ -526,7 +526,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showJournal) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showJournal ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>📓</span><span>Journal</span>
+            <i className="ti ti-book" style={{ fontSize: '15px', flexShrink: 0 }} /><span>Journal</span>
             {journalEntries.length > 0 && <span className="text-[10px] opacity-60">{journalEntries.length}</span>}
           </button>
         </div>
@@ -588,7 +588,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showRecent) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showRecent ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>🕘</span><span className="flex-1 text-left">Vue récente</span>
+            <i className="ti ti-clock-hour-9" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Vue récente</span>
           </button>
           <button
             onClick={() => { setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
@@ -600,7 +600,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showReview ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>🔄</span><span className="flex-1 text-left">Réviser</span>
+            <i className="ti ti-refresh" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Réviser</span>
           </button>
           <button
             onClick={() => { setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
@@ -612,7 +612,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => { if (!showTags) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.background = showTags ? 'var(--sidebar-selected)' : 'transparent' }}
           >
-            <span>🏷️</span>
+            <i className="ti ti-tag" style={{ fontSize: '15px', flexShrink: 0 }} />
             <span className="flex-1 text-left">Tags</span>
             {Array.from(new Set([...activePages, ...journalEntries].flatMap(p => p.tags || []))).length > 0 && (
               <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
@@ -627,7 +627,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
-            <span>🗑</span><span className="flex-1 text-left">Corbeille</span>
+            <i className="ti ti-trash" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Corbeille</span>
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>{trashedPages.length}</span>}
           </button>
           <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '4px 0' }} />
@@ -642,7 +642,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--sidebar-selected)' : 'transparent' }}
             title="Mode focus — touche F"
           >
-            <span>🎯</span>
+            <i className="ti ti-focus-2" style={{ fontSize: '15px', flexShrink: 0 }} />
             <span className="flex-1 text-left">Mode focus</span>
             <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>F</kbd>
           </button>
@@ -654,7 +654,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             title="Capture rapide — touche Q"
           >
-            <span>⚡</span>
+            <i className="ti ti-bolt" style={{ fontSize: '15px', flexShrink: 0 }} />
             <span className="flex-1 text-left">Capture rapide</span>
             <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>Q</kbd>
           </button>
