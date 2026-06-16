@@ -717,7 +717,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
       {showHistory && <HistoryModal pages={pages} onClose={() => setShowHistory(false)} onNavigate={p => { selectPage(p); setShowHistory(false); setShowJournal(p.type === 'journal') }} />}
-
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">

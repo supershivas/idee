@@ -30,7 +30,6 @@ export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail }: {
   userEmail?: string
 }) {
   const { theme, setTheme } = useTheme()
-
   const totalPages = pages.filter(p => !p.deleted_at && p.type !== 'journal').length
   const journalCount = pages.filter(p => !p.deleted_at && p.type === 'journal').length
   const trashedCount = pages.filter(p => !!p.deleted_at).length
