@@ -1,7 +1,7 @@
 /* Valeurs partagées avec La fabrique : voir design-tokens.json
-   (couleurs accent fixe, radii, sidebar, kbd, search) — à
-   resynchroniser manuellement avec la-fabrique/design-tokens.json
-   si l'une des deux valeurs change. */
+   (couleurs accent fixe, radii, sidebar, kbd, search) — la
+   source de vérité canonique est supershivas/design-system,
+   à récupérer via ./scripts/sync-tokens.sh. */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
