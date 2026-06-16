@@ -260,7 +260,7 @@ export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite
           {activePage && <SortableFavoriteItem page={activePage} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} isDragOverlay />}
         </DragOverlay>
       </DndContext>
-      <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--border)' }} />
+      <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--sidebar-border)' }} />
     </div>
   )
 }

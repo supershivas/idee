@@ -40,7 +40,7 @@
   --sidebar-hover:   rgba(255,255,255,0.07);
   --sidebar-selected:rgba(192,57,43,0.20);
   --sidebar-selected-fg:#E8887E;
-  --sidebar-border:  rgba(255,255,255,0.07);
+  --sidebar-border:  rgba(196,201,209,0.18);
 
   /* ── Boutons primaires — cramoisi ── */
   --btn-primary-bg:    #C0392B;
@@ -123,7 +123,7 @@ html.dark {
   --sidebar-hover:   rgba(255,255,255,0.07);
   --sidebar-selected:rgba(192,57,43,0.20);
   --sidebar-selected-fg:#E8887E;
-  --sidebar-border:  rgba(255,255,255,0.07);
+  --sidebar-border:  rgba(196,201,209,0.18);
 
   /* ── Boutons primaires — cramoisi ── */
   --btn-primary-bg:    #C0392B;
