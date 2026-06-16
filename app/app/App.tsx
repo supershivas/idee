@@ -234,6 +234,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         setShowTrash(false)
         return
       }
+      if (e.key === 'Enter' && !e.shiftKey && confirmDeleteId && (document.activeElement as HTMLElement | null)?.tagName !== 'TEXTAREA') {
+        e.preventDefault()
+        deletePage(confirmDeleteId)
+        setConfirmDeleteId(null)
+        return
+      }
       // Bare keys — only when not in a text field
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
       if (isTyping()) return
@@ -244,7 +250,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [addPage, addJournalEntry])
+  }, [addPage, addJournalEntry, confirmDeleteId, deletePage])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
