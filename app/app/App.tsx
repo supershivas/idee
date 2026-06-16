@@ -157,6 +157,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   }
 
   const selectPage = useCallback((page: Page | null) => {
+    setShowSettings(false)
+    setShowTemplateModal(false)
+    setShowQuickCapture(false)
+    setShowTrash(false)
     setSelected(page)
     if (page) {
       const slug = `${slugify(page.title || 'sans-titre')}--${page.id}`
@@ -222,6 +226,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus(); return
       }
+      if (e.key === 'Escape') {
+        setFocusMode(false)
+        setShowSettings(false)
+        setShowTemplateModal(false)
+        setShowQuickCapture(false)
+        setShowTrash(false)
+        return
+      }
       // Bare keys — only when not in a text field
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
       if (isTyping()) return
@@ -229,7 +241,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (e.key === 'j') { e.preventDefault(); addJournalEntry() }
       if (e.key === 'f') { e.preventDefault(); setFocusMode(v => !v) }
       if (e.key === 'q') { e.preventDefault(); setShowQuickCapture(true) }
-      if (e.key === 'Escape') { setFocusMode(false) }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -505,7 +516,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         <SearchBar ref={searchBarRef} pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
         <div className="flex px-2 pt-1 pb-1 gap-1 flex-shrink-0">
           <button
-            onClick={() => { setShowJournal(false); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(s => s?.type === 'journal' ? null : s) }}
+            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowJournal(false); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(s => s?.type === 'journal' ? null : s) }}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
               background: !showJournal && !showTags && !showRecent && !showReview ? 'var(--sidebar-selected)' : 'transparent',
@@ -517,7 +528,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <i className="ti ti-file-text" style={{ fontSize: '15px', flexShrink: 0 }} /><span>Notes</span>
           </button>
           <button
-            onClick={() => { setShowJournal(true); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
+            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowJournal(true); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{
               background: showJournal ? 'var(--sidebar-selected)' : 'transparent',
@@ -579,7 +590,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
           <button
-            onClick={() => { setShowRecent(true); setShowReview(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
+            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowRecent(true); setShowReview(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showRecent ? 'var(--sidebar-selected)' : 'transparent',
@@ -591,7 +602,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <i className="ti ti-clock-hour-9" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Vue récente</span>
           </button>
           <button
-            onClick={() => { setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
+            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showReview ? 'var(--sidebar-selected)' : 'transparent',
@@ -603,7 +614,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <i className="ti ti-refresh" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Réviser</span>
           </button>
           <button
-            onClick={() => { setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
+            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showTags ? 'var(--sidebar-selected)' : 'transparent',
