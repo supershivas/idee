@@ -89,10 +89,13 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
     var isOpen = focused && query.length > 1
 
     return (
-      <div className="relative px-2 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
-        <style>{`.search-highlight{background:var(--search-highlight,#fde68a);color:inherit;border-radius:2px;padding:0 1px}`}</style>
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.10)' }}>
-          <i className="ti ti-search" style={{ fontSize: '14px', color: 'var(--sidebar-icon)', flexShrink: 0 }} />
+      <div className="relative px-2 py-2">
+        <style>{`
+          .search-highlight{background:var(--search-highlight,#fde68a);color:inherit;border-radius:2px;padding:0 1px}
+          .sidebar-search-input::placeholder{color:var(--sidebar-muted)}
+        `}</style>
+        <div className="flex items-center gap-2 rounded-lg px-3" style={{ height: '36px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.10)' }}>
+          <i className="ti ti-search" style={{ fontSize: '13px', color: 'var(--sidebar-icon)', flexShrink: 0 }} />
           <input
             ref={inputRef}
             value={query}
@@ -107,8 +110,8 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
               }
             }}
             placeholder="Rechercher…  ⌘/"
-            className="flex-1 text-sm outline-none bg-transparent min-w-0"
-            style={{ color: 'var(--sidebar-fg)' }}
+            className="sidebar-search-input flex-1 outline-none bg-transparent min-w-0"
+            style={{ color: 'var(--sidebar-fg)', fontSize: '13px' }}
           />
           {query && (
             <button
