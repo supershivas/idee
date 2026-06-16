@@ -13,6 +13,7 @@ import { MobileHomeView, MobileTopBar } from './components/MobileNav'
 import { ConfirmTrashModal } from './components/ActionsMenu'
 import { JournalList } from './components/JournalView'
 import { SettingsPanel, useTheme } from './components/SettingsPanel'
+import { HistoryModal } from './components/HistoryModal'
 import { TagsView } from './components/TagsView'
 import { PageHeader } from './components/PageHeader'
 import { toast, Toaster } from './components/Toast'
@@ -41,7 +42,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showJournal, setShowJournal] = useState(false)
   const [showTags, setShowTags] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'history'>('general')
+  const [showHistory, setShowHistory] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showQuickCapture, setShowQuickCapture] = useState(false)
@@ -490,7 +491,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               <i className="ti ti-layout-sidebar-left-collapse" style={{ fontSize: '14px' }} />
             </button>
             <button
-              onClick={() => { setSettingsInitialTab('general'); setShowSettings(true) }}
+              onClick={() => setShowSettings(true)}
               className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
               style={{ color: 'var(--sidebar-icon)', background: 'transparent' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)' }}
@@ -639,7 +640,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             )}
           </button>
           <button
-            onClick={() => { setSettingsInitialTab('history'); setShowSettings(true) }}
+            onClick={() => setShowHistory(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{ color: 'var(--sidebar-muted)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
@@ -714,8 +715,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} initialTab={settingsInitialTab} onNavigate={p => { selectPage(p); setShowSettings(false); setShowJournal(p.type === 'journal') }} />}
-
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
+      {showHistory && <HistoryModal pages={pages} onClose={() => setShowHistory(false)} onNavigate={p => { selectPage(p); setShowHistory(false); setShowJournal(p.type === 'journal') }} />}
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">

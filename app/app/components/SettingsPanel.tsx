@@ -1,10 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Page } from '../types'
 
 type Theme = 'light' | 'dark' | 'system'
-type Tab = 'general' | 'history'
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -23,146 +21,15 @@ export function useTheme() {
   return { theme, setTheme }
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-type HistoryEntry = {
-  page_id: string
-  title: string
-  count: number
-  last_at: string
-}
-
-type DayGroup = {
-  day: string // 'YYYY-MM-DD'
-  label: string
-  entries: HistoryEntry[]
-}
-
-// ── Historique ────────────────────────────────────────────────────────────────
-function HistoryTab({ pages, onClose, onNavigate }: {
-  pages: Page[]
-  onClose: () => void
-  onNavigate: (page: Page) => void
-}) {
-  const [groups, setGroups] = useState<DayGroup[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      const { data } = await createClient()
-        .from('page_history')
-        .select('page_id, title, created_at')
-        .order('created_at', { ascending: false })
-        .limit(500)
-
-      if (!data) { setLoading(false); return }
-
-      // Grouper par jour puis par page_id
-      const byDay: Record<string, Record<string, { title: string; count: number; last_at: string }>> = {}
-
-      for (const row of data) {
-        const day = row.created_at.slice(0, 10)
-        if (!byDay[day]) byDay[day] = {}
-        if (!byDay[day][row.page_id]) {
-          byDay[day][row.page_id] = { title: row.title || 'Sans titre', count: 0, last_at: row.created_at }
-        }
-        byDay[day][row.page_id].count++
-        if (row.created_at > byDay[day][row.page_id].last_at) {
-          byDay[day][row.page_id].last_at = row.created_at
-          byDay[day][row.page_id].title = row.title || 'Sans titre'
-        }
-      }
-
-      const result: DayGroup[] = Object.entries(byDay)
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([day, pages]) => ({
-          day,
-          label: formatDay(day),
-          entries: Object.entries(pages)
-            .map(([page_id, v]) => ({ page_id, ...v }))
-            .sort((a, b) => b.last_at.localeCompare(a.last_at)),
-        }))
-
-      setGroups(result)
-      setLoading(false)
-    }
-    load()
-  }, [])
-
-  function formatDay(day: string) {
-    const d = new Date(day + 'T12:00:00')
-    const today = new Date()
-    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
-    if (day === today.toISOString().slice(0, 10)) return "Aujourd'hui"
-    if (day === yesterday.toISOString().slice(0, 10)) return 'Hier'
-    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  }
-
-  if (loading) {
-    return <div className="flex items-center justify-center py-12 text-sm text-gray-400">Chargement…</div>
-  }
-
-  if (groups.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-2">
-        <span className="text-3xl">📋</span>
-        <p className="text-sm text-gray-400">Aucun historique pour l'instant.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="overflow-y-auto flex-1" style={{ maxHeight: '60vh' }}>
-      {groups.map(group => (
-        <div key={group.day}>
-          <p className="px-5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-            {group.label}
-          </p>
-          {group.entries.map(entry => {
-            const page = pages.find(p => p.id === entry.page_id)
-            return (
-              <button
-                key={entry.page_id}
-                onClick={() => {
-                  if (page) { onNavigate(page); onClose() }
-                }}
-                disabled={!page}
-                className="w-full flex items-center gap-3 px-5 py-2.5 transition-colors text-left disabled:opacity-40"
-                style={{ borderBottom: '1px solid var(--border-light, #f0ede8)' }}
-                onMouseEnter={e => { if (page) e.currentTarget.style.background = 'var(--hover-bg, #f5f3ef)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-              >
-                <span className="text-base flex-shrink-0">{page?.icon || '📄'}</span>
-                <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary, #1a1714)' }}>
-                  {entry.title}
-                </span>
-                <span className="text-xs flex-shrink-0 px-2 py-0.5 rounded-full"
-                  style={{ background: 'var(--selected-bg, #ede9e3)', color: 'var(--text-muted, #9c8e82)' }}>
-                  {entry.count} modif{entry.count > 1 ? 's' : ''}
-                </span>
-                {page && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint, #c4b8ac)' }}>→</span>}
-              </button>
-            )
-          })}
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ── SettingsPanel ─────────────────────────────────────────────────────────────
-export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail, onNavigate, initialTab }: {
+export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail }: {
   onClose: () => void
   onLogout: () => void
   pages: Page[]
   userId: string
   userEmail?: string
-  onNavigate?: (page: Page) => void
-  initialTab?: Tab
 }) {
   const { theme, setTheme } = useTheme()
-  const [tab, setTab] = useState<Tab>(initialTab || 'general')
-
   const totalPages = pages.filter(p => !p.deleted_at && p.type !== 'journal').length
   const journalCount = pages.filter(p => !p.deleted_at && p.type === 'journal').length
   const trashedCount = pages.filter(p => !!p.deleted_at).length
@@ -190,29 +57,8 @@ export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail, onN
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 px-5 pt-3 pb-0 flex-shrink-0">
-          {([
-            { key: 'general', label: 'Général' },
-            { key: 'history', label: 'Historique' },
-          ] as { key: Tab, label: string }[]).map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                background: tab === t.key ? 'var(--selected-bg, #ede9e3)' : 'transparent',
-                color: tab === t.key ? 'var(--text-primary, #1a1714)' : 'var(--text-muted, #9c8e82)',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
         {/* Contenu */}
-        {tab === 'general' ? (
-          <div className="px-5 py-4 space-y-5 overflow-y-auto flex-1">
+        <div className="px-5 py-4 space-y-5 overflow-y-auto flex-1">
             {/* Apparence */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Apparence</p>
@@ -278,14 +124,7 @@ export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail, onN
             >
               Se déconnecter
             </button>
-          </div>
-        ) : (
-          <HistoryTab
-            pages={pages}
-            onClose={onClose}
-            onNavigate={onNavigate || (() => {})}
-          />
-        )}
+        </div>
 
         <div className="md:hidden flex-shrink-0" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
       </div>
