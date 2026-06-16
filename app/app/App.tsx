@@ -41,6 +41,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showJournal, setShowJournal] = useState(false)
   const [showTags, setShowTags] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'history'>('general')
   const [focusMode, setFocusMode] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showQuickCapture, setShowQuickCapture] = useState(false)
@@ -489,7 +490,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               <i className="ti ti-layout-sidebar-left-collapse" style={{ fontSize: '14px' }} />
             </button>
             <button
-              onClick={() => setShowSettings(true)}
+              onClick={() => { setSettingsInitialTab('general'); setShowSettings(true) }}
               className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
               style={{ color: 'var(--sidebar-icon)', background: 'transparent' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)' }}
@@ -638,6 +639,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             )}
           </button>
           <button
+            onClick={() => { setSettingsInitialTab('history'); setShowSettings(true) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{ color: 'var(--sidebar-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            <i className="ti ti-clock-hour-4" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Historique</span>
+          </button>
+          <button
             onClick={() => setShowTrash(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{ color: 'var(--sidebar-muted)' }}
@@ -704,7 +714,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} onNavigate={p => { selectPage(p); setShowSettings(false); setShowJournal(p.type === 'journal') }} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} initialTab={settingsInitialTab} onNavigate={p => { selectPage(p); setShowSettings(false); setShowJournal(p.type === 'journal') }} />}
 
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
