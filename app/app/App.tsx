@@ -448,7 +448,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           minWidth: 0,
         }}
       >
-        <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-blue-400 transition-colors" title="Redimensionner">
+        <div onMouseDown={startResize} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 transition-colors" onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Redimensionner">
           <div className="absolute right-0 top-0 bottom-0 w-4 -translate-x-1.5" />
         </div>
 
@@ -488,13 +488,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         <div className="px-2 pt-2 pb-1">
           <button
             onClick={() => showJournal ? addJournalEntry() : setShowTemplateModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+            className="w-full flex items-center justify-start gap-2 px-3 rounded-xl text-sm font-medium transition-colors"
+            style={{ height: '40px', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
             title={showJournal ? 'Nouvelle entrée — touche J' : 'Nouvelle page — touche N'}
           >
-            <span>{showJournal ? <i className="ti ti-pencil" style={{ fontSize: '15px' }} /> : '+'}</span>
+            <span className="flex items-center justify-center" style={{ fontSize: '15px' }}>{showJournal ? <i className="ti ti-pencil" /> : <i className="ti ti-plus" />}</span>
             <span className="flex-1">{showJournal ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
             <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono opacity-60" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
               {showJournal ? 'J' : 'N'}
