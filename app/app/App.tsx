@@ -82,9 +82,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     window.addEventListener('pointermove', onPointerMove, { passive: true })
     return () => { window.removeEventListener('pointermove', onPointerMove); cancelAnimationFrame(frameId) }
   }, [])
-  const SIDEBAR_MIN = 180
-  const SIDEBAR_MAX = 400
-  const SIDEBAR_DEFAULT = 240
+  const SIDEBAR_MIN = 200
+  const SIDEBAR_MAX = 420
+  const SIDEBAR_DEFAULT = 264
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT)
   const [sidebarHidden, setSidebarHidden] = useState(false)
   const [mounted, setMounted] = useState(false)
