@@ -151,16 +151,17 @@ function HistoryTab({ pages, onClose, onNavigate }: {
 }
 
 // ── SettingsPanel ─────────────────────────────────────────────────────────────
-export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail, onNavigate }: {
+export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail, onNavigate, initialTab }: {
   onClose: () => void
   onLogout: () => void
   pages: Page[]
   userId: string
   userEmail?: string
   onNavigate?: (page: Page) => void
+  initialTab?: Tab
 }) {
   const { theme, setTheme } = useTheme()
-  const [tab, setTab] = useState<Tab>('general')
+  const [tab, setTab] = useState<Tab>(initialTab || 'general')
 
   const totalPages = pages.filter(p => !p.deleted_at && p.type !== 'journal').length
   const journalCount = pages.filter(p => !p.deleted_at && p.type === 'journal').length
