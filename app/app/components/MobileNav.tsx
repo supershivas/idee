@@ -236,6 +236,11 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   const journalEntries = pages.filter(function(p) { return p.type === 'journal' && !p.deleted_at })
   const favorites = nonJournalPages.filter(function(p) { return p.favorite }).sort(function(a, b) { return (a.favorite_position ?? 999) - (b.favorite_position ?? 999) })
 
+  const recentPages = [...nonJournalPages]
+    .sort(function(a, b) { return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime() })
+    .slice(0, 6)
+    .filter(function(p) { return !p.favorite })
+
   const sortedPages = [...nonJournalPages].sort(function(a, b) { return a.position - b.position })
   const sortedJournal = [...journalEntries].sort(function(a, b) {
     return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
@@ -315,6 +320,16 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
                 <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border-light)' }} />
               </>
             )}
+            {recentPages.length > 0 && (
+              <>
+                <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Récents</p>
+                {recentPages.map(function(page) {
+                  return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+                })}
+                <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border-light)' }} />
+              </>
+            )}
+            <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Toutes les pages</p>
             {sortedPages.length === 0 && (
               <p className="text-sm px-2 py-4 text-center" style={{ color: 'var(--text-muted)' }}>Aucune page</p>
             )}
@@ -326,6 +341,11 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           <>
             {sortedJournal.length === 0 && (
               <p className="text-sm px-2 py-4 text-center" style={{ color: 'var(--text-muted)' }}>Aucune entrée. Crée la première !</p>
+            )}
+            {sortedJournal.length > 0 && (
+              <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                {sortedJournal.length} entrée{sortedJournal.length > 1 ? 's' : ''}
+              </p>
             )}
             {visibleJournal.map(function(entry) {
               return <JournalRow key={entry.id} entry={entry} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
