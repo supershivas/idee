@@ -35,11 +35,12 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
-function PagePickerModal({ pages, onSelect, onClose, onCloseSplit }: {
+function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCloseSplit }: {
   pages: Page[]
   onSelect: (p: Page) => void
   onClose: () => void
   onCloseSplit: () => void
+  hideCloseSplit?: boolean
 }) {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -153,18 +154,20 @@ function PagePickerModal({ pages, onSelect, onClose, onCloseSplit }: {
           )}
         </div>
 
-        <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <button
-            onClick={onCloseSplit}
-            className="w-full text-sm py-2 rounded-lg"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <i className="ti ti-layout-columns-off mr-2" />
-            Fermer la vue partagée
-          </button>
-        </div>
+        {!hideCloseSplit && (
+          <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <button
+              onClick={onCloseSplit}
+              className="w-full text-sm py-2 rounded-lg"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <i className="ti ti-layout-columns-off mr-2" />
+              Fermer la vue partagée
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -194,6 +197,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [selectedRight, setSelectedRight] = useState<Page | null>(null)
   const [scrolledPastRight, setScrolledPastRight] = useState(false)
   const [pagePicker, setPagePicker] = useState<'left' | 'right' | null>(null)
+  const [showCmdPalette, setShowCmdPalette] = useState(false)
   const lastSaveRef = useRef(0)
   const addingPageRef = useRef(false)
   const pointerYRef = useRef(0)
@@ -390,7 +394,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus(); return
       }
+      // ⌘+K → palette de commandes globale
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault(); e.stopPropagation(); setShowCmdPalette(true); return
+      }
       if (e.key === 'Escape') {
+        setShowCmdPalette(false)
         setShowSettings(false)
         setShowTemplateModal(false)
         setShowQuickCapture(false)
@@ -1178,8 +1187,20 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         <PagePickerModal
           pages={[...activePages, ...journalEntries]}
           onSelect={handlePickerSelect}
-          onClose={() => setPagePicker(null)}
+          onClose={() => {
+            if (pagePicker === 'right' && !selectedRight) closeSplit()
+            else setPagePicker(null)
+          }}
           onCloseSplit={closeSplit}
+        />
+      )}
+      {showCmdPalette && (
+        <PagePickerModal
+          pages={[...activePages, ...journalEntries]}
+          onSelect={p => { selectPage(p); setShowCmdPalette(false) }}
+          onClose={() => setShowCmdPalette(false)}
+          onCloseSplit={() => setShowCmdPalette(false)}
+          hideCloseSplit
         />
       )}
       <Toaster />
