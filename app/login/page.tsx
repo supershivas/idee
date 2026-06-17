@@ -54,7 +54,7 @@ export default function LoginPage() {
 
   return (
     <main className="t-bg-app flex min-h-screen flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-semibold t-text" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Idée</h1>
+      <h1 className="text-2xl font-semibold t-text" style={{ fontFamily: 'var(--font-title)' }}>Idée</h1>
       <div className="t-bg-card rounded-xl p-6 flex flex-col gap-3 w-80" style={{ boxShadow: 'var(--card-shadow)' }}>
         <input
           type="email"
