@@ -180,7 +180,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showHistory, setShowHistory] = useState(false)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
   const [showMore, setShowMore] = useState(false)
-  const [focusMode, setFocusMode] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showQuickCapture, setShowQuickCapture] = useState(false)
   const [showRecent, setShowRecent] = useState(false)
@@ -392,7 +391,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         e.preventDefault(); e.stopPropagation(); searchBarRef.current?.focus(); return
       }
       if (e.key === 'Escape') {
-        setFocusMode(false)
         setShowSettings(false)
         setShowTemplateModal(false)
         setShowQuickCapture(false)
@@ -410,7 +408,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (isTyping()) return
       if (e.key === 'n') { e.preventDefault(); addPage(null) }
       if (e.key === 'j') { e.preventDefault(); addJournalEntry() }
-      if (e.key === 'f') { e.preventDefault(); setFocusMode(v => !v) }
+      if (e.key === 'f') { e.preventDefault(); setSidebarHidden(v => !v) }
       if (e.key === 'q') { e.preventDefault(); setShowQuickCapture(true) }
       if (e.key === 's') { e.preventDefault(); setSplitMode(v => !v) }
     }
@@ -646,7 +644,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     return <div style={{ position: 'fixed', inset: 0, background: '#f0f0ec' }} />
   }
 
-  const sidebarHiddenEff = sidebarHidden || focusMode
+  const sidebarHiddenEff = sidebarHidden
 
   return (
     <div className="flex w-full h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
@@ -826,16 +824,40 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <button
             onClick={() => setShowMore(v => !v)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{ color: (showMore || showRecent || showReview || focusMode) ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)' }}
+            style={{ color: (showMore || showRecent || showReview) ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <i className="ti ti-dots" style={{ fontSize: '15px', flexShrink: 0 }} />
             <span className="flex-1 text-left">Plus</span>
-            <i className={`ti ${(showMore || showRecent || showReview || focusMode) ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: '12px', opacity: 0.5 }} />
+            <i className={`ti ${(showMore || showRecent || showReview) ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: '12px', opacity: 0.5 }} />
           </button>
-          {(showMore || showRecent || showReview || focusMode) && (
+          {(showMore || showRecent || showReview) && (
             <div className="space-y-0.5 pl-2">
+              <button
+                onClick={() => setShowQuickCapture(true)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ color: 'var(--sidebar-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                title="Capture rapide — touche Q"
+              >
+                <i className="ti ti-bolt" style={{ fontSize: '14px', flexShrink: 0 }} />
+                <span className="flex-1 text-left">Capture rapide</span>
+                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>Q</kbd>
+              </button>
+              <button
+                onClick={() => setSplitMode(v => !v)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ background: splitMode ? 'var(--sidebar-selected)' : 'transparent', color: splitMode ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)' }}
+                onMouseEnter={e => { if (!splitMode) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = splitMode ? 'var(--sidebar-selected)' : 'transparent' }}
+                title="Vue partagée — touche S"
+              >
+                <i className="ti ti-layout-columns" style={{ fontSize: '14px', flexShrink: 0 }} />
+                <span className="flex-1 text-left">Vue partagée</span>
+                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>S</kbd>
+              </button>
               <button
                 onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowRecent(true); setShowReview(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
@@ -862,42 +884,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <i className="ti ti-clock-hour-4" style={{ fontSize: '14px', flexShrink: 0 }} /><span className="flex-1 text-left">Historique</span>
-              </button>
-              <button
-                onClick={() => setFocusMode(v => !v)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
-                style={{ background: focusMode ? 'var(--sidebar-selected)' : 'transparent', color: focusMode ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)' }}
-                onMouseEnter={e => { if (!focusMode) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--sidebar-selected)' : 'transparent' }}
-                title="Mode focus — touche F"
-              >
-                <i className="ti ti-focus-2" style={{ fontSize: '14px', flexShrink: 0 }} />
-                <span className="flex-1 text-left">Mode focus</span>
-                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>F</kbd>
-              </button>
-              <button
-                onClick={() => setSplitMode(v => !v)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
-                style={{ background: splitMode ? 'var(--sidebar-selected)' : 'transparent', color: splitMode ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)' }}
-                onMouseEnter={e => { if (!splitMode) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = splitMode ? 'var(--sidebar-selected)' : 'transparent' }}
-                title="Vue partagée — touche S"
-              >
-                <i className="ti ti-layout-columns" style={{ fontSize: '14px', flexShrink: 0 }} />
-                <span className="flex-1 text-left">Vue partagée</span>
-                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>S</kbd>
-              </button>
-              <button
-                onClick={() => setShowQuickCapture(true)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
-                style={{ color: 'var(--sidebar-muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                title="Capture rapide — touche Q"
-              >
-                <i className="ti ti-bolt" style={{ fontSize: '14px', flexShrink: 0 }} />
-                <span className="flex-1 text-left">Capture rapide</span>
-                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>Q</kbd>
               </button>
             </div>
           )}
@@ -962,7 +948,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {/* ── Bouton toggle sidebar (focus mode) ── */}
       {!isMobile && (
         <button
-          onClick={() => { setFocusMode(false); setSidebarHidden(v => !v) }}
+          onClick={() => setSidebarHidden(v => !v)}
           title={sidebarHiddenEff ? 'Afficher la sidebar' : 'Masquer la sidebar'}
           className="hidden md:flex fixed bottom-5 left-5 z-30 items-center justify-center w-8 h-8 rounded-full shadow-md"
           style={{
@@ -986,10 +972,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         {/* Panneau gauche */}
         <div ref={mainScrollRef} className="flex-1 overflow-y-auto min-w-0 pb-12">
           {splitMode && (
-            <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-1.5" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Panneau gauche</span>
-              <button onClick={() => setPagePicker('left')} className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                <i className="ti ti-x" style={{ fontSize: '12px' }} /> Changer
+            <div className="sticky top-0 z-30 flex items-center justify-end gap-1 px-2 py-1" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
+              <button onClick={() => setPagePicker('left')} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Changer la page">
+                <i className="ti ti-arrows-exchange" style={{ fontSize: '14px' }} />
+              </button>
+              <button onClick={closeSplit} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Fermer la vue partagée">
+                <i className="ti ti-layout-columns-off" style={{ fontSize: '14px' }} />
               </button>
             </div>
           )}
@@ -1065,7 +1053,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
                   userId={userId}
                   isMobile={isMobile}
-                  focusMode={focusMode}
+                  focusMode={sidebarHidden}
                 />
               </div>
             </>
@@ -1085,10 +1073,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <>
             <div style={{ width: '1px', flexShrink: 0, background: 'var(--border)' }} />
             <div ref={mainScrollRefRight} className="flex-1 overflow-y-auto min-w-0 pb-12">
-              <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-1.5" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Panneau droit</span>
-                <button onClick={() => setPagePicker('right')} className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                  <i className="ti ti-x" style={{ fontSize: '12px' }} /> Changer
+              <div className="sticky top-0 z-30 flex items-center justify-end gap-1 px-2 py-1" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
+                <button onClick={() => setPagePicker('right')} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Changer la page">
+                  <i className="ti ti-arrows-exchange" style={{ fontSize: '14px' }} />
+                </button>
+                <button onClick={closeSplit} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Fermer la vue partagée">
+                  <i className="ti ti-layout-columns-off" style={{ fontSize: '14px' }} />
                 </button>
               </div>
               {selectedRight ? (
@@ -1188,7 +1178,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         <PagePickerModal
           pages={[...activePages, ...journalEntries]}
           onSelect={handlePickerSelect}
-          onClose={closeSplit}
+          onClose={() => setPagePicker(null)}
           onCloseSplit={closeSplit}
         />
       )}
