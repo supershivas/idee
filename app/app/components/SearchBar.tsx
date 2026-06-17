@@ -52,7 +52,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   )
 }
 
-export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: (p: Page) => void }>(
+export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: (p: Page, query?: string) => void }>(
   function SearchBar({ pages, onSelect }, ref) {
     const [query, setQuery] = useState('')
     const [focused, setFocused] = useState(false)
@@ -106,7 +106,7 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
               if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, results.length - 1)) }
               else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, -1)) }
               else if (e.key === 'Enter' && selectedIndex >= 0 && results[selectedIndex]) {
-                e.preventDefault(); onSelect(results[selectedIndex].page); setQuery('')
+                e.preventDefault(); onSelect(results[selectedIndex].page, query); setQuery('')
               }
             }}
             placeholder="Rechercher…  ⌘/"
@@ -137,7 +137,7 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
                   return (
                     <button
                       key={page.id}
-                      onClick={() => { onSelect(page); setQuery('') }}
+                      onClick={() => { onSelect(page, query); setQuery('') }}
                       onMouseEnter={() => setSelectedIndex(index)}
                       className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors"
                       style={{ borderTop: '1px solid var(--border-light)', background: index === selectedIndex ? 'var(--hover-bg)' : 'transparent' }}

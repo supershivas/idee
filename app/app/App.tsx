@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter, useDroppable, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { Page } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
 import { SearchBar } from './components/SearchBar'
@@ -24,6 +24,29 @@ import ReviewMode from './components/ReviewMode'
 
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
+
+function TrashDropZone({ activeDragId, count, onClick }: { activeDragId: string | null; count: number; onClick: () => void }) {
+  const { setNodeRef, isOver } = useDroppable({ id: 'trash' })
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+      style={{
+        background: isOver ? 'rgba(192,57,43,0.18)' : 'transparent',
+        color: isOver ? '#E8887E' : activeDragId ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)',
+        outline: isOver ? '2px dashed rgba(192,57,43,0.5)' : 'none',
+        outlineOffset: '-2px',
+      }}
+      onMouseEnter={e => { if (!activeDragId && !isOver) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+      onMouseLeave={e => { if (!isOver) e.currentTarget.style.background = 'transparent' }}
+    >
+      <i className="ti ti-trash" style={{ fontSize: '15px', flexShrink: 0 }} />
+      <span className="flex-1 text-left">{isOver ? 'Déposer ici' : 'Corbeille'}</span>
+      {count > 0 && !isOver && <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>{count}</span>}
+    </button>
+  )
+}
 
 function getAncestorIds(pages: Page[], pageId: string): string[] {
   const ids: string[] = []
@@ -62,6 +85,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverOverIdRef = useRef<string | null>(null)
   const searchBarRef = useRef<{ focus: () => void }>(null)
+  const [editorSearchQuery, setEditorSearchQuery] = useState<string | undefined>(undefined)
   const mainScrollRef = useRef<HTMLDivElement>(null)
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
@@ -283,6 +307,31 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false) }
   }
 
+  async function createSubpageFromSelection(title: string): Promise<Page | null> {
+    if (!selected) return null
+    const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
+    const icon = icons[Math.floor(Math.random() * icons.length)]
+    const { data } = await createClient().from('pages')
+      .insert({ title, content: '', user_id: userId, parent_id: selected.id, position: pages.length, icon, type: 'page' })
+      .select().single()
+    if (data) {
+      setPages(prev => [...prev, data])
+      setOpenMap(o => ({ ...o, [selected.id]: true }))
+    }
+    return data || null
+  }
+
+  async function duplicateJournalEntries(ids: string[]) {
+    for (const id of ids) {
+      const source = pages.find(p => p.id === id)
+      if (!source) continue
+      const { data } = await createClient().from('pages')
+        .insert({ title: source.title + ' (copie)', content: source.content, user_id: userId, parent_id: null, position: pages.length, icon: source.icon, type: 'journal', tags: source.tags })
+        .select().single()
+      if (data) setPages(prev => [...prev, data])
+    }
+  }
+
   async function convertToJournal(id: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, type: 'journal' as const, parent_id: null } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, type: 'journal' as const, parent_id: null } : null)
@@ -403,7 +452,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   function handleDragStart(e: DragStartEvent) { setActiveDragId(e.active.id as string) }
   function handleDragOver(e: DragOverEvent) {
     const { over, active } = e
-    if (!over || over.id === active.id) {
+    if (!over || over.id === active.id || over.id === 'trash') {
+      if (over?.id === 'trash') { setOverId('trash'); setOverPosition(null); return }
       setOverId(null); setOverPosition(null)
       if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null }
       hoverOverIdRef.current = null
@@ -442,6 +492,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     hoverOverIdRef.current = null
     setActiveDragId(null); setOverId(null); setOverPosition(null)
     if (!over || active.id === over.id) return
+    if (over.id === 'trash') { await deletePage(active.id as string); return }
     await reorderSiblings(active.id as string, over.id as string, finalPosition || 'after')
   }
 
@@ -526,7 +577,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           </button>
         </div>
 
-        <SearchBar ref={searchBarRef} pages={[...activePages, ...journalEntries]} onSelect={selectPage} />
+        <SearchBar ref={searchBarRef} pages={[...activePages, ...journalEntries]} onSelect={(p, q) => { selectPage(p); setEditorSearchQuery(q) }} />
         <div className="flex px-2 pt-1 pb-1 gap-1 flex-shrink-0">
           <button
             onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowJournal(false); setShowTags(false); setShowRecent(false); setShowReview(false); setSelected(s => s?.type === 'journal' ? null : s) }}
@@ -554,6 +605,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             {journalEntries.length > 0 && <span className="text-[10px] opacity-60">{journalEntries.length}</span>}
           </button>
         </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          autoScroll={{ enabled: true, threshold: { x: 0, y: 0.12 } }}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
         <div className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
           {activePages.filter(p => p.parent_id === null).length === 0 && (
             <p className="text-xs px-3 py-3" style={{ color: 'var(--sidebar-muted)' }}>Clique sur + pour créer une page.</p>
@@ -569,37 +628,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
             }}
           />
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            autoScroll={{ enabled: true, threshold: { x: 0, y: 0.12 } }}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-          >
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
               onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
               overId={overId} overPosition={overPosition} isMobile={false}
               onRename={renamePage} onToggleFavorite={toggleFavorite} />
-            <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
-              {activeDragPage && (
-                <div
-                  className="drag-overlay flex items-center gap-2 px-3 py-2 rounded-xl text-sm select-none"
-                  style={{
-                    background: 'var(--drag-bg)',
-                    border: '1px solid var(--drop-indicator)',
-                    color: 'var(--text-primary)',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
-                    minWidth: '120px',
-                    maxWidth: '220px',
-                  }}
-                >
-                  <span>{activeDragPage.icon}</span>
-                  <span className="truncate flex-1">{activeDragPage.title || 'Sans titre'}</span>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
         </div>
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
           {/* Tags — toujours visible */}
@@ -621,17 +653,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               </span>
             )}
           </button>
-          {/* Corbeille — toujours visible */}
-          <button
-            onClick={() => setShowTrash(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{ color: 'var(--sidebar-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <i className="ti ti-trash" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Corbeille</span>
-            {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>{trashedPages.length}</span>}
-          </button>
+          {/* Corbeille — droppable */}
+          <TrashDropZone activeDragId={activeDragId} count={trashedPages.length} onClick={() => setShowTrash(true)} />
           {/* Plus — replie le reste */}
           <button
             onClick={() => setShowMore(v => !v)}
@@ -700,6 +723,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             </div>
           )}
         </div>
+        <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
+          {activeDragPage && (
+            <div className="drag-overlay flex items-center gap-2 px-3 py-2 rounded-xl text-sm select-none" style={{ background: 'var(--drag-bg)', border: '1px solid var(--drop-indicator)', color: 'var(--text-primary)', boxShadow: '0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)', minWidth: '120px', maxWidth: '220px' }}>
+              <span>{activeDragPage.icon}</span>
+              <span className="truncate flex-1">{activeDragPage.title || 'Sans titre'}</span>
+            </div>
+          )}
+        </DragOverlay>
+        </DndContext>
       </div>
 
       {/* ── Mobile : vue liste ── */}
@@ -722,7 +754,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
             <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
-          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
+          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} onDelete={ids => ids.forEach(id => deletePage(id))} onDuplicate={duplicateJournalEntries} />
         </div>
       )}
 
@@ -732,7 +764,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
+          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} onDelete={ids => ids.forEach(id => deletePage(id))} onDuplicate={duplicateJournalEntries} />
         </div>
       )}
 
@@ -851,10 +883,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 pages={[...activePages, ...journalEntries]}
                 onUpdate={updateContent}
                 onAddSubpage={() => addPage(selected.id)}
+                onCreateSubpageFromSelection={selected.type !== 'journal' ? createSubpageFromSelection : undefined}
                 onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
                 userId={userId}
                 isMobile={isMobile}
                 focusMode={focusMode}
+                searchQuery={editorSearchQuery}
+                onSearchQueryConsumed={() => setEditorSearchQuery(undefined)}
               />
             </div>
           </>

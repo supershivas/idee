@@ -236,10 +236,14 @@ function onMouseLeave(e: MouseEvent) {
     </div>
   )
 }
-export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, userId, isMobile, focusMode }: {
+export default function Editor({ page, pages, onUpdate, onAddSubpage, onCreateSubpageFromSelection, onNavigate, userId, isMobile, focusMode, searchQuery, onSearchQueryConsumed }: {
   page: Page, pages: Page[], onUpdate: (content: string) => void
-  onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string, isMobile: boolean
+  onAddSubpage: () => void
+  onCreateSubpageFromSelection?: (title: string) => Promise<Page | null>
+  onNavigate: (page: Page) => void, userId: string, isMobile: boolean
   focusMode?: boolean
+  searchQuery?: string
+  onSearchQueryConsumed?: () => void
 }) {
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [showTableSheet, setShowTableSheet] = useState(false)
@@ -368,6 +372,24 @@ Image.extend({
       editor.commands.setContent(page.content || '', false)
     }
   }, [page.id])
+
+  useEffect(() => {
+    if (!editor || !searchQuery) return
+    const q = searchQuery.toLowerCase()
+    let found = false
+    editor.state.doc.descendants((node, pos) => {
+      if (found || !node.isText || !node.text) return
+      const idx = node.text.toLowerCase().indexOf(q)
+      if (idx !== -1) {
+        const from = pos + idx
+        const to = from + q.length
+        editor.commands.setTextSelection({ from, to })
+        editor.commands.scrollIntoView()
+        found = true
+      }
+    })
+    onSearchQueryConsumed?.()
+  }, [editor, searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function insertLink(url: string) {
     setShowLinkModal(false)
@@ -521,6 +543,25 @@ Image.extend({
               className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('link') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
               title={editor.isActive('link') ? 'Retirer le lien' : 'Ajouter un lien'}
             >🔗</button>
+            {onCreateSubpageFromSelection && (
+              <>
+                <div className="w-px bg-white/20 self-stretch mx-0.5" />
+                <button
+                  onClick={async () => {
+                    const { from, to } = editor.state.selection
+                    const title = editor.state.doc.textBetween(from, to).trim()
+                    if (!title) return
+                    const newPage = await onCreateSubpageFromSelection(title)
+                    if (newPage) {
+                      editor.chain().focus().deleteRange({ from, to }).run()
+                      insertSubpageBlock(editor, newPage.id)
+                    }
+                  }}
+                  className="px-2 py-1 text-xs rounded-lg transition-colors text-white hover:bg-white/10 whitespace-nowrap"
+                  title="Créer une sous-page à partir du texte sélectionné"
+                >↳ Sous-page</button>
+              </>
+            )}
           </div>
         </BubbleMenu>
       )}
