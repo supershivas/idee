@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 type ToastType = 'success' | 'error' | 'info'
-type ToastItem = { id: number; message: string; type: ToastType }
+type ToastAction = { label: string; onAction: () => void }
+type ToastItem = { id: number; message: string; type: ToastType; action?: ToastAction }
 
 let _id = 0
 
-export function toast(message: string, type: ToastType = 'info') {
+export function toast(message: string, type: ToastType = 'info', action?: ToastAction) {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('idee:toast', { detail: { message, type, id: ++_id } }))
+    window.dispatchEvent(new CustomEvent('idee:toast', { detail: { message, type, id: ++_id, action } }))
   }
 }
 
@@ -18,8 +19,8 @@ export function Toaster() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const { message, type, id } = (e as CustomEvent<ToastItem>).detail
-      setItems(prev => [...prev.slice(-4), { id, message, type }])
+      const { message, type, id, action } = (e as CustomEvent<ToastItem>).detail
+      setItems(prev => [...prev.slice(-4), { id, message, type, action }])
       setTimeout(() => setItems(prev => prev.filter(t => t.id !== id)), 3500)
     }
     window.addEventListener('idee:toast', handler)
@@ -28,7 +29,6 @@ export function Toaster() {
 
   if (!items.length) return null
 
-  const icons = { success: '✓', error: '✕', info: 'ℹ' }
   const colors = {
     success: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
     error:   { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
@@ -45,8 +45,19 @@ export function Toaster() {
             <div key={item.id}
               className="flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto"
               style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}`, maxWidth: '320px', animation: '_toast_in 180ms ease' }}>
-              <span className="flex-shrink-0">{icons[item.type]}</span>
-              <span>{item.message}</span>
+              <span className="flex-1">{item.message}</span>
+              {item.action && (
+                <button
+                  onClick={() => {
+                    item.action!.onAction()
+                    setItems(prev => prev.filter(t => t.id !== item.id))
+                  }}
+                  className="flex-shrink-0 text-xs font-semibold px-2 py-1 rounded-lg transition-opacity hover:opacity-70"
+                  style={{ color: c.text, background: 'rgba(0,0,0,0.07)', marginLeft: 4 }}
+                >
+                  {item.action.label}
+                </button>
+              )}
             </div>
           )
         })}
