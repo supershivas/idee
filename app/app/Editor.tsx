@@ -15,6 +15,7 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import { Plugin } from '@tiptap/pm/state'
 import { SlashCommands } from './SlashCommands'
+import { PillMark, PILL_COLORS, PillColorId } from './PillMark'
 import { DragHandleExtension } from './DragHandle'
 import { createSubpageExtension, insertSubpageBlock } from './SubpageNode'
 import { createWikiLinkExtension } from './WikiLinkExtension'
@@ -351,6 +352,7 @@ Image.extend({
           if (editor) insertSubpageBlock(editor, pageId)
         },
       }),
+      PillMark,
       ...(!isMobile ? [DragHandleExtension] : []),
     ],
     content: page.content || '',
@@ -521,6 +523,42 @@ Image.extend({
               className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('link') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
               title={editor.isActive('link') ? 'Retirer le lien' : 'Ajouter un lien'}
             >🔗</button>
+            <div className="w-px bg-white/20 self-stretch mx-0.5" />
+            {PILL_COLORS.map(c => {
+              const isActive = editor.isActive('pill', { color: c.id })
+              return (
+                <button
+                  key={c.id}
+                  title={`Pill ${c.id}`}
+                  onClick={() => {
+                    if (isActive) {
+                      editor.chain().focus().unsetMark('pill').run()
+                    } else {
+                      editor.chain().focus().setMark('pill', { color: c.id }).run()
+                    }
+                  }}
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    background: c.bg,
+                    border: isActive ? `2px solid ${c.text}` : `1.5px solid ${c.border}`,
+                    flexShrink: 0,
+                    cursor: 'pointer',
+                    padding: 0,
+                    transition: 'transform 0.1s',
+                    transform: isActive ? 'scale(1.25)' : 'scale(1)',
+                  }}
+                />
+              )
+            })}
+            {editor.isActive('pill') && (
+              <button
+                title="Retirer la pill"
+                onClick={() => editor.chain().focus().unsetMark('pill').run()}
+                className="px-1.5 py-1 text-xs rounded-lg transition-colors text-white/60 hover:bg-white/10"
+              >×</button>
+            )}
           </div>
         </BubbleMenu>
       )}
