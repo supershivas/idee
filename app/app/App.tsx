@@ -35,6 +35,89 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
+function PagePickerModal({ pages, onSelect, onClose, onCloseSplit }: {
+  pages: Page[]
+  onSelect: (p: Page) => void
+  onClose: () => void
+  onCloseSplit: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const filtered = pages.filter(p =>
+    !p.deleted_at &&
+    (!query || (p.title || '').toLowerCase().includes(query.toLowerCase()))
+  )
+
+  return (
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.55)' }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="flex flex-col rounded-2xl overflow-hidden"
+        style={{ width: 420, maxHeight: '70vh', background: 'var(--card-bg)', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', border: '1px solid var(--border)' }}
+      >
+        <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+          <i className="ti ti-search" style={{ color: 'var(--text-muted)', fontSize: '15px' }} />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Rechercher une page…"
+            className="flex-1 bg-transparent outline-none text-sm"
+            style={{ color: 'var(--text-primary)' }}
+          />
+          <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
+        </div>
+        <div className="overflow-y-auto flex-1 py-1">
+          {filtered.length === 0 && (
+            <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>Aucune page trouvée</p>
+          )}
+          {filtered.map(p => (
+            <button
+              key={p.id}
+              onClick={() => onSelect(p)}
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+              style={{ color: 'var(--text-primary)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span className="flex-shrink-0">{p.icon || (p.type === 'journal' ? '📝' : '📄')}</span>
+              <span className="flex-1 truncate">{p.title || 'Sans titre'}</span>
+              {p.type === 'journal' && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Journal</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={onCloseSplit}
+            className="w-full text-sm py-2 rounded-lg"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            <i className="ti ti-layout-columns-off mr-2" />
+            Fermer la vue partagée
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
@@ -59,6 +142,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [splitMode, setSplitMode] = useState(false)
   const [selectedRight, setSelectedRight] = useState<Page | null>(null)
   const [scrolledPastRight, setScrolledPastRight] = useState(false)
+  const [pagePicker, setPagePicker] = useState<'left' | 'right' | null>(null)
   const lastSaveRef = useRef(0)
   const addingPageRef = useRef(false)
   const pointerYRef = useRef(0)
@@ -231,6 +315,16 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     setScrolledPastRight(false)
     if (mainScrollRefRight.current) mainScrollRefRight.current.scrollTop = 0
   }, [selectedRight?.id])
+
+  useEffect(() => {
+    if (splitMode) {
+      setSelectedRight(null)
+      setPagePicker('right')
+    } else {
+      setSelectedRight(null)
+      setPagePicker(null)
+    }
+  }, [splitMode])
 
   // Keyboard shortcuts — bare keys (only when not typing in a field/editor)
   useEffect(() => {
@@ -480,6 +574,21 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const showingTagsDesktop = !isMobile && showTags && !selected
   const showingRecentDesktop = !isMobile && showRecent && !selected
   const showingReviewDesktop = !isMobile && showReview && !selected
+
+  function closeSplit() {
+    setSplitMode(false)
+    setSelectedRight(null)
+    setPagePicker(null)
+  }
+
+  function handlePickerSelect(page: Page) {
+    if (pagePicker === 'right') {
+      setSelectedRight(page)
+    } else if (pagePicker === 'left') {
+      selectPage(page)
+    }
+    setPagePicker(null)
+  }
 
   if (!mounted) {
     return <div style={{ position: 'fixed', inset: 0, background: '#f0f0ec' }} />
@@ -824,6 +933,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}>
         {/* Panneau gauche */}
         <div ref={mainScrollRef} className="flex-1 overflow-y-auto min-w-0 pb-12">
+          {splitMode && (
+            <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-1.5" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Panneau gauche</span>
+              <button onClick={() => setPagePicker('left')} className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <i className="ti ti-x" style={{ fontSize: '12px' }} /> Changer
+              </button>
+            </div>
+          )}
           {selected ? (
             <>
               {scrolledPast && !isMobile && (
@@ -916,6 +1033,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <>
             <div style={{ width: '1px', flexShrink: 0, background: 'var(--border)' }} />
             <div ref={mainScrollRefRight} className="flex-1 overflow-y-auto min-w-0 pb-12">
+              <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-1.5" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Panneau droit</span>
+                <button onClick={() => setPagePicker('right')} className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <i className="ti ti-x" style={{ fontSize: '12px' }} /> Changer
+                </button>
+              </div>
               {selectedRight ? (
                 <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col">
                   <PageHeader
@@ -972,23 +1095,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 <div className="flex flex-1 items-center justify-center h-full min-h-[50vh]">
                   <div className="text-center">
                     <p className="text-3xl mb-3">📄</p>
-                    <p className="text-sm font-medium mb-1" style={{ color: 'var(--empty-title)' }}>Panneau droit vide</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Cliquez sur une page dans la liste ci-dessous</p>
-                    <div className="mt-4 max-h-64 overflow-y-auto text-left">
-                      {activePages.slice(0, 10).map(p => (
-                        <button
-                          key={p.id}
-                          onClick={() => selectPageRight(p)}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left"
-                          style={{ color: 'var(--text-primary)' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                        >
-                          <span>{p.icon || '📄'}</span>
-                          <span className="truncate">{p.title || 'Sans titre'}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <p className="text-sm font-medium mb-2" style={{ color: 'var(--empty-title)' }}>Aucune page sélectionnée</p>
+                    <button
+                      onClick={() => setPagePicker('right')}
+                      className="text-sm px-4 py-2 rounded-xl"
+                      style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}
+                    >
+                      Choisir une page
+                    </button>
                   </div>
                 </div>
               )}
@@ -1018,6 +1132,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         if (!page) return null
         return <ConfirmTrashModal page={page} onConfirm={() => { deletePage(confirmDeleteId); setConfirmDeleteId(null) }} onCancel={() => setConfirmDeleteId(null)} />
       })()}
+      {pagePicker && (
+        <PagePickerModal
+          pages={[...activePages, ...journalEntries]}
+          onSelect={handlePickerSelect}
+          onClose={closeSplit}
+          onCloseSplit={closeSplit}
+        />
+      )}
       <Toaster />
     </div>
   )

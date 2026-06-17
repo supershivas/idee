@@ -6,9 +6,6 @@ export const PILL_COLORS = [
   { id: 'yellow', bg: '#fef9c3', text: '#a16207', border: '#fef08a' },
   { id: 'pink',   bg: '#fce7f3', text: '#be185d', border: '#fbcfe8' },
   { id: 'purple', bg: '#ede9fe', text: '#6d28d9', border: '#ddd6fe' },
-  { id: 'orange', bg: '#ffedd5', text: '#c2410c', border: '#fed7aa' },
-  { id: 'cyan',   bg: '#cffafe', text: '#0e7490', border: '#a5f3fc' },
-  { id: 'gray',   bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' },
 ] as const
 
 export type PillColorId = (typeof PILL_COLORS)[number]['id']
