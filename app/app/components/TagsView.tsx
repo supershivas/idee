@@ -19,25 +19,30 @@ function tagColor(tag: string) {
   return TAG_PALETTE[hash % TAG_PALETTE.length]
 }
 
-export function TagBadge({ tag, onRemove }: { tag: string; onRemove?: () => void }) {
+export function TagBadge({ tag, onRemove, onClick }: { tag: string; onRemove?: () => void; onClick?: () => void }) {
   const c = tagColor(tag)
+  const El = onClick ? 'button' : 'span'
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-      style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
+    <El
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+      style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}`, cursor: onClick ? 'pointer' : 'default' }}
+      {...(onClick ? { onClick, type: 'button' as const } : {})}
+    >
       #{tag}
       {onRemove && (
-        <button onClick={onRemove} className="hover:opacity-60 transition-opacity leading-none ml-0.5">×</button>
+        <button onClick={e => { e.stopPropagation(); onRemove() }} className="hover:opacity-60 transition-opacity leading-none ml-0.5">×</button>
       )}
-    </span>
+    </El>
   )
 }
 
 // ─── TagsInput ────────────────────────────────────────────────────────────────
-export function TagsInput({ tags, onChange, allTags, compact }: {
+export function TagsInput({ tags, onChange, allTags, compact, onTagClick }: {
   tags: string[]
   onChange: (tags: string[]) => void
   allTags?: string[]
   compact?: boolean
+  onTagClick?: (tag: string) => void
 }) {
   const [input, setInput] = useState('')
   const [focused, setFocused] = useState(false)
@@ -70,7 +75,7 @@ export function TagsInput({ tags, onChange, allTags, compact }: {
     <div className={compact ? 'relative' : 'relative px-6 pb-3'}>
       <div className="flex flex-wrap items-center gap-1.5 min-h-[28px]">
         {tags.map(tag => (
-          <TagBadge key={tag} tag={tag} onRemove={() => onChange(tags.filter(t => t !== tag))} />
+          <TagBadge key={tag} tag={tag} onRemove={() => onChange(tags.filter(t => t !== tag))} onClick={onTagClick ? () => onTagClick(tag) : undefined} />
         ))}
         <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -99,9 +104,9 @@ export function TagsInput({ tags, onChange, allTags, compact }: {
 }
 
 // ─── TagsView ─────────────────────────────────────────────────────────────────
-export function TagsView({ pages, onSelect }: { pages: Page[]; onSelect: (p: Page) => void }) {
+export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSelect: (p: Page) => void; initialTag?: string }) {
   const [search, setSearch] = useState('')
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialTag ? [initialTag] : [])
   const searchRef = useRef<HTMLInputElement>(null)
 
   // Count per tag, sorted by frequency desc

@@ -266,13 +266,14 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
   )
 }
 
-export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate }: {
+export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onTagClick }: {
   page: Page; pages: Page[]; userId: string; saving: boolean; isMobile: boolean
   onBack: () => void; onSelectPage: (p: Page) => void; onTitleChange: (v: string) => void
   onIconChange: (emoji: string) => void; onTagsChange: (tags: string[]) => void
   onToggleFavorite: (id: string) => void; onDelete: () => void; onConvertToJournal: () => void
   onCreatedAtChange?: (iso: string) => void; onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void; onSummaryUpdate?: (summary: string | null) => void
+  onTagClick?: (tag: string) => void
 }) {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const isJournal = page.type === 'journal'
@@ -326,7 +327,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
       </div>
 
       <div className="px-6 pt-1">
-        <MetaRow label="Tags"><TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} compact /></MetaRow>
+        <MetaRow label="Tags"><TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} compact onTagClick={onTagClick} /></MetaRow>
       </div>
       <MetaSection page={page} onCreatedAtChange={onCreatedAtChange} onSummaryUpdate={onSummaryUpdate} />
     </div>
