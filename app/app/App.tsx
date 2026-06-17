@@ -56,6 +56,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
   const [overPosition, setOverPosition] = useState<'before' | 'after' | 'inside' | null>(null)
+  const [splitMode, setSplitMode] = useState(false)
+  const [selectedRight, setSelectedRight] = useState<Page | null>(null)
+  const [scrolledPastRight, setScrolledPastRight] = useState(false)
   const lastSaveRef = useRef(0)
   const addingPageRef = useRef(false)
   const pointerYRef = useRef(0)
@@ -63,6 +66,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const hoverOverIdRef = useRef<string | null>(null)
   const searchBarRef = useRef<{ focus: () => void }>(null)
   const mainScrollRef = useRef<HTMLDivElement>(null)
+  const mainScrollRefRight = useRef<HTMLDivElement>(null)
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
@@ -160,6 +164,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       || 'sans-titre'
   }
 
+  const selectPageRight = useCallback((page: Page | null) => {
+    setSelectedRight(page)
+    setScrolledPastRight(false)
+    if (mainScrollRefRight.current) mainScrollRefRight.current.scrollTop = 0
+  }, [])
+
   const selectPage = useCallback((page: Page | null) => {
     setShowSettings(false)
     setShowTemplateModal(false)
@@ -217,6 +227,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0
   }, [selected?.id])
 
+  useEffect(() => {
+    setScrolledPastRight(false)
+    if (mainScrollRefRight.current) mainScrollRefRight.current.scrollTop = 0
+  }, [selectedRight?.id])
+
   // Keyboard shortcuts — bare keys (only when not typing in a field/editor)
   useEffect(() => {
     function isTyping() {
@@ -251,6 +266,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (e.key === 'j') { e.preventDefault(); addJournalEntry() }
       if (e.key === 'f') { e.preventDefault(); setFocusMode(v => !v) }
       if (e.key === 'q') { e.preventDefault(); setShowQuickCapture(true) }
+      if (e.key === 's') { e.preventDefault(); setSplitMode(v => !v) }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -289,12 +305,20 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     await createClient().from('pages').update({ type: 'journal', parent_id: null }).eq('id', id)
   }
 
-  async function updateTitle(value: string) {
-    if (!selected) return
-    const updated = { ...selected, title: value, updated_at: new Date().toISOString() }
-    setSelected(updated); setPages(prev => prev.map(p => p.id === updated.id ? updated : p)); setSaving(true)
+  function syncSelectedPage(id: string, patch: Partial<Page>) {
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, ...patch } : null)
+    if (selectedRight?.id === id) setSelectedRight(prev => prev ? { ...prev, ...patch } : null)
+  }
+
+  async function updateTitle(value: string, pageId: string) {
+    const page = pages.find(p => p.id === pageId)
+    if (!page) return
+    const updated_at = new Date().toISOString()
+    syncSelectedPage(pageId, { title: value, updated_at })
+    setPages(prev => prev.map(p => p.id === pageId ? { ...p, title: value, updated_at } : p))
+    setSaving(true)
     try {
-      const { error } = await createClient().from('pages').update({ title: value, updated_at: updated.updated_at }).eq('id', selected.id)
+      const { error } = await createClient().from('pages').update({ title: value, updated_at }).eq('id', pageId)
       if (error) throw error
     } catch {
       toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
@@ -305,41 +329,44 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
 
   async function updateIcon(id: string, icon: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, icon } : p))
-    if (selected?.id === id) setSelected(prev => prev ? { ...prev, icon } : null)
+    syncSelectedPage(id, { icon })
     await createClient().from('pages').update({ icon }).eq('id', id)
   }
 
   async function updateTags(id: string, tags: string[]) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, tags } : p))
-    if (selected?.id === id) setSelected(prev => prev ? { ...prev, tags } : null)
+    syncSelectedPage(id, { tags })
     await createClient().from('pages').update({ tags }).eq('id', id)
   }
 
   async function updateCreatedAt(id: string, iso: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, created_at: iso } : p))
-    if (selected?.id === id) setSelected(prev => prev ? { ...prev, created_at: iso } : null)
+    syncSelectedPage(id, { created_at: iso })
     await createClient().from('pages').update({ created_at: iso }).eq('id', id)
   }
 
   async function renamePage(id: string, title: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, title } : p))
-    if (selected?.id === id) setSelected(prev => prev ? { ...prev, title } : null)
+    syncSelectedPage(id, { title })
     await createClient().from('pages').update({ title }).eq('id', id)
   }
 
-  async function updateContent(content: string) {
-    if (!selected) return
-    const updated = { ...selected, content, updated_at: new Date().toISOString() }
-    setSelected(prev => prev ? { ...prev, content, updated_at: updated.updated_at } : null)
-    setPages(prev => prev.map(p => p.id === updated.id ? updated : p))
+  async function updateContent(content: string, pageId?: string) {
+    const targetId = pageId ?? selected?.id
+    if (!targetId) return
+    const page = pages.find(p => p.id === targetId)
+    if (!page) return
+    const updated_at = new Date().toISOString()
+    syncSelectedPage(targetId, { content, updated_at })
+    setPages(prev => prev.map(p => p.id === targetId ? { ...p, content, updated_at } : p))
     setSaving(true)
     try {
-      const { error } = await createClient().from('pages').update({ content, updated_at: updated.updated_at }).eq('id', selected.id)
+      const { error } = await createClient().from('pages').update({ content, updated_at }).eq('id', targetId)
       if (error) throw error
       const now = Date.now()
       if (now - lastSaveRef.current > 2 * 60 * 1000) {
         lastSaveRef.current = now
-        await createClient().from('page_history').insert({ page_id: selected.id, user_id: userId, title: selected.title, content })
+        await createClient().from('page_history').insert({ page_id: targetId, user_id: userId, title: page.title, content })
       }
     } catch {
       toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
@@ -360,6 +387,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         setSelected(activePages.find(p => p.id !== id && p.type !== 'journal') || null)
       }
     }
+    if (selectedRight?.id === id) setSelectedRight(null)
     toast('Déplacé dans la corbeille.', 'info', { label: 'Annuler', onAction: () => restorePage(id) })
     await createClient().from('pages').update({ deleted_at: deletedAt }).eq('id', id)
     const children = pages.filter(p => p.parent_id === id)
@@ -447,6 +475,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
 
   const activeDragPage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
+  const subpagesRight = selectedRight ? activePages.filter(p => p.parent_id === selectedRight.id) : []
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
   const showingRecentDesktop = !isMobile && showRecent && !selected
@@ -686,6 +715,18 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>F</kbd>
               </button>
               <button
+                onClick={() => setSplitMode(v => !v)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ background: splitMode ? 'var(--sidebar-selected)' : 'transparent', color: splitMode ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)' }}
+                onMouseEnter={e => { if (!splitMode) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = splitMode ? 'var(--sidebar-selected)' : 'transparent' }}
+                title="Vue partagée — touche S"
+              >
+                <i className="ti ti-layout-columns" style={{ fontSize: '14px', flexShrink: 0 }} />
+                <span className="flex-1 text-left">Vue partagée</span>
+                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>S</kbd>
+              </button>
+              <button
                 onClick={() => setShowQuickCapture(true)}
                 className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
                 style={{ color: 'var(--sidebar-muted)' }}
@@ -780,92 +821,179 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {/* ── Contenu principal ── */}
-      <div ref={mainScrollRef} className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 overflow-y-auto min-w-0 pb-12`}>
-        {selected ? (
-          <>
-            {/* Sticky mini header — apparaît quand le titre sort du viewport */}
-            {scrolledPast && !isMobile && (
-              <>
-                <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-                <div className="sticky top-0 z-20 flex items-center gap-2 px-5"
-                  style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
-                  <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
-                  <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
-                    {selected.title || 'Sans titre'}
-                  </span>
-                </div>
-              </>
-            )}
-            <div
-              className={`page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col${selected.id === justCreatedId ? ' page-new-enter' : ''}`}
-              onAnimationEnd={() => setJustCreatedId(null)}
-            >
-              <MobileTopBar
-                onBack={() => {
-                  if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
-                  else setSelected(null)
-                }}
-                saving={saving}
-              />
-              <PageHeader
-                page={selected}
-                pages={[...activePages, ...journalEntries]}
-                userId={userId}
-                saving={saving}
-                isMobile={isMobile}
-                onBack={() => { setSelected(null); setShowJournal(true) }}
-                onSelectPage={selectPage}
-                onTitleChange={updateTitle}
-                onIconChange={emoji => updateIcon(selected.id, emoji)}
-                onTagsChange={tags => updateTags(selected.id, tags)}
-                onToggleFavorite={toggleFavorite}
-                onDelete={() => setConfirmDeleteId(selected.id)}
-                onConvertToJournal={() => convertToJournal(selected.id)}
-                onCreatedAtChange={iso => updateCreatedAt(selected.id, iso)}
-                onRestore={(title, content) => {
-                  setSelected(prev => prev ? { ...prev, title, content } : null)
-                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
-                }}
-                onShareUpdate={updates => {
-                  setSelected(prev => prev ? { ...prev, ...updates } : null)
-                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
-                }}
-                onSummaryUpdate={summary => {
-                  setSelected(prev => prev ? { ...prev, summary: summary ?? undefined } : null)
-                  setPages(prev => prev.map(p => p.id === selected.id ? { ...p, summary: summary ?? undefined } : p))
-                }}
-              />
-              {selected.type !== 'journal' && (
-                <SubpagesList
-                  page={selected}
-                  subpages={subpages}
-                  onSelect={selectPage}
-                  onReorder={(a, o, p) => reorderSiblings(a, o, p)}
-                  isMobile={isMobile}
-                  onAddSubpage={() => addPage(selected.id)}
-                />
+      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}>
+        {/* Panneau gauche */}
+        <div ref={mainScrollRef} className="flex-1 overflow-y-auto min-w-0 pb-12">
+          {selected ? (
+            <>
+              {scrolledPast && !isMobile && (
+                <>
+                  <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+                  <div className="sticky top-0 z-20 flex items-center gap-2 px-5"
+                    style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
+                    <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
+                    <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                      {selected.title || 'Sans titre'}
+                    </span>
+                  </div>
+                </>
               )}
-              <Editor
-                key={selected.id}
-                page={selected}
-                pages={[...activePages, ...journalEntries]}
-                onUpdate={updateContent}
-                onAddSubpage={() => addPage(selected.id)}
-                onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
-                userId={userId}
-                isMobile={isMobile}
-                focusMode={focusMode}
-              />
+              <div
+                className={`page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col${selected.id === justCreatedId ? ' page-new-enter' : ''}`}
+                onAnimationEnd={() => setJustCreatedId(null)}
+              >
+                <MobileTopBar
+                  onBack={() => {
+                    if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
+                    else setSelected(null)
+                  }}
+                  saving={saving}
+                />
+                <PageHeader
+                  page={selected}
+                  pages={[...activePages, ...journalEntries]}
+                  userId={userId}
+                  saving={saving}
+                  isMobile={isMobile}
+                  onBack={() => { setSelected(null); setShowJournal(true) }}
+                  onSelectPage={selectPage}
+                  onTitleChange={v => updateTitle(v, selected.id)}
+                  onIconChange={emoji => updateIcon(selected.id, emoji)}
+                  onTagsChange={tags => updateTags(selected.id, tags)}
+                  onToggleFavorite={toggleFavorite}
+                  onDelete={() => setConfirmDeleteId(selected.id)}
+                  onConvertToJournal={() => convertToJournal(selected.id)}
+                  onCreatedAtChange={iso => updateCreatedAt(selected.id, iso)}
+                  onRestore={(title, content) => {
+                    syncSelectedPage(selected.id, { title, content })
+                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, title, content } : p))
+                  }}
+                  onShareUpdate={updates => {
+                    syncSelectedPage(selected.id, updates)
+                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, ...updates } : p))
+                  }}
+                  onSummaryUpdate={summary => {
+                    syncSelectedPage(selected.id, { summary: summary ?? undefined })
+                    setPages(prev => prev.map(p => p.id === selected.id ? { ...p, summary: summary ?? undefined } : p))
+                  }}
+                />
+                {selected.type !== 'journal' && (
+                  <SubpagesList
+                    page={selected}
+                    subpages={subpages}
+                    onSelect={selectPage}
+                    onReorder={(a, o, p) => reorderSiblings(a, o, p)}
+                    isMobile={isMobile}
+                    onAddSubpage={() => addPage(selected.id)}
+                  />
+                )}
+                <Editor
+                  key={selected.id}
+                  page={selected}
+                  pages={[...activePages, ...journalEntries]}
+                  onUpdate={content => updateContent(content, selected.id)}
+                  onAddSubpage={() => addPage(selected.id)}
+                  onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
+                  userId={userId}
+                  isMobile={isMobile}
+                  focusMode={focusMode}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="hidden md:flex flex-1 items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-4xl mb-3">💡</p>
+                <p className="text-lg font-medium mb-1" style={{ color: 'var(--empty-title)' }}>Aucune page sélectionnée</p>
+                <button onClick={() => addPage(null)} className="text-sm text-blue-500 hover:text-blue-400 underline">Créer une page</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Séparateur + panneau droit (vue partagée) */}
+        {splitMode && !isMobile && (
+          <>
+            <div style={{ width: '1px', flexShrink: 0, background: 'var(--border)' }} />
+            <div ref={mainScrollRefRight} className="flex-1 overflow-y-auto min-w-0 pb-12">
+              {selectedRight ? (
+                <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col">
+                  <PageHeader
+                    page={selectedRight}
+                    pages={[...activePages, ...journalEntries]}
+                    userId={userId}
+                    saving={saving}
+                    isMobile={false}
+                    onBack={() => setSelectedRight(null)}
+                    onSelectPage={selectPageRight}
+                    onTitleChange={v => updateTitle(v, selectedRight.id)}
+                    onIconChange={emoji => updateIcon(selectedRight.id, emoji)}
+                    onTagsChange={tags => updateTags(selectedRight.id, tags)}
+                    onToggleFavorite={toggleFavorite}
+                    onDelete={() => setConfirmDeleteId(selectedRight.id)}
+                    onConvertToJournal={() => convertToJournal(selectedRight.id)}
+                    onCreatedAtChange={iso => updateCreatedAt(selectedRight.id, iso)}
+                    onRestore={(title, content) => {
+                      syncSelectedPage(selectedRight.id, { title, content })
+                      setPages(prev => prev.map(p => p.id === selectedRight.id ? { ...p, title, content } : p))
+                    }}
+                    onShareUpdate={updates => {
+                      syncSelectedPage(selectedRight.id, updates)
+                      setPages(prev => prev.map(p => p.id === selectedRight.id ? { ...p, ...updates } : p))
+                    }}
+                    onSummaryUpdate={summary => {
+                      syncSelectedPage(selectedRight.id, { summary: summary ?? undefined })
+                      setPages(prev => prev.map(p => p.id === selectedRight.id ? { ...p, summary: summary ?? undefined } : p))
+                    }}
+                  />
+                  {selectedRight.type !== 'journal' && (
+                    <SubpagesList
+                      page={selectedRight}
+                      subpages={subpagesRight}
+                      onSelect={selectPageRight}
+                      onReorder={(a, o, p) => reorderSiblings(a, o, p)}
+                      isMobile={false}
+                      onAddSubpage={() => addPage(selectedRight.id)}
+                    />
+                  )}
+                  <Editor
+                    key={`right-${selectedRight.id}`}
+                    page={selectedRight}
+                    pages={[...activePages, ...journalEntries]}
+                    onUpdate={content => updateContent(content, selectedRight.id)}
+                    onAddSubpage={() => addPage(selectedRight.id)}
+                    onNavigate={p => selectPageRight(p)}
+                    userId={userId}
+                    isMobile={false}
+                    focusMode={false}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center h-full min-h-[50vh]">
+                  <div className="text-center">
+                    <p className="text-3xl mb-3">📄</p>
+                    <p className="text-sm font-medium mb-1" style={{ color: 'var(--empty-title)' }}>Panneau droit vide</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Cliquez sur une page dans la liste ci-dessous</p>
+                    <div className="mt-4 max-h-64 overflow-y-auto text-left">
+                      {activePages.slice(0, 10).map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => selectPageRight(p)}
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left"
+                          style={{ color: 'var(--text-primary)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span>{p.icon || '📄'}</span>
+                          <span className="truncate">{p.title || 'Sans titre'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </>
-        ) : (
-          <div className="hidden md:flex flex-1 items-center justify-center h-full">
-            <div className="text-center">
-              <p className="text-4xl mb-3">💡</p>
-              <p className="text-lg font-medium mb-1" style={{ color: 'var(--empty-title)' }}>Aucune page sélectionnée</p>
-              <button onClick={() => addPage(null)} className="text-sm text-blue-500 hover:text-blue-400 underline">Créer une page</button>
-            </div>
-          </div>
         )}
       </div>
 
