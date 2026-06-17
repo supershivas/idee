@@ -491,7 +491,7 @@ Image.extend({
             const { empty } = selection
             return !empty && !editor.isActive('table')
           }}
-          tippyOptions={{ placement: 'top', offset: [0, 8], animation: 'fade' }}
+          tippyOptions={{ placement: 'top', offset: [0, 8], animation: 'fade', maxWidth: 'none' }}
         >
           <div className="flex items-center gap-0.5 rounded-xl shadow-xl px-1.5 py-1.5" style={{ background: '#1a1a1a' }}>
             <button onClick={() => editor.chain().focus().toggleBold().run()}
