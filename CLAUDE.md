@@ -3,15 +3,14 @@
 App Next.js / React / TypeScript / Tailwind (`app/app/App.tsx` + composants
 dans `app/app/components/`), styles globaux dans `app/globals.css`.
 
-## Parité visuelle avec La-fabrique (IMPORTANT)
+## Parité visuelle avec Source (IMPORTANT)
 
-idee et `supershivas/La-fabrique` doivent avoir **exactement la même sidebar**
+idee et `supershivas/source` doivent avoir **exactement la même sidebar**
 (espacements, dividers, tailles d'icônes, hauteurs de bouton, etc.) — seul le
 contenu/la fonction change. Si tu modifies un style de sidebar ici
 (`App.tsx`, `SearchBar.tsx`, etc.), vérifie toujours son équivalent dans
-La-fabrique (`index.html`, `style.css`, `app.js`) et applique le même
-changement des deux côtés dans la même session/PR. Ne jamais laisser les deux
-diverger.
+source et applique le même changement des deux côtés dans la même session/PR.
+Ne jamais laisser les deux diverger.
 
 La sidebar est "toujours sombre" indépendamment du thème clair/sombre de
 l'app — les variables `--sidebar-*` dans `globals.css` doivent rester
@@ -25,7 +24,7 @@ search/kbd/header/divider) doit être modifiée **là-bas en premier**, puis
 synchronisée ici via `./scripts/sync-tokens.sh`, puis reportée dans
 `app/globals.css` / les classNames-styles inline qui la consomment. Ne jamais
 modifier une valeur partagée uniquement ici sans la reporter dans
-design-system et dans La-fabrique.
+design-system et dans source.
 
 ## Workflow Git
 
