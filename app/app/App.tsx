@@ -43,6 +43,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showTags, setShowTags] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
+  const [showMore, setShowMore] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showQuickCapture, setShowQuickCapture] = useState(false)
@@ -266,15 +268,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       const { data } = await createClient().from('pages')
         .insert({ title: template?.title || 'Sans titre', content: template?.content || '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
         .select().single()
-      if (data) { setPages(prev => [...prev, data]); selectPage(data); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
+      if (data) { setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
     } finally {
       addingPageRef.current = false
     }
   }
 
   async function addJournalEntry() {
-    const now = new Date()
-    const title = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    const mots = ['Réflexion', 'Fragment', 'Éclat', 'Lueur', 'Souffle', 'Trace', 'Murmure', 'Impression', 'Intuition', 'Instant', 'Étincelle', 'Écho', 'Envol', 'Vibration', 'Pensée', 'Grain', 'Sillon', 'Élancement']
+    const title = mots[Math.floor(Math.random() * mots.length)]
     const { data } = await createClient().from('pages')
       .insert({ title, content: '', user_id: userId, parent_id: null, position: pages.length, icon: '📝', type: 'journal' })
       .select().single()
@@ -358,6 +360,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         setSelected(activePages.find(p => p.id !== id && p.type !== 'journal') || null)
       }
     }
+    toast('Déplacé dans la corbeille.', 'info', { label: 'Annuler', onAction: () => restorePage(id) })
     await createClient().from('pages').update({ deleted_at: deletedAt }).eq('id', id)
     const children = pages.filter(p => p.parent_id === id)
     if (children.length) await createClient().from('pages').update({ deleted_at: deletedAt }).in('id', children.map(c => c.id))
@@ -366,11 +369,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   async function restorePage(id: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } : p))
     await createClient().from('pages').update({ deleted_at: null }).eq('id', id)
+    toast('Note restaurée.', 'success')
   }
 
   async function deleteForever(id: string) {
     setPages(prev => prev.filter(p => p.id !== id))
     await createClient().from('pages').delete().eq('id', id)
+    toast('Supprimée définitivement.', 'info')
   }
 
   async function logout() {
@@ -597,30 +602,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           </DndContext>
         </div>
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
-          <button
-            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowRecent(true); setShowReview(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{
-              background: showRecent ? 'var(--sidebar-selected)' : 'transparent',
-              color: showRecent ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
-            }}
-            onMouseEnter={e => { if (!showRecent) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showRecent ? 'var(--sidebar-selected)' : 'transparent' }}
-          >
-            <i className="ti ti-clock-hour-9" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Vue récente</span>
-          </button>
-          <button
-            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{
-              background: showReview ? 'var(--sidebar-selected)' : 'transparent',
-              color: showReview ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
-            }}
-            onMouseEnter={e => { if (!showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = showReview ? 'var(--sidebar-selected)' : 'transparent' }}
-          >
-            <i className="ti ti-refresh" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Réviser</span>
-          </button>
+          {/* Tags — toujours visible */}
           <button
             onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
@@ -639,15 +621,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               </span>
             )}
           </button>
-          <button
-            onClick={() => setShowHistory(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{ color: 'var(--sidebar-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <i className="ti ti-clock-hour-4" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Historique</span>
-          </button>
+          {/* Corbeille — toujours visible */}
           <button
             onClick={() => setShowTrash(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
@@ -658,35 +632,73 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <i className="ti ti-trash" style={{ fontSize: '15px', flexShrink: 0 }} /><span className="flex-1 text-left">Corbeille</span>
             {trashedPages.length > 0 && <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>{trashedPages.length}</span>}
           </button>
-          <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '4px 0' }} />
+          {/* Plus — replie le reste */}
           <button
-            onClick={() => setFocusMode(v => !v)}
+            onClick={() => setShowMore(v => !v)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{
-              background: focusMode ? 'var(--sidebar-selected)' : 'transparent',
-              color: focusMode ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
-            }}
-            onMouseEnter={e => { if (!focusMode) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--sidebar-selected)' : 'transparent' }}
-            title="Mode focus — touche F"
-          >
-            <i className="ti ti-focus-2" style={{ fontSize: '15px', flexShrink: 0 }} />
-            <span className="flex-1 text-left">Mode focus</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>F</kbd>
-          </button>
-          <button
-            onClick={() => setShowQuickCapture(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-            style={{ color: 'var(--sidebar-muted)' }}
+            style={{ color: (showMore || showRecent || showReview || focusMode) ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            title="Capture rapide — touche Q"
           >
-            <i className="ti ti-bolt" style={{ fontSize: '15px', flexShrink: 0 }} />
-            <span className="flex-1 text-left">Capture rapide</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>Q</kbd>
+            <i className="ti ti-dots" style={{ fontSize: '15px', flexShrink: 0 }} />
+            <span className="flex-1 text-left">Plus</span>
+            <i className={`ti ${(showMore || showRecent || showReview || focusMode) ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: '12px', opacity: 0.5 }} />
           </button>
-
+          {(showMore || showRecent || showReview || focusMode) && (
+            <div className="space-y-0.5 pl-2">
+              <button
+                onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowRecent(true); setShowReview(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ background: showRecent ? 'var(--sidebar-selected)' : 'transparent', color: showRecent ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)' }}
+                onMouseEnter={e => { if (!showRecent) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = showRecent ? 'var(--sidebar-selected)' : 'transparent' }}
+              >
+                <i className="ti ti-clock-hour-9" style={{ fontSize: '14px', flexShrink: 0 }} /><span className="flex-1 text-left">Vue récente</span>
+              </button>
+              <button
+                onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowReview(true); setShowRecent(false); setShowJournal(false); setShowTags(false); setSelected(null) }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ background: showReview ? 'var(--sidebar-selected)' : 'transparent', color: showReview ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)' }}
+                onMouseEnter={e => { if (!showReview) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = showReview ? 'var(--sidebar-selected)' : 'transparent' }}
+              >
+                <i className="ti ti-refresh" style={{ fontSize: '14px', flexShrink: 0 }} /><span className="flex-1 text-left">Réviser</span>
+              </button>
+              <button
+                onClick={() => setShowHistory(true)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ color: 'var(--sidebar-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <i className="ti ti-clock-hour-4" style={{ fontSize: '14px', flexShrink: 0 }} /><span className="flex-1 text-left">Historique</span>
+              </button>
+              <button
+                onClick={() => setFocusMode(v => !v)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ background: focusMode ? 'var(--sidebar-selected)' : 'transparent', color: focusMode ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)' }}
+                onMouseEnter={e => { if (!focusMode) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = focusMode ? 'var(--sidebar-selected)' : 'transparent' }}
+                title="Mode focus — touche F"
+              >
+                <i className="ti ti-focus-2" style={{ fontSize: '14px', flexShrink: 0 }} />
+                <span className="flex-1 text-left">Mode focus</span>
+                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>F</kbd>
+              </button>
+              <button
+                onClick={() => setShowQuickCapture(true)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ color: 'var(--sidebar-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                title="Capture rapide — touche Q"
+              >
+                <i className="ti ti-bolt" style={{ fontSize: '14px', flexShrink: 0 }} />
+                <span className="flex-1 text-left">Capture rapide</span>
+                <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-muted)', border: '1px solid var(--sidebar-border)' }}>Q</kbd>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -784,7 +796,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 </div>
               </>
             )}
-            <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col">
+            <div
+              className={`page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col${selected.id === justCreatedId ? ' page-new-enter' : ''}`}
+              onAnimationEnd={() => setJustCreatedId(null)}
+            >
               <MobileTopBar
                 onBack={() => {
                   if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }

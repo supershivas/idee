@@ -371,6 +371,39 @@ html, body {
 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
 .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 
+/* ─── Animation création de note ─────────────────────────────────────────────*/
+@keyframes page-new-enter {
+  0%   { opacity: 0; transform: translateY(22px) scale(0.972); filter: blur(4px); }
+  55%  { filter: blur(0); }
+  72%  { transform: translateY(-4px) scale(1.005); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes title-invite {
+  0%   { box-shadow: none; }
+  35%  { box-shadow: 0 0 0 4px var(--accent-muted); border-radius: 8px; }
+  100% { box-shadow: none; }
+}
+
+@keyframes placeholder-appear {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.page-new-enter {
+  animation: page-new-enter 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Halo sur le titre après l'entrée pour inviter à taper */
+.page-new-enter .page-title {
+  animation: title-invite 800ms 340ms ease-in-out both;
+}
+
+/* Placeholder de l'éditeur apparaît avec un léger décalage */
+.page-new-enter .tiptap p.is-editor-empty:first-child::before {
+  animation: placeholder-appear 400ms 460ms ease-out both;
+}
+
 /* ─── Drag & drop ────────────────────────────────────────────────────────────*/
 @keyframes drop-line-in {
   from { opacity: 0; transform: scaleX(0.6); }
