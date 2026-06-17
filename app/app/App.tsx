@@ -179,6 +179,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showTrash, setShowTrash] = useState(false)
   const [showJournal, setShowJournal] = useState(false)
   const [showTags, setShowTags] = useState(false)
+  const [tagsInitialTag, setTagsInitialTag] = useState<string | undefined>(undefined)
   const [showSettings, setShowSettings] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
@@ -801,7 +802,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         <div className="flex-shrink-0 px-2 py-2 space-y-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
           {/* Tags — toujours visible */}
           <button
-            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
+            onClick={() => { setShowSettings(false); setShowTemplateModal(false); setShowQuickCapture(false); setShowTags(true); setTagsInitialTag(undefined); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
             style={{
               background: showTags ? 'var(--sidebar-selected)' : 'transparent',
@@ -936,7 +937,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {/* ── Desktop : vue tags ── */}
       {showingTagsDesktop && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} />
+          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} initialTag={tagsInitialTag} />
         </div>
       )}
 
@@ -1042,6 +1043,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     syncSelectedPage(selected.id, { summary: summary ?? undefined })
                     setPages(prev => prev.map(p => p.id === selected.id ? { ...p, summary: summary ?? undefined } : p))
                   }}
+                  onTagClick={tag => { setTagsInitialTag(tag); setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
                 />
                 {selected.type !== 'journal' && (
                   <SubpagesList
