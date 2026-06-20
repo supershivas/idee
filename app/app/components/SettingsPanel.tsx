@@ -117,6 +117,30 @@ export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail }: {
               </div>
             </div>
 
+            {/* Applications */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Applications</p>
+              <div className="flex gap-2">
+                {[
+                  { name: 'Source', url: 'https://source-sigma-kohl.vercel.app/app', favicon: 'https://source-sigma-kohl.vercel.app/favicon.ico' },
+                  { name: 'AutoCompare', url: 'https://supershivas.github.io/projetV/', favicon: 'https://supershivas.github.io/projetV/favicon.ico' },
+                  { name: 'Portfolio', url: 'https://stockportfolio-five.vercel.app/', favicon: 'https://stockportfolio-five.vercel.app/favicon.ico' },
+                ].map(app => (
+                  <a
+                    key={app.name}
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex flex-col items-center gap-1.5 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title={app.name}
+                  >
+                    <img src={app.favicon} alt="" width={20} height={20} className="rounded-sm" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    <span className="text-[10px] text-gray-400">{app.name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
             {/* Déconnexion */}
             <button
               onClick={onLogout}
