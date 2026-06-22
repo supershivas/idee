@@ -77,7 +77,7 @@ function highlightText(text: string, contentEl: HTMLElement | null) {
         range.setEnd(node, idx + text.length)
         const span = document.createElement('span')
         span.className = 'comment-highlight'
-        span.style.cssText = 'background:#fef08a;border-radius:2px;padding:0 1px;'
+        span.style.cssText = 'background:rgba(192,57,43,0.15);border-radius:2px;padding:0 1px;'
         range.surroundContents(span)
         span.scrollIntoView({ behavior: 'smooth', block: 'center' })
         setTimeout(() => {
@@ -431,7 +431,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
             </div>
             {selectedText && (
               <div className="text-xs rounded-lg px-3 py-2 border-l-2 italic"
-                style={{ background: '#fefce8', borderColor: '#eab308', color: '#854d0e' }}>
+                style={{ background: 'rgba(192,57,43,0.08)', borderColor: '#C0392B', color: '#9B2D22' }}>
                 « {selectedText} »
               </div>
             )}
