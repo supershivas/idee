@@ -335,6 +335,8 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     if (!contentRef.current?.contains(sel.anchorNode)) { setBubble(null); return }
     const text = sel.toString().trim()
     const rect = sel.getRangeAt(0).getBoundingClientRect()
+    highlightText(text, contentRef.current)
+    sel.removeAllRanges()
     setBubble({ x: rect.left + rect.width / 2, y: rect.top - 8, text })
   }, [])
 
@@ -407,7 +409,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
             e.preventDefault()
             const text = bubble.text
             setBubble(null)
-            highlightText(text, contentRef.current)
             openForm(text)
           }}
           style={{ position: 'fixed', left: bubble.x, top: bubble.y, transform: 'translate(-50%, -100%)', zIndex: 50, background: '#1a1a1a', borderRadius: '9999px', padding: '5px 12px', fontSize: '12px', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
