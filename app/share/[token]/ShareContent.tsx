@@ -301,17 +301,13 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
   const [showForm, setShowForm] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null)
-  const [pseudo, setPseudo] = useState('')
+  const [pseudo, setPseudo] = useState(() => typeof window !== 'undefined' ? localStorage.getItem(PSEUDO_KEY) || '' : '')
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [showResolved, setShowResolved] = useState(false)
   const [lastSubmit, setLastSubmit] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setPseudo(localStorage.getItem(PSEUDO_KEY) || '')
-  }, [])
 
   // Realtime subscription
   useEffect(() => {
