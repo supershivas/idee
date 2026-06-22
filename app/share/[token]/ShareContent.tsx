@@ -376,8 +376,9 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
           author_token: authorToken,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Erreur'); return }
+      const text = await res.text()
+      const data = text ? JSON.parse(text) : {}
+      if (!res.ok) { setError(data.error || `Erreur ${res.status}`); return }
       localStorage.setItem(PSEUDO_KEY, pseudo.trim())
       setComments(prev => [...prev, data])
       setShowForm(false)
