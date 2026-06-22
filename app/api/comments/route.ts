@@ -7,8 +7,9 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('page_comments')
-    .select('*')
+    .select('*, reactions:page_comment_reactions(emoji, author_token)')
     .eq('page_id', pageId)
+    .order('pinned', { ascending: false })
     .order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
@@ -16,18 +17,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { page_id, author_name, content, selected_text } = body
+  const { page_id, author_name, content, selected_text, parent_id, author_token } = body
   if (!page_id || !author_name?.trim() || !content?.trim()) {
     return NextResponse.json({ error: 'Champs manquants' }, { status: 400 })
   }
   const supabase = await createClient()
   const { data: page } = await supabase
     .from('pages')
-    .select('id')
+    .select('id, comments_enabled')
     .eq('id', page_id)
     .eq('is_shared', true)
     .single()
   if (!page) return NextResponse.json({ error: 'Page introuvable ou non partagée' }, { status: 404 })
+  if (page.comments_enabled === false) return NextResponse.json({ error: 'Commentaires désactivés' }, { status: 403 })
+
   const { data, error } = await supabase
     .from('page_comments')
     .insert({
@@ -35,8 +38,10 @@ export async function POST(req: NextRequest) {
       author_name: author_name.trim().slice(0, 50),
       content: content.trim().slice(0, 2000),
       selected_text: selected_text?.trim().slice(0, 500) || null,
+      parent_id: parent_id || null,
+      author_token: author_token || null,
     })
-    .select()
+    .select('*, reactions:page_comment_reactions(emoji, author_token)')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)

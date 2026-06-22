@@ -27,9 +27,17 @@ export default function ShareButton({ page, onUpdate }: {
   const [showPanel, setShowPanel] = useState(false)
 
   const isShared = page.is_shared
+  const commentsEnabled = page.comments_enabled !== false
   const shareUrl = page.share_token && typeof window !== 'undefined'
     ? `${window.location.origin}/share/${page.share_token}`
     : null
+
+  async function toggleComments() {
+    setLoading(true)
+    await createClient().from('pages').update({ comments_enabled: !commentsEnabled }).eq('id', page.id)
+    onUpdate({ comments_enabled: !commentsEnabled } as any)
+    setLoading(false)
+  }
 
   async function toggleShare() {
     setLoading(true)
@@ -103,6 +111,15 @@ export default function ShareButton({ page, onUpdate }: {
                     className="px-2 py-1.5 text-xs rounded-lg flex-shrink-0 transition-colors"
                     style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
                     {copied ? '✓' : 'Copier'}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Commentaires</span>
+                  <button onClick={toggleComments} disabled={loading}
+                    className="relative inline-flex w-9 h-5 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
+                    style={{ background: commentsEnabled ? 'var(--btn-primary-bg)' : 'var(--selected-bg)' }}>
+                    <span className="inline-block w-4 h-4 mt-0.5 rounded-full shadow transition-transform"
+                      style={{ background: 'white', transform: commentsEnabled ? 'translateX(16px)' : 'translateX(2px)' }} />
                   </button>
                 </div>
                 <a href={shareUrl} target="_blank" rel="noopener noreferrer"

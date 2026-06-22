@@ -79,7 +79,8 @@ export default async function SharePage({ params }: { params: { token: string } 
         pageIcon={page.icon || '📄'}
         pageTitle={page.title || 'Sans titre'}
         safeContent={safeContent}
-        initialComments={comments || []}
+        initialComments={(comments || []) as any}
+        commentsEnabled={page.comments_enabled !== false}
         subpagesBlock={subpagesBlock}
       />
     </main>
