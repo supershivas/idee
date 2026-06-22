@@ -60,11 +60,33 @@ function groupReactions(reactions: Reaction[]): { emoji: string; count: number; 
   return Object.entries(map).map(([emoji, v]) => ({ emoji, ...v }))
 }
 
-function highlightText(text: string, contentEl: HTMLElement | null) {
+function removeHighlights() {
   document.querySelectorAll('.comment-highlight').forEach(el => {
     const parent = el.parentNode
-    if (parent) { parent.replaceChild(document.createTextNode(el.textContent || ''), el) }
+    if (!parent) return
+    while (el.firstChild) parent.insertBefore(el.firstChild, el)
+    parent.removeChild(el)
   })
+}
+
+function highlightRange(range: Range) {
+  removeHighlights()
+  const span = document.createElement('span')
+  span.className = 'comment-highlight'
+  span.style.cssText = 'background:rgba(192,57,43,0.18);border-radius:2px;padding:0 1px;'
+  try {
+    // Works when selection stays within a single element
+    range.surroundContents(span)
+  } catch {
+    // Cross-element selection: extract fragment, wrap it, reinsert
+    span.appendChild(range.extractContents())
+    range.insertNode(span)
+  }
+  setTimeout(removeHighlights, 5000)
+}
+
+function highlightText(text: string, contentEl: HTMLElement | null) {
+  removeHighlights()
   if (!text || !contentEl) return
   const walker = document.createTreeWalker(contentEl, NodeFilter.SHOW_TEXT)
   let node: Text | null
@@ -75,15 +97,8 @@ function highlightText(text: string, contentEl: HTMLElement | null) {
         const range = document.createRange()
         range.setStart(node, idx)
         range.setEnd(node, idx + text.length)
-        const span = document.createElement('span')
-        span.className = 'comment-highlight'
-        span.style.cssText = 'background:rgba(192,57,43,0.15);border-radius:2px;padding:0 1px;'
-        range.surroundContents(span)
-        span.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        setTimeout(() => {
-          const el = document.querySelector('.comment-highlight')
-          if (el?.parentNode) el.parentNode.replaceChild(document.createTextNode(el.textContent || ''), el)
-        }, 2500)
+        highlightRange(range)
+        document.querySelector('.comment-highlight')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       } catch {}
       break
     }
@@ -334,8 +349,9 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     if (!sel || sel.isCollapsed || !sel.toString().trim()) { setBubble(null); return }
     if (!contentRef.current?.contains(sel.anchorNode)) { setBubble(null); return }
     const text = sel.toString().trim()
-    const rect = sel.getRangeAt(0).getBoundingClientRect()
-    highlightText(text, contentRef.current)
+    const range = sel.getRangeAt(0).cloneRange()
+    const rect = range.getBoundingClientRect()
+    highlightRange(range)
     sel.removeAllRanges()
     setBubble({ x: rect.left + rect.width / 2, y: rect.top - 8, text })
   }, [])
