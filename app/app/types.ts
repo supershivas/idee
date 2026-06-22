@@ -15,6 +15,8 @@ export type Page = {
   deleted_at?: string | null
   summary?: string | null
   cover_url?: string | null
+  is_shared?: boolean
+  share_token?: string | null
 }
 export function formatSubtitle(date: string) {
   return new Date(date).toLocaleString('fr-FR', {
