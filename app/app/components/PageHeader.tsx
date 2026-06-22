@@ -10,7 +10,7 @@ import HistoryButton from '../HistoryButton'
 import ExportButton from '../ExportButton'
 import ShareButton from '../ShareButton'
 import { toast } from './Toast'
-import { CommentsPanel, useCommentsCount } from './CommentsPanel'
+import { CommentsPanel, useUnreadCommentsCount } from './CommentsPanel'
 import { createClient } from '@/lib/supabase/client'
 import { coverDataUri, coverSeeds } from '@/lib/coverGen'
 
@@ -279,7 +279,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const isJournal = page.type === 'journal'
-  const commentsCount = useCommentsCount(page.is_shared ? page.id : null)
+  const unreadCount = useUnreadCommentsCount(page.is_shared ? page.id : null)
   const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [] as string[]))).sort() as string[]
 
   return (
@@ -294,14 +294,14 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
           <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           </span>
-          {page.is_shared && commentsCount > 0 && (
+          {page.is_shared && (
             <button
               onClick={() => setShowComments(true)}
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
               style={{ color: 'var(--text-muted)', background: 'var(--hover-bg)' }}
               title="Voir les commentaires"
             >
-              💬 {commentsCount}
+              💬{unreadCount > 0 && <span className="font-semibold" style={{ color: 'var(--accent)' }}> {unreadCount}</span>}
             </button>
           )}
           <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>
