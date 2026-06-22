@@ -335,6 +335,8 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     if (!contentRef.current?.contains(sel.anchorNode)) { setBubble(null); return }
     const text = sel.toString().trim()
     const rect = sel.getRangeAt(0).getBoundingClientRect()
+    highlightText(text, contentRef.current)
+    sel.removeAllRanges()
     setBubble({ x: rect.left + rect.width / 2, y: rect.top - 8, text })
   }, [])
 
