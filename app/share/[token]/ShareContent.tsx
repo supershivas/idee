@@ -429,9 +429,10 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
             </div>
             {selectedText && (
-              <blockquote className="text-xs text-gray-500 border-l-2 border-gray-300 pl-3 italic line-clamp-3">
-                {selectedText}
-              </blockquote>
+              <div className="text-xs rounded-lg px-3 py-2 border-l-2 italic"
+                style={{ background: '#fefce8', borderColor: '#eab308', color: '#854d0e' }}>
+                « {selectedText} »
+              </div>
             )}
             <input value={pseudo} onChange={e => setPseudo(e.target.value)}
               placeholder="Votre prénom ou pseudo" maxLength={50} required
