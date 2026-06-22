@@ -3,6 +3,18 @@ import { notFound } from 'next/navigation'
 import sanitizeHtml from 'sanitize-html'
 import ShareContent from './ShareContent'
 
+export async function generateMetadata({ params }: { params: { token: string } }) {
+  const supabase = await createClient()
+  const { data: page } = await supabase
+    .from('pages')
+    .select('title, icon')
+    .eq('share_token', params.token)
+    .eq('is_shared', true)
+    .single()
+  if (!page) return {}
+  return { title: `${page.icon || '📄'} ${page.title || 'Sans titre'} — Idée` }
+}
+
 export default async function SharePage({ params }: { params: { token: string } }) {
   const supabase = await createClient()
 

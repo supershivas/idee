@@ -101,7 +101,16 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       {/* Floating bubble on text selection */}
       {bubble && (
         <button
-          onClick={openForm}
+          onMouseDown={e => {
+            e.preventDefault() // empêche le navigateur d'effacer la sélection avant qu'on capture le texte
+            const text = bubble.text
+            window.getSelection()?.removeAllRanges()
+            setBubble(null)
+            setSelectedText(text)
+            setShowForm(true)
+            setCommentText('')
+            setError('')
+          }}
           style={{ position: 'fixed', left: bubble.x, top: bubble.y, transform: 'translate(-50%, -100%)', zIndex: 50, background: '#1a1a1a', borderRadius: '9999px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', border: 'none', cursor: 'pointer' }}
         >
           💬 Commenter
