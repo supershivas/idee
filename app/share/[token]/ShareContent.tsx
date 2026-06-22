@@ -382,7 +382,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       setComments(prev => [...prev, data])
       setShowForm(false)
       setLastSubmit(Date.now())
-    } catch { setError('Erreur réseau') } finally { setSubmitting(false) }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Erreur réseau') } finally { setSubmitting(false) }
   }
 
   function updateComment(updated: Comment) {
@@ -405,7 +405,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
           onMouseDown={e => {
             e.preventDefault()
             const text = bubble.text
-            window.getSelection()?.removeAllRanges()
             setBubble(null)
             openForm(text)
           }}

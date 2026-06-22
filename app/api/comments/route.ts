@@ -24,25 +24,27 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: page } = await supabase
     .from('pages')
-    .select('id, comments_enabled')
+    .select('id')
     .eq('id', page_id)
     .eq('is_shared', true)
     .single()
   if (!page) return NextResponse.json({ error: 'Page introuvable ou non partagée' }, { status: 404 })
-  if (page.comments_enabled === false) return NextResponse.json({ error: 'Commentaires désactivés' }, { status: 403 })
+
+  const row: Record<string, unknown> = {
+    page_id,
+    author_name: author_name.trim().slice(0, 50),
+    content: content.trim().slice(0, 2000),
+    selected_text: selected_text?.trim().slice(0, 500) || null,
+  }
+  // Colonnes optionnelles — ignorées si elles n'existent pas encore en DB
+  if (parent_id) row.parent_id = parent_id
+  if (author_token) row.author_token = author_token
 
   const { data, error } = await supabase
     .from('page_comments')
-    .insert({
-      page_id,
-      author_name: author_name.trim().slice(0, 50),
-      content: content.trim().slice(0, 2000),
-      selected_text: selected_text?.trim().slice(0, 500) || null,
-      parent_id: parent_id || null,
-      author_token: author_token || null,
-    })
-    .select('*, reactions:page_comment_reactions(emoji, author_token)')
+    .insert(row)
+    .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json({ ...data, reactions: [] })
 }
