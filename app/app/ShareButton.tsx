@@ -94,15 +94,25 @@ export default function ShareButton({ page, onUpdate }: {
               </button>
             </div>
             {isShared && shareUrl && (
-              <div className="flex items-center gap-2">
-                <input readOnly value={shareUrl}
-                  className="flex-1 text-xs rounded-lg px-2 py-1.5 outline-none truncate"
-                  style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }} />
-                <button onClick={copyLink}
-                  className="px-2 py-1.5 text-xs rounded-lg flex-shrink-0 transition-colors"
-                  style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
-                  {copied ? '✓' : 'Copier'}
-                </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <input readOnly value={shareUrl}
+                    className="flex-1 text-xs rounded-lg px-2 py-1.5 outline-none truncate"
+                    style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }} />
+                  <button onClick={copyLink}
+                    className="px-2 py-1.5 text-xs rounded-lg flex-shrink-0 transition-colors"
+                    style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
+                    {copied ? '✓' : 'Copier'}
+                  </button>
+                </div>
+                <a href={shareUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 w-full py-1.5 text-xs rounded-lg transition-colors"
+                  style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}>
+                  <IconLink />
+                  Voir l'aperçu
+                </a>
               </div>
             )}
           </div>
