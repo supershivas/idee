@@ -10,7 +10,7 @@ import HistoryButton from '../HistoryButton'
 import ExportButton from '../ExportButton'
 import ShareButton from '../ShareButton'
 import { toast } from './Toast'
-import { CommentsPanel, useUnreadCommentsCount } from './CommentsPanel'
+import { CommentsPanel, useUnreadCommentsCount, useTotalCommentsCount } from './CommentsPanel'
 import { createClient } from '@/lib/supabase/client'
 import { coverDataUri, coverSeeds } from '@/lib/coverGen'
 
@@ -280,6 +280,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   const [showComments, setShowComments] = useState(false)
   const isJournal = page.type === 'journal'
   const unreadCount = useUnreadCommentsCount(page.is_shared ? page.id : null)
+  const totalCommentCount = useTotalCommentsCount(page.is_shared ? page.id : null)
   const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [] as string[]))).sort() as string[]
 
   return (
@@ -294,6 +295,18 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
           <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           </span>
+          {page.is_shared && page.share_token && (
+            <a
+              href={`/share/${page.share_token}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
+              style={{ color: 'var(--text-muted)', background: 'var(--hover-bg)' }}
+              title="Voir la page partagée"
+            >
+              <i className="ti ti-world" style={{ fontSize: '13px' }} />
+            </a>
+          )}
           {page.is_shared && (
             <button
               onClick={() => setShowComments(true)}
@@ -301,7 +314,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
               style={{ color: 'var(--text-muted)', background: 'var(--hover-bg)' }}
               title="Voir les commentaires"
             >
-              💬{unreadCount > 0 && <span className="font-semibold" style={{ color: 'var(--accent)' }}> {unreadCount}</span>}
+              💬{totalCommentCount > 0 && <span className="font-semibold" style={{ color: unreadCount > 0 ? 'var(--accent)' : 'inherit' }}> {totalCommentCount}</span>}
             </button>
           )}
           <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>

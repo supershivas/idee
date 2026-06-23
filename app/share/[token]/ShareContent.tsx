@@ -557,6 +557,38 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
   const resolvedCount = topLevel.filter(c => c.resolved).length
   const totalCount = comments.length
   const authorToken = typeof window !== 'undefined' ? getAuthorToken() : ''
+  const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null)
+  const [connectorLine, setConnectorLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
+
+  useEffect(() => {
+    if (!hoveredCommentId) { setConnectorLine(null); return }
+    const comment = visible.find(c => c.id === hoveredCommentId)
+    if (!comment?.selected_text || !contentRef.current || !wrapperRef.current) { setConnectorLine(null); return }
+    const wrapperRect = wrapperRef.current.getBoundingClientRect()
+    const cardEl = cardRefs.current[hoveredCommentId]
+    if (!cardEl) { setConnectorLine(null); return }
+    const cardRect = cardEl.getBoundingClientRect()
+    const walker = document.createTreeWalker(contentRef.current, NodeFilter.SHOW_TEXT)
+    let node: Text | null
+    while ((node = walker.nextNode() as Text | null)) {
+      const idx = (node.textContent || '').indexOf(comment.selected_text)
+      if (idx >= 0 && node.textContent) {
+        try {
+          const range = document.createRange()
+          range.setStart(node, idx)
+          range.setEnd(node, Math.min(idx + comment.selected_text.length, node.textContent.length))
+          const textRect = range.getBoundingClientRect()
+          setConnectorLine({
+            x1: textRect.right - wrapperRect.left,
+            y1: textRect.top + textRect.height / 2 - wrapperRect.top,
+            x2: cardRect.left - wrapperRect.left,
+            y2: cardRect.top + cardRect.height / 2 - wrapperRect.top,
+          })
+        } catch { setConnectorLine(null) }
+        break
+      }
+    }
+  }, [hoveredCommentId, visible])
 
   // Compute total height of right column (for wrapper min-height)
   const rightColHeight = visible.reduce((acc, c) => {
@@ -639,6 +671,18 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
 
       {/* Two-column layout: content left, comments right */}
       <div ref={wrapperRef} className="relative" style={{ minHeight: rightColHeight > 0 ? rightColHeight : undefined }}>
+        {/* Connector line SVG (desktop, hover) */}
+        {connectorLine && (
+          <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5, overflow: 'visible' }}>
+            <path
+              d={`M ${connectorLine.x1} ${connectorLine.y1} C ${connectorLine.x1 + 40} ${connectorLine.y1}, ${connectorLine.x2 - 40} ${connectorLine.y2}, ${connectorLine.x2} ${connectorLine.y2}`}
+              fill="none"
+              stroke="rgba(192,57,43,0.4)"
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+            />
+          </svg>
+        )}
         {/* Content — padded right on large screens to leave room for comments */}
         <div className={visible.length > 0 ? 'lg:pr-[320px]' : ''}>
           <div ref={contentRef} className="share-content">
@@ -651,8 +695,8 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               /* Task list (checkboxes) */
               .prose ul[data-type="taskList"] { list-style:none; padding-left:0.25rem; }
               .prose ul li:has(> input[type="checkbox"]),
-              .prose ul li:has(> label > input[type="checkbox"]) { display:flex; align-items:flex-start; gap:0.5rem; list-style:none; }
-              .prose ul li input[type="checkbox"] { flex-shrink:0; margin-top:4px; width:1rem; height:1rem; cursor:default; }
+              .prose ul li:has(> label > input[type="checkbox"]) { display:flex; align-items:center; gap:0.5rem; list-style:none; }
+              .prose ul li input[type="checkbox"] { flex-shrink:0; width:1rem; height:1rem; cursor:default; }
               .prose ul li:has(> input[type="checkbox"][checked]) > *:not(input),
               .prose ul li:has(> label > input[type="checkbox"][checked]) > *:not(label) { opacity:0.6; text-decoration:line-through; }
             `}</style>
@@ -668,6 +712,8 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               <div
                 key={c.id}
                 ref={el => { cardRefs.current[c.id] = el }}
+                onMouseEnter={() => setHoveredCommentId(c.id)}
+                onMouseLeave={() => { setHoveredCommentId(null); setConnectorLine(null) }}
                 style={{
                   position: 'absolute',
                   top: positions[c.id] ?? 0,
