@@ -352,7 +352,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     const text = sel.toString().trim()
     const range = sel.getRangeAt(0)
     const bounding = range.getBoundingClientRect()
-    // Capture les rects de chaque ligne sélectionnée pour l'overlay
     const rects = Array.from(range.getClientRects()).map(r => ({
       left: r.left, top: r.top, width: r.width, height: r.height,
     }))
