@@ -313,6 +313,7 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete }: {
 export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent, initialComments, commentsEnabled, subpagesBlock }: Props) {
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [bubble, setBubble] = useState<{ x: number; y: number; text: string } | null>(null)
+  const [selRects, setSelRects] = useState<{ left: number; top: number; width: number; height: number }[]>([])
   const [showForm, setShowForm] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null)
@@ -346,12 +347,18 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
   // Selection detection (mouse + touch)
   const handleSelectionEnd = useCallback(() => {
     const sel = window.getSelection()
-    if (!sel || sel.isCollapsed || !sel.toString().trim()) { setBubble(null); return }
-    if (!contentRef.current?.contains(sel.anchorNode)) { setBubble(null); return }
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) { setBubble(null); setSelRects([]); return }
+    if (!contentRef.current?.contains(sel.anchorNode)) { setBubble(null); setSelRects([]); return }
     const text = sel.toString().trim()
-    const rect = sel.getRangeAt(0).getBoundingClientRect()
-    // On garde la sélection native visible — elle disparaîtra quand l'utilisateur clique ailleurs
-    setBubble({ x: rect.left + rect.width / 2, y: rect.top - 8, text })
+    const range = sel.getRangeAt(0)
+    const bounding = range.getBoundingClientRect()
+    // Capture les rects de chaque ligne sélectionnée pour l'overlay
+    const rects = Array.from(range.getClientRects()).map(r => ({
+      left: r.left, top: r.top, width: r.width, height: r.height,
+    }))
+    sel.removeAllRanges()
+    setSelRects(rects)
+    setBubble({ x: bounding.left + bounding.width / 2, y: bounding.top - 8, text })
   }, [])
 
   useEffect(() => {
@@ -398,6 +405,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       localStorage.setItem(PSEUDO_KEY, pseudo.trim())
       setComments(prev => [...prev, data])
       setShowForm(false)
+      setSelRects([])
       setLastSubmit(Date.now())
     } catch (err) { setError(err instanceof Error ? err.message : 'Erreur réseau') } finally { setSubmitting(false) }
   }
@@ -416,6 +424,14 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
 
   return (
     <>
+      {/* Overlay de sélection (indépendant de la sélection native du navigateur) */}
+      {selRects.map((r, i) => (
+        <div key={i} style={{
+          position: 'fixed', left: r.left, top: r.top, width: r.width, height: r.height,
+          background: 'rgba(192,57,43,0.2)', pointerEvents: 'none', zIndex: 40,
+        }} />
+      ))}
+
       {/* Bubble */}
       {bubble && commentsEnabled && (
         <button
@@ -428,6 +444,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               highlightRange(sel.getRangeAt(0).cloneRange())
               sel.removeAllRanges()
             }
+            setSelRects([])
             setBubble(null)
             openForm(text)
           }}
@@ -440,14 +457,14 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       {/* Form modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}
-          onClick={() => setShowForm(false)}>
+          onClick={() => { setShowForm(false); setSelRects([]) }}>
           <form onClick={e => e.stopPropagation()} onSubmit={submit}
             className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-gray-900 text-sm">
                 {replyTo ? `Répondre à ${replyTo.author}` : 'Laisser un commentaire'}
               </span>
-              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
+              <button type="button" onClick={() => { setShowForm(false); setSelRects([]) }} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
             </div>
             {selectedText && (
               <div className="text-xs rounded-lg px-3 py-2 border-l-2 italic"
@@ -463,7 +480,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               className="w-full text-sm rounded-lg px-3 py-2 outline-none border border-gray-200 resize-none" />
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="text-sm px-4 py-2 rounded-lg text-gray-500 hover:text-gray-700">Annuler</button>
+              <button type="button" onClick={() => { setShowForm(false); setSelRects([]) }} className="text-sm px-4 py-2 rounded-lg text-gray-500 hover:text-gray-700">Annuler</button>
               <button type="submit" disabled={submitting || !pseudo.trim() || !commentText.trim()}
                 className="text-sm px-4 py-2 rounded-lg bg-gray-900 text-white disabled:opacity-50 hover:bg-gray-700 transition-colors">
                 {submitting ? 'Envoi…' : 'Envoyer'}
