@@ -301,20 +301,25 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
-              style={{ color: 'var(--text-muted)', background: 'var(--hover-bg)' }}
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
               title="Voir la page partagée"
             >
-              <i className="ti ti-world" style={{ fontSize: '13px' }} />
+              <i className="ti ti-world-upload" style={{ fontSize: '15px' }} />
             </a>
           )}
           {page.is_shared && (
             <button
               onClick={() => setShowComments(true)}
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
-              style={{ color: 'var(--text-muted)', background: 'var(--hover-bg)' }}
+              style={{ color: unreadCount > 0 ? 'var(--accent)' : 'var(--text-muted)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+              onMouseLeave={e => (e.currentTarget.style.color = unreadCount > 0 ? 'var(--accent)' : 'var(--text-muted)')}
               title="Voir les commentaires"
             >
-              💬{totalCommentCount > 0 && <span className="font-semibold" style={{ color: unreadCount > 0 ? 'var(--accent)' : 'inherit' }}> {totalCommentCount}</span>}
+              <i className="ti ti-message" style={{ fontSize: '15px' }} />
+              {totalCommentCount > 0 && <span className="font-medium text-[11px]">{totalCommentCount}</span>}
             </button>
           )}
           <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>
