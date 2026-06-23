@@ -428,7 +428,7 @@ Image.extend({
     }
   }
 
-  const Sep = () => <div className="w-px self-stretch flex-shrink-0 mx-0.5" style={{ background: 'var(--border)' }} />
+  const Sep = () => <div className="w-px self-stretch flex-shrink-0 mx-0.5" style={{ background: 'var(--sidebar-border)' }} />
 
   const toolbarMobile = (
     <>
@@ -566,9 +566,9 @@ Image.extend({
       {editor && !isMobile && (
         <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('table')} tippyOptions={{ placement: 'top', offset: [0, 8] }}>
           <div className="flex items-center gap-0.5 rounded-xl shadow-lg px-2 py-1.5"
-            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
-            <span className="text-xs mr-1 font-medium" style={{ color: 'var(--text-muted)' }}>Tableau</span>
-            <div className="w-px self-stretch mx-1" style={{ background: 'var(--border)' }} />
+            style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--sidebar-border)' }}>
+            <span className="text-xs mr-1 font-medium" style={{ color: 'var(--sidebar-muted)' }}>Tableau</span>
+            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
             {[
               { label: '← Col', fn: () => editor.chain().focus().addColumnBefore().run() },
               { label: 'Col →', fn: () => editor.chain().focus().addColumnAfter().run() },
@@ -577,13 +577,13 @@ Image.extend({
             ].map((a, i) => (
               <button key={i} onClick={a.fn}
                 className="px-2 py-1 text-xs rounded transition-colors"
-                style={{ color: 'var(--text-secondary)' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                style={{ color: 'var(--sidebar-icon)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}>
                 {a.label}
               </button>
             ))}
-            <div className="w-px self-stretch mx-1" style={{ background: 'var(--border)' }} />
+            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
             {[
               { label: '− Col', fn: () => editor.chain().focus().deleteColumn().run() },
               { label: '− Ligne', fn: () => editor.chain().focus().deleteRow().run() },
@@ -595,7 +595,7 @@ Image.extend({
                 {a.label}
               </button>
             ))}
-            <div className="w-px self-stretch mx-1" style={{ background: 'var(--border)' }} />
+            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
             <button onClick={() => editor.chain().focus().deleteTable().run()}
               className="px-2 py-1 text-xs rounded transition-colors text-red-500"
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
