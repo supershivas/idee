@@ -73,7 +73,7 @@ export default async function SharePage({ params }: { params: { token: string } 
   ) : null
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-12 relative">
+    <main className="max-w-5xl mx-auto px-6 py-12 relative">
       <ShareContent
         pageId={page.id}
         pageIcon={page.icon || '📄'}
