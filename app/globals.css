@@ -479,8 +479,8 @@ input::placeholder, textarea::placeholder {
 
 /* ─── Task list ──────────────────────────────────────────────────────────────*/
 .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
-.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: baseline; gap: 0.5rem; }
-.ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; position: relative; top: 2px; cursor: pointer; }
+.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: center; gap: 0.5rem; }
+.ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; display: flex; align-items: center; cursor: pointer; }
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] { cursor: pointer; width: 1rem; height: 1rem; }
 .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
 .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { opacity: 0.6; text-decoration: line-through; }

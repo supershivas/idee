@@ -767,6 +767,35 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
             }}
           />
+          {/* Pages récentes */}
+          {(() => {
+            const recent = [...pages]
+              .filter(p => !p.deleted_at)
+              .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+              .slice(0, 4)
+            if (recent.length === 0) return null
+            return (
+              <div className="mb-1">
+                <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--sidebar-muted)' }}>Récents</p>
+                {recent.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => { selectPage(p); if (p.type === 'journal') setShowJournal(true) }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm truncate transition-colors"
+                    style={{
+                      background: selected?.id === p.id ? 'var(--sidebar-selected)' : 'transparent',
+                      color: selected?.id === p.id ? 'var(--sidebar-selected-fg)' : 'var(--sidebar-muted)',
+                    }}
+                    onMouseEnter={e => { if (selected?.id !== p.id) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = selected?.id === p.id ? 'var(--sidebar-selected)' : 'transparent' }}
+                  >
+                    <span className="text-sm flex-shrink-0">{p.icon || (p.type === 'journal' ? '📝' : '📄')}</span>
+                    <span className="truncate text-xs">{p.title || 'Sans titre'}</span>
+                  </button>
+                ))}
+              </div>
+            )
+          })()}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}

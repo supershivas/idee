@@ -47,6 +47,18 @@ export function useCommentsCount(pageId: string | null) {
   return count
 }
 
+export function useTotalCommentsCount(pageId: string | null) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!pageId) return
+    fetch(`/api/comments?pageId=${pageId}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setCount(data.filter((c: Comment) => !c.parent_id).length) })
+      .catch(() => {})
+  }, [pageId])
+  return count
+}
+
 export function useUnreadCommentsCount(pageId: string | null) {
   const [count, setCount] = useState(0)
   useEffect(() => {
