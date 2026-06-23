@@ -430,19 +430,19 @@ html, body {
 .editor-toolbar {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  background: var(--card-bg);
-  border-top: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  border-top: 1px solid var(--sidebar-border);
 }
 .editor-toolbar::-webkit-scrollbar { display: none; }
 
 /* ─── Toolbar boutons ────────────────────────────────────────────────────────*/
 .toolbar-btn {
-  color: var(--text-secondary);
+  color: var(--sidebar-icon);
   border-radius: 4px;
   transition: background 0.1s, color 0.1s;
 }
-.toolbar-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
-.toolbar-btn.is-active { background: var(--selected-bg); color: var(--text-primary); }
+.toolbar-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-fg); }
+.toolbar-btn.is-active { background: var(--sidebar-selected); color: var(--sidebar-selected-fg); }
 
 /* ─── Input / placeholder global ────────────────────────────────────────────*/
 input::placeholder, textarea::placeholder {
