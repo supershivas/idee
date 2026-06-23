@@ -68,7 +68,7 @@ function removeHighlights() {
   })
 }
 
-function highlightRange(range: Range) {
+function highlightRange(range: Range, autoRemove = true) {
   removeHighlights()
   const span = document.createElement('span')
   span.className = 'comment-highlight'
@@ -79,10 +79,10 @@ function highlightRange(range: Range) {
     span.appendChild(range.extractContents())
     range.insertNode(span)
   }
-  setTimeout(removeHighlights, 5000)
+  if (autoRemove) setTimeout(removeHighlights, 5000)
 }
 
-function highlightText(text: string, contentEl: HTMLElement | null) {
+function highlightText(text: string, contentEl: HTMLElement | null, autoRemove = true) {
   removeHighlights()
   if (!text || !contentEl) return
   const walker = document.createTreeWalker(contentEl, NodeFilter.SHOW_TEXT)
@@ -94,8 +94,8 @@ function highlightText(text: string, contentEl: HTMLElement | null) {
         const range = document.createRange()
         range.setStart(node, idx)
         range.setEnd(node, idx + text.length)
-        highlightRange(range)
-        document.querySelector('.comment-highlight')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        highlightRange(range, autoRemove)
+        if (autoRemove) document.querySelector('.comment-highlight')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       } catch {}
       break
     }
@@ -712,8 +712,8 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               <div
                 key={c.id}
                 ref={el => { cardRefs.current[c.id] = el }}
-                onMouseEnter={() => setHoveredCommentId(c.id)}
-                onMouseLeave={() => { setHoveredCommentId(null); setConnectorLine(null) }}
+                onMouseEnter={() => { setHoveredCommentId(c.id); if (c.selected_text) highlightText(c.selected_text, contentRef.current, false) }}
+                onMouseLeave={() => { setHoveredCommentId(null); setConnectorLine(null); removeHighlights() }}
                 style={{
                   position: 'absolute',
                   top: positions[c.id] ?? 0,

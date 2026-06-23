@@ -796,6 +796,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               </div>
             )
           })()}
+          <div style={{ height: '1px', background: 'var(--sidebar-border)', margin: '4px 12px 6px' }} />
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
