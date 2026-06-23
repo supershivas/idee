@@ -648,6 +648,13 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               .prose [data-callout][color="blue"]  { background:rgba(96,165,250,.12); border-left-color:#60a5fa; }
               .prose [data-callout][color="red"]   { background:rgba(239,68,68,.12);  border-left-color:#ef4444; }
               .prose [data-callout][color="green"] { background:rgba(34,197,94,.12);  border-left-color:#22c55e; }
+              /* Task list (checkboxes) */
+              .prose ul[data-type="taskList"] { list-style:none; padding-left:0.25rem; }
+              .prose ul li:has(> input[type="checkbox"]),
+              .prose ul li:has(> label > input[type="checkbox"]) { display:flex; align-items:flex-start; gap:0.5rem; list-style:none; }
+              .prose ul li input[type="checkbox"] { flex-shrink:0; margin-top:4px; width:1rem; height:1rem; cursor:default; }
+              .prose ul li:has(> input[type="checkbox"][checked]) > *:not(input),
+              .prose ul li:has(> label > input[type="checkbox"][checked]) > *:not(label) { opacity:0.6; text-decoration:line-through; }
             `}</style>
             <div className="prose max-w-none"
               dangerouslySetInnerHTML={{ __html: safeContent || '<p class="text-gray-400">Page vide.</p>' }} />
