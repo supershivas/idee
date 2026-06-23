@@ -480,8 +480,9 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       <h1 className="text-3xl font-bold text-gray-900 mb-6">{pageTitle}</h1>
       {subpagesBlock}
 
-      <div ref={contentRef}>
+      <div ref={contentRef} className="share-content">
         <style>{`
+          .share-content *::selection { background: rgba(192,57,43,0.2); color: inherit; }
           .prose [data-callout] { display:flex;gap:12px;padding:12px 16px;border-radius:12px;margin:8px 0;background:rgba(245,200,66,.12);border-left:3px solid #f5c842;font-size:.9em; }
           .prose [data-callout][color="blue"]  { background:rgba(96,165,250,.12); border-left-color:#60a5fa; }
           .prose [data-callout][color="red"]   { background:rgba(239,68,68,.12);  border-left-color:#ef4444; }
