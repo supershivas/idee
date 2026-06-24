@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Page, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
@@ -279,6 +279,13 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const isJournal = page.type === 'journal'
+  const titleRef = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = titleRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [page.title])
   const unreadCount = useUnreadCommentsCount(page.is_shared ? page.id : null)
   const totalCommentCount = useTotalCommentsCount(page.is_shared ? page.id : null)
   const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [] as string[]))).sort() as string[]
@@ -345,9 +352,10 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <input className="page-title w-full text-2xl md:text-3xl outline-none bg-transparent"
-              style={{ caretColor: 'var(--text-primary)', minHeight: '44px' }}
-              value={page.title} onChange={e => onTitleChange(e.target.value)} placeholder="Sans titre" />
+            <textarea ref={titleRef} className="page-title w-full text-2xl md:text-3xl outline-none bg-transparent resize-none overflow-hidden"
+              style={{ caretColor: 'var(--text-primary)', minHeight: '44px', lineHeight: '1.25' }}
+              value={page.title} onChange={e => onTitleChange(e.target.value)} placeholder="Sans titre"
+              rows={1} />
           </div>
           <button onClick={() => onToggleFavorite(page.id)}
             className={`flex-shrink-0 mt-2 text-xl transition-all ${page.favorite ? 'opacity-100' : 'opacity-0 group-hover/title:opacity-100 hover:!opacity-100'} ${!page.favorite ? 'hidden md:flex' : ''}`}
