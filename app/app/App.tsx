@@ -2,7 +2,20 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Editor from './Editor'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type CollisionDetection, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
+
+// Collision detection vertical uniquement (ignore le décalage horizontal des items indentés)
+const closestVertical: CollisionDetection = ({ collisionRect, droppableRects, droppableContainers }) => {
+  let bestId = null as null | string | number
+  let bestDist = Infinity
+  for (const container of droppableContainers) {
+    const rect = droppableRects.get(container.id)
+    if (!rect) continue
+    const dist = Math.abs((rect.top + rect.bottom) / 2 - (collisionRect.top + collisionRect.bottom) / 2)
+    if (dist < bestDist) { bestDist = dist; bestId = container.id }
+  }
+  return bestId != null ? [{ id: bestId }] : []
+}
 import { Page } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
 import { SearchBar } from './components/SearchBar'
@@ -607,9 +620,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
       setOverPosition(immediatePos)
       hoverTimerRef.current = setTimeout(() => {
-        // Après 400ms sur le même item → inside
+        // Après 400ms sur le même item → inside + auto-expand
         if (hoverOverIdRef.current === overId) {
           setOverPosition('inside')
+          setOpenMap(o => ({ ...o, [overId]: true }))
         }
       }, 400)
     } else {
@@ -799,7 +813,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <div style={{ height: '1px', background: 'var(--sidebar-border)', margin: '4px 12px 6px' }} />
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={closestVertical}
             autoScroll={{ enabled: true, threshold: { x: 0, y: 0.12 } }}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
