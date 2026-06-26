@@ -20,7 +20,29 @@ import { DragHandleExtension } from './DragHandle'
 import { createSubpageExtension, insertSubpageBlock } from './SubpageNode'
 import { createWikiLinkExtension } from './WikiLinkExtension'
 import { CalloutExtension } from './CalloutNode'
+import { Extension } from '@tiptap/core'
+import { InputRule } from '@tiptap/core'
 import { Backlinks } from './Backlinks'
+
+const TypographyShortcuts = Extension.create({
+  name: 'typographyShortcuts',
+  addInputRules() {
+    const rules: [RegExp, string][] = [
+      [/<->(\s)$/, '↔$1'],
+      [/->(\s)$/, '→$1'],
+      [/<-(\s)$/, '←$1'],
+      [/=>(\s)$/, '⇒$1'],
+      [/\.\.\./, '…'],
+      [/--(\s)$/, '—$1'],
+    ]
+    return rules.map(([find, replace]) =>
+      new InputRule({ find, handler: ({ state, range, match }) => {
+        const tr = state.tr.replaceWith(range.from, range.to, state.schema.text(replace.replace('$1', match[1] ?? '')))
+        return tr
+      }})
+    )
+  },
+})
 import { Page } from './types'
 import { useKeyboardOffset } from './hooks'
 import { createClient } from '@/lib/supabase/client'
@@ -276,6 +298,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const editor = useEditor({
     extensions: [
       StarterKit,
+      TypographyShortcuts,
       Underline,
       TaskList,
       TaskItem.configure({ nested: true }),
