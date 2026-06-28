@@ -408,8 +408,9 @@ style={{ color: page.favorite ? 'var(--accent)' : 'var(--text-faint)' }}      >
   )
 }
 
-export function MobileTopBar({ onBack, saving }: {
+export function MobileTopBar({ onBack, backLabel = 'Pages', saving }: {
   onBack: () => void
+  backLabel?: string
   saving: boolean
 }) {
   return (
@@ -423,7 +424,7 @@ export function MobileTopBar({ onBack, saving }: {
         <svg width="9" height="15" viewBox="0 0 9 15" fill="none" style={{ flexShrink: 0 }}>
           <path d="M8 1L1.5 7.5L8 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-        <span className="text-sm font-medium ml-0.5">Pages</span>
+        <span className="text-sm font-medium ml-0.5">{backLabel}</span>
       </button>
       <div className="flex-1" />
       <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
