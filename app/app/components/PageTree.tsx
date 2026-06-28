@@ -182,11 +182,12 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
 }
 
 // ─── SortableFavoriteItem ─────────────────────────────────────────────────────
-function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, isDragOverlay }: {
+function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, isDragOverlay, onContextMenu }: {
   page: Page, selectedId: string | null,
   onSelect: (p: Page) => void,
   onToggleFavorite: (id: string) => void,
   isDragOverlay?: boolean,
+  onContextMenu?: (e: React.MouseEvent, id: string) => void,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
@@ -198,6 +199,7 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
       {...listeners}
       style={{ ...style, minHeight: '30px', background: isDragOverlay ? 'var(--drag-bg)' : undefined }}
       onClick={() => onSelect(page)}
+      onContextMenu={e => { e.preventDefault(); onContextMenu?.(e, page.id) }}
       className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-grab active:cursor-grabbing group transition-colors text-sm
         ${selectedId === page.id ? 'sidebar-selected' : 'sidebar-item-hover'}
         ${isDragOverlay ? 'shadow-lg' : ''}`}
@@ -215,12 +217,13 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
 }
 
 // ─── FavoritesSection ─────────────────────────────────────────────────────────
-export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite, onReorderFavorites }: {
+export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite, onReorderFavorites, onContextMenu }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
   onToggleFavorite: (id: string) => void
   onReorderFavorites: (orderedIds: string[]) => void
+  onContextMenu?: (e: React.MouseEvent, id: string) => void
 }) {
   const favorites = pages
     .filter(p => p.favorite && !p.deleted_at)
@@ -257,11 +260,11 @@ export function FavoritesSection({ pages, selectedId, onSelect, onToggleFavorite
       >
         <SortableContext items={favorites.map(p => p.id)} strategy={verticalListSortingStrategy}>
           {favorites.map(page => (
-            <SortableFavoriteItem key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+            <SortableFavoriteItem key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onContextMenu={onContextMenu} />
           ))}
         </SortableContext>
         <DragOverlay>
-          {activePage && <SortableFavoriteItem page={activePage} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} isDragOverlay />}
+          {activePage && <SortableFavoriteItem page={activePage} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} isDragOverlay onContextMenu={onContextMenu} />}
         </DragOverlay>
       </DndContext>
       <div className="mx-2 mt-1.5 mb-0.5" style={{ borderTop: '1px solid var(--sidebar-border)' }} />
