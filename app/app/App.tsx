@@ -137,7 +137,7 @@ function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCloseSpli
             onChange={e => setQuery(e.target.value)}
             placeholder="Rechercher une page…"
             className="flex-1 outline-none text-sm"
-            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }}
+            style={{ color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }}
           />
           <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
         </div>
@@ -242,7 +242,7 @@ function MoveToModal({ page, pages, onMove, onClose }: {
           <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Déplacer vers…"
             className="flex-1 outline-none text-sm"
-            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }} />
+            style={{ color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }} />
           <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
         </div>
         <div className="overflow-y-auto flex-1 pb-1">
