@@ -22,13 +22,16 @@ export default function RootLayout({
         {/* PWA manifest */}
         <link rel="manifest" href="/manifest.json" />
 
+        {/* Viewport — viewport-fit=cover pour safe-areas iPhone/iPad */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
         {/* iOS / iPadOS home screen icon */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Idée" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#f0f0ec" />
 

@@ -267,7 +267,8 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         />
       )}
 
-      <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 pb-2 flex-shrink-0"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)' }}>
         <div className="flex items-center gap-2">
           <img src="/apple-touch-icon.png" alt="Idée" className="w-7 h-7 rounded-xl flex-shrink-0" />
           <span className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>Idée</span>
@@ -412,13 +413,17 @@ export function MobileTopBar({ onBack, saving }: {
   saving: boolean
 }) {
   return (
-    <div className="md:hidden flex items-center gap-2 px-4 pt-3 pb-1 flex-shrink-0">
+    <div className="md:hidden flex items-center gap-2 px-3 pb-1 flex-shrink-0"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)' }}>
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-sm transition-colors"
-        style={{ color: 'var(--text-muted)' }}
+        className="flex items-center gap-1 py-2 px-2 rounded-xl active:opacity-60 transition-opacity"
+        style={{ color: 'var(--accent)', minWidth: 44, minHeight: 44 }}
       >
-        ← Pages
+        <svg width="9" height="15" viewBox="0 0 9 15" fill="none" style={{ flexShrink: 0 }}>
+          <path d="M8 1L1.5 7.5L8 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <span className="text-sm font-medium ml-0.5">Pages</span>
       </button>
       <div className="flex-1" />
       <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>

@@ -214,6 +214,21 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showCmdPalette, setShowCmdPalette] = useState(false)
   const lastSaveRef = useRef(0)
   const addingPageRef = useRef(false)
+  // Swipe-back depuis le bord gauche (mobile)
+  const swipeTouchStartX = useRef(0)
+  const swipeTouchStartY = useRef(0)
+  function onSwipeTouchStart(e: React.TouchEvent) {
+    swipeTouchStartX.current = e.touches[0].clientX
+    swipeTouchStartY.current = e.touches[0].clientY
+  }
+  function onSwipeTouchEnd(e: React.TouchEvent) {
+    if (!isMobile || !selected) return
+    const dx = e.changedTouches[0].clientX - swipeTouchStartX.current
+    const dy = Math.abs(e.changedTouches[0].clientY - swipeTouchStartY.current)
+    if (swipeTouchStartX.current < 40 && dx > 72 && dy < 80) {
+      setSelected(null)
+    }
+  }
   const pointerYRef = useRef(0)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverOverIdRef = useRef<string | null>(null)
@@ -1022,9 +1037,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {/* ── Contenu principal ── */}
-      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}>
+      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}
+        onTouchStart={onSwipeTouchStart} onTouchEnd={onSwipeTouchEnd}>
         {/* Panneau gauche */}
-        <div ref={mainScrollRef} className="flex-1 overflow-y-auto min-w-0 pb-12">
+        <div ref={mainScrollRef} className="flex-1 overflow-y-auto min-w-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)' }}>
           {splitMode && (
             <div className="sticky top-0 z-30 flex items-center justify-end gap-1 px-2 py-1" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
               <button onClick={() => setPagePicker('left')} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Changer la page">
