@@ -215,7 +215,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -226,6 +226,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   onShowJournal: () => void
   journalCount: number
   onAddJournalEntry: () => void
+  onShowSettings: () => void
 }) {
   const [showSearch, setShowSearch] = useState(false)
   const [tab, setTab] = useState<'pages' | 'journal'>('pages')
@@ -278,18 +279,25 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           <img src="/apple-touch-icon.png" alt="Idée" className="w-7 h-7 rounded-xl flex-shrink-0" />
           <span className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>Idée</span>
         </div>
-        <button
-          onClick={onShowTrash}
-          className="relative w-9 h-9 flex items-center justify-center rounded-xl"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          🗑
-          {trashedCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">
-              {trashedCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onShowTrash}
+            className="relative w-9 h-9 flex items-center justify-center rounded-xl"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            🗑
+            {trashedCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">
+                {trashedCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={onShowSettings}
+            className="w-9 h-9 flex items-center justify-center rounded-xl"
+            style={{ color: 'var(--text-muted)' }}
+          >⚙️</button>
+        </div>
       </div>
 
       <div className="flex px-3 gap-1 pb-2 flex-shrink-0">
