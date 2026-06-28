@@ -449,6 +449,11 @@ input::placeholder, textarea::placeholder {
   color: var(--text-muted);
 }
 
+/* iOS/Safari : -webkit-text-fill-color prend le dessus sur color dans les inputs */
+input, textarea {
+  -webkit-text-fill-color: currentColor;
+}
+
 /* ─── Utility classes thème ──────────────────────────────────────────────────*/
 .t-bg-app    { background: var(--app-bg); }
 .t-bg-card   { background: var(--card-bg); }
