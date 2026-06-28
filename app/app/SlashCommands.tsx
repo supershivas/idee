@@ -22,8 +22,9 @@ const PagePicker = forwardRef((props: {
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const filtered = props.pages.filter(p =>
-    (p.title || 'Sans titre').toLowerCase().includes(query.toLowerCase())
+    norm(p.title || 'Sans titre').includes(norm(query))
   )
 
   useEffect(() => { setIdx(0) }, [query])
@@ -47,6 +48,7 @@ const PagePicker = forwardRef((props: {
           onChange={e => setQuery(e.target.value)}
           placeholder="Rechercher une page..."
           className="w-full text-sm outline-none px-2 py-1.5"
+          style={{ color: '#1a1714', WebkitTextFillColor: '#1a1714', caretColor: '#C0392B', background: 'transparent' }}
           onKeyDown={e => {
             if (e.key === 'Escape') { e.stopPropagation(); props.onClose() }
             if (e.key === 'ArrowDown') { e.preventDefault(); setIdx(i => Math.min(i + 1, filtered.length - 1)) }
