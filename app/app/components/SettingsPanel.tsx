@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Page } from '../types'
 
 type Theme = 'light' | 'dark' | 'system'
@@ -22,14 +22,38 @@ export function useTheme() {
 }
 
 // ── SettingsPanel ─────────────────────────────────────────────────────────────
-export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail }: {
+export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, userEmail }: {
   onClose: () => void
   onLogout: () => void
+  onImport: (pages: Omit<Page, 'user_id'>[]) => Promise<{ count: number; errors: number }>
   pages: Page[]
   userId: string
   userEmail?: string
 }) {
   const { theme, setTheme } = useTheme()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importStatus, setImportStatus] = useState<{ ok?: number; err?: number } | null>(null)
+  const [importing, setImporting] = useState(false)
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImporting(true)
+    setImportStatus(null)
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      if (!Array.isArray(data)) throw new Error('Format invalide')
+      const { count, errors } = await onImport(data)
+      setImportStatus({ ok: count, err: errors })
+    } catch {
+      setImportStatus({ ok: 0, err: -1 })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const totalPages = pages.filter(p => !p.deleted_at && p.type !== 'journal').length
   const journalCount = pages.filter(p => !p.deleted_at && p.type === 'journal').length
   const trashedCount = pages.filter(p => !!p.deleted_at).length
@@ -128,19 +152,41 @@ export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail }: {
               </div>
             </div>
 
-            {/* Export */}
+            {/* Données */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Données</p>
-              <button
-                onClick={exportJSON}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
-              >
-                <span className="text-lg">⬇️</span>
-                <div>
-                  <p className="text-sm font-medium text-gray-800 dark:text-white">Exporter mes données</p>
-                  <p className="text-xs text-gray-400">JSON · pages + journal (corbeille exclue)</p>
-                </div>
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={exportJSON}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                >
+                  <span className="text-lg">⬇️</span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">Exporter mes données</p>
+                    <p className="text-xs text-gray-400">JSON · pages + journal (corbeille exclue)</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importing}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50"
+                >
+                  <span className="text-lg">{importing ? '⏳' : '⬆️'}</span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">
+                      {importing ? 'Import en cours…' : 'Importer des données'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {importStatus
+                        ? importStatus.err === -1
+                          ? '❌ Fichier invalide'
+                          : `✅ ${importStatus.ok} page(s) importée(s)${importStatus.err ? `, ${importStatus.err} erreur(s)` : ''}`
+                        : 'JSON exporté depuis idee'}
+                    </p>
+                  </div>
+                </button>
+                <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+              </div>
             </div>
 
             {/* Applications */}
