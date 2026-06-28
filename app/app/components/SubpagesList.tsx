@@ -3,11 +3,11 @@ import { useState } from 'react'
 import { useSortable, SortableContext } from '@dnd-kit/sortable'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Page } from '../types'
+import { Page, formatSubtitle } from '../types'
 
 // ── Hub detection ─────────────────────────────────────────────────────────────
-function detectHub(page: Page, subpages: Page[]): boolean {
-  if (subpages.length === 0) return false
+function detectHub(page: Page, subpages: Page[], journalSubpages: Page[]): boolean {
+  if (subpages.length === 0 && journalSubpages.length === 0) return false
   const text = (page.content || '').replace(/<[^>]*>/g, '').replace(/\s/g, '').trim()
   return text.length === 0
 }
@@ -56,6 +56,37 @@ function SortableHubCard({ page, onSelect, isMobile }: {
   )
 }
 
+// ── Journal hub card ──────────────────────────────────────────────────────────
+function JournalHubCard({ page, onSelect }: { page: Page; onSelect: (p: Page) => void }) {
+  return (
+    <button
+      onClick={() => onSelect(page)}
+      className="group/hub w-full flex flex-col gap-1.5 rounded-2xl p-4 text-left transition-all"
+      style={{
+        background: 'var(--hover-bg)',
+        border: '1px solid var(--border)',
+        minHeight: '88px',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.07)'
+        e.currentTarget.style.borderColor = 'var(--text-faint)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = 'none'
+        e.currentTarget.style.borderColor = 'var(--border)'
+      }}
+    >
+      <span className="text-3xl leading-none">{page.icon || '📝'}</span>
+      <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+        {page.title || 'Sans titre'}
+      </span>
+      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        {formatSubtitle(page.created_at)}
+      </span>
+    </button>
+  )
+}
+
 // ── Compact card (existing behaviour) ────────────────────────────────────────
 function SortableSubpageCard({ page, onSelect, isMobile }: {
   page: Page; onSelect: (p: Page) => void; isMobile: boolean
@@ -86,9 +117,10 @@ function SortableSubpageCard({ page, onSelect, isMobile }: {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function SubpagesList({ page, subpages, onSelect, onReorder, isMobile, onAddSubpage }: {
+export function SubpagesList({ page, subpages, journalSubpages = [], onSelect, onReorder, isMobile, onAddSubpage }: {
   page: Page
   subpages: Page[]
+  journalSubpages?: Page[]
   onSelect: (p: Page) => void
   onReorder: (activeId: string, overId: string, position: 'before' | 'after') => void
   isMobile: boolean
@@ -98,8 +130,9 @@ export function SubpagesList({ page, subpages, onSelect, onReorder, isMobile, on
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const sorted = [...subpages].sort((a, b) => a.position - b.position)
+  const sortedJournal = [...journalSubpages].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   const activePage = sorted.find(p => p.id === activeId)
-  const hub = detectHub(page, subpages)
+  const hub = detectHub(page, subpages, journalSubpages)
 
   function handleDragStart(e: DragStartEvent) { setActiveId(e.active.id as string) }
   function handleDragOver(_e: DragOverEvent) {}
@@ -166,6 +199,9 @@ export function SubpagesList({ page, subpages, onSelect, onReorder, isMobile, on
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {sorted.map(sub => (
           <SortableHubCard key={sub.id} page={sub} onSelect={onSelect} isMobile={isMobile} />
+        ))}
+        {sortedJournal.map(entry => (
+          <JournalHubCard key={entry.id} page={entry} onSelect={onSelect} />
         ))}
         {hubAddBtn}
       </div>

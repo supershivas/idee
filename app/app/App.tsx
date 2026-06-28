@@ -819,6 +819,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const activeDragPage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
   const subpagesRight = selectedRight ? activePages.filter(p => p.parent_id === selectedRight.id) : []
+  const journalSubpages = selected ? journalEntries.filter(p => p.parent_id === selected.id) : []
+  const journalSubpagesRight = selectedRight ? journalEntries.filter(p => p.parent_id === selectedRight.id) : []
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
   const showingRecentDesktop = !isMobile && showRecent && !selected
@@ -955,6 +957,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               setPages(prev => prev.map(p => { const u = updates.find(u => u.id === p.id); return u ? { ...p, favorite_position: u.favorite_position } : p }))
               await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
             }}
+            onContextMenu={(e, id) => setContextMenu({ x: e.clientX, y: e.clientY, pageId: id })}
           />
           {/* Pages récentes */}
           {(() => {
@@ -970,6 +973,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   <button
                     key={p.id}
                     onClick={() => { selectPage(p); if (p.type === 'journal') setShowJournal(true) }}
+                    onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, pageId: p.id }) }}
                     className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm truncate transition-colors"
                     style={{
                       background: selected?.id === p.id ? 'var(--sidebar-selected)' : 'transparent',
@@ -1311,6 +1315,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   <SubpagesList
                     page={selected}
                     subpages={subpages}
+                    journalSubpages={journalSubpages}
                     onSelect={selectPage}
                     onReorder={(a, o, p) => reorderSiblings(a, o, p)}
                     isMobile={isMobile}
@@ -1388,6 +1393,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     <SubpagesList
                       page={selectedRight}
                       subpages={subpagesRight}
+                      journalSubpages={journalSubpagesRight}
                       onSelect={selectPageRight}
                       onReorder={(a, o, p) => reorderSiblings(a, o, p)}
                       isMobile={false}
