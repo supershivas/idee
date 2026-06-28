@@ -35,6 +35,17 @@ export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail }: {
   const trashedCount = pages.filter(p => !!p.deleted_at).length
   const favoriteCount = pages.filter(p => p.favorite && !p.deleted_at).length
 
+  function exportJSON() {
+    const data = pages.filter(p => !p.deleted_at)
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `idee-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const THEMES: { value: Theme, label: string, icon: string }[] = [
     { value: 'light', label: 'Clair',   icon: '☀️' },
     { value: 'dark',  label: 'Sombre',  icon: '🌙' },
@@ -115,6 +126,21 @@ export function SettingsPanel({ onClose, onLogout, pages, userId, userEmail }: {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Export */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Données</p>
+              <button
+                onClick={exportJSON}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+              >
+                <span className="text-lg">⬇️</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white">Exporter mes données</p>
+                  <p className="text-xs text-gray-400">JSON · pages + journal (corbeille exclue)</p>
+                </div>
+              </button>
             </div>
 
             {/* Applications */}
