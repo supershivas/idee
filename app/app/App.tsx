@@ -521,17 +521,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   }, [])
 
   // Sticky header: observe the page title element via IntersectionObserver
-  // → appears exactly when the title scrolls out of view, disappears when it comes back
+  // sticky header : apparaît dès que l'on a scrollé > 80px dans le panneau
   useEffect(() => {
     if (isMobile) return
-    const titleEl = document.querySelector('.page-title')
-    if (!titleEl) return
-    const observer = new IntersectionObserver(
-      ([entry]) => setScrolledPast(!entry.isIntersecting),
-      { threshold: 0 }
-    )
-    observer.observe(titleEl)
-    return () => observer.disconnect()
+    const container = mainScrollRef.current
+    if (!container) return
+    setScrolledPast(container.scrollTop > 80)
+    function onScroll() { setScrolledPast(container.scrollTop > 80) }
+    container.addEventListener('scroll', onScroll, { passive: true })
+    return () => container.removeEventListener('scroll', onScroll)
   }, [selected?.id, isMobile])
 
   // Reset scroll & sticky on page change
