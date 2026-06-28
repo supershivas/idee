@@ -75,10 +75,12 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
 
     const results = useMemo(function() {
       if (query.length < 2) return []
-      var q = query.toLowerCase()
+      var q = query.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
       return pageTexts
         .filter(function({ page, text }) {
-          return (page.title || '').toLowerCase().includes(q) || text.toLowerCase().includes(q)
+          var t = (page.title || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+          var b = text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+          return t.includes(q) || b.includes(q)
         })
         .map(function({ page, text }) {
           return { page: page, snippet: getSnippet(text, query) }
