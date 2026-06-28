@@ -753,6 +753,22 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     window.location.href = '/login'
   }
 
+  async function importPages(imported: Omit<Page, 'user_id'>[]) {
+    let count = 0, errors = 0
+    for (const p of imported) {
+      const { data, error } = await createClient().from('pages')
+        .upsert({ ...p, user_id: userId }, { onConflict: 'id', ignoreDuplicates: false })
+        .select().single()
+      if (error || !data) { errors++; continue }
+      setPages(prev => {
+        const exists = prev.find(x => x.id === data.id)
+        return exists ? prev.map(x => x.id === data.id ? data : x) : [...prev, data]
+      })
+      count++
+    }
+    return { count, errors }
+  }
+
   const reorderSiblings = useCallback(async (activeId: string, targetId: string, position: 'before' | 'after' | 'inside') => {
     const dragged = pages.find(p => p.id === activeId)
     const target = pages.find(p => p.id === targetId)
@@ -1149,7 +1165,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} pages={pages} userId={userId} userEmail={userEmail} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} onImport={importPages} pages={pages} userId={userId} userEmail={userEmail} />}
       {showHistory && <HistoryModal pages={pages} onClose={() => setShowHistory(false)} onNavigate={p => { selectPage(p); setShowHistory(false); setShowJournal(p.type === 'journal') }} />}
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
