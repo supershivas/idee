@@ -819,6 +819,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const activeDragPage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
   const subpagesRight = selectedRight ? activePages.filter(p => p.parent_id === selectedRight.id) : []
+  const journalSubpages = selected ? journalEntries.filter(p => p.parent_id === selected.id) : []
+  const journalSubpagesRight = selectedRight ? journalEntries.filter(p => p.parent_id === selectedRight.id) : []
   const showingJournalDesktop = !isMobile && showJournal && !selected
   const showingTagsDesktop = !isMobile && showTags && !selected
   const showingRecentDesktop = !isMobile && showRecent && !selected
@@ -1313,6 +1315,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   <SubpagesList
                     page={selected}
                     subpages={subpages}
+                    journalSubpages={journalSubpages}
                     onSelect={selectPage}
                     onReorder={(a, o, p) => reorderSiblings(a, o, p)}
                     isMobile={isMobile}
@@ -1390,6 +1393,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     <SubpagesList
                       page={selectedRight}
                       subpages={subpagesRight}
+                      journalSubpages={journalSubpagesRight}
                       onSelect={selectPageRight}
                       onReorder={(a, o, p) => reorderSiblings(a, o, p)}
                       isMobile={false}
