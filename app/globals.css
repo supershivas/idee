@@ -496,3 +496,20 @@ input::placeholder, textarea::placeholder {
   max-width: 660px;
   margin: 0 auto;
 }
+
+/* ─── iOS/iPadOS PWA — suppression du context menu natif ─────────────────────*/
+/* Empêche le menu natif iOS (copier/coller/définir) d'apparaître par-dessus
+   les menus custom de l'app lors d'un appui long sur la sidebar et les boutons */
+.sidebar-item-hover,
+.sidebar-selected,
+[data-drag-handle],
+button,
+a {
+  -webkit-touch-callout: none;
+}
+
+/* Désactive la sélection de texte dans les éléments de navigation */
+nav, aside, [role="navigation"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
