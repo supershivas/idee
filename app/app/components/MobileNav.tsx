@@ -231,6 +231,8 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   const [tab, setTab] = useState<'pages' | 'journal'>('pages')
   const [journalLimit, setJournalLimit] = useState(MOBILE_JOURNAL_PAGE)
   const journalSentinelRef = useRef<HTMLDivElement>(null)
+  // drill-down stack : chaque entrée = { id, title, icon } de la page parente
+  const [drillStack, setDrillStack] = useState<{ id: string; title: string; icon: string }[]>([])
 
   const nonJournalPages = pages.filter(function(p) { return p.type !== 'journal' && !p.deleted_at })
   const journalEntries = pages.filter(function(p) { return p.type === 'journal' && !p.deleted_at })
@@ -241,7 +243,10 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
     .slice(0, 6)
     .filter(function(p) { return !p.favorite })
 
-  const sortedPages = [...nonJournalPages].sort(function(a, b) { return a.position - b.position })
+  const currentParentId = drillStack.length > 0 ? drillStack[drillStack.length - 1].id : null
+  const sortedPages = nonJournalPages
+    .filter(function(p) { return p.parent_id === currentParentId })
+    .sort(function(a, b) { return a.position - b.position })
   const sortedJournal = [...journalEntries].sort(function(a, b) {
     return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
   })
@@ -289,7 +294,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
 
       <div className="flex px-3 gap-1 pb-2 flex-shrink-0">
         <button
-          onClick={() => setTab('pages')}
+          onClick={() => { setTab('pages'); setDrillStack([]) }}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-colors"
           style={{ background: tab === 'pages' ? 'var(--selected-bg)' : 'transparent', color: tab === 'pages' ? 'var(--text-primary)' : 'var(--text-muted)' }}
         >
@@ -330,12 +335,39 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
                 <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border-light)' }} />
               </>
             )}
-            <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Toutes les pages</p>
+            {/* Breadcrumb drill-down */}
+            {drillStack.length > 0 ? (
+              <div className="flex items-center gap-1 px-2 pt-1 pb-1 flex-wrap">
+                <button
+                  onClick={() => setDrillStack([])}
+                  className="text-[11px] flex-shrink-0 py-0.5 px-1 rounded"
+                  style={{ color: 'var(--accent)' }}
+                >Pages</button>
+                {drillStack.map(function(crumb, i) {
+                  return (
+                    <span key={crumb.id} className="flex items-center gap-1 flex-shrink-0">
+                      <span style={{ color: 'var(--text-faint)', fontSize: 10 }}>/</span>
+                      <button
+                        onClick={() => setDrillStack(function(s) { return s.slice(0, i + 1) })}
+                        className="text-[11px] py-0.5 px-1 rounded truncate max-w-[120px]"
+                        style={{ color: i === drillStack.length - 1 ? 'var(--text-primary)' : 'var(--accent)' }}
+                      >{crumb.icon} {crumb.title || 'Sans titre'}</button>
+                    </span>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Pages</p>
+            )}
             {sortedPages.length === 0 && (
               <p className="text-sm px-2 py-4 text-center" style={{ color: 'var(--text-muted)' }}>Aucune page</p>
             )}
             {sortedPages.map(function(page) {
-              return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+              const hasChildren = nonJournalPages.some(function(p) { return p.parent_id === page.id })
+              return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite}
+                hasChildren={hasChildren}
+                onDrillDown={function(p) { setDrillStack(function(s) { return [...s, { id: p.id, title: p.title || 'Sans titre', icon: p.icon || '📄' }] }) }}
+              />
             })}
           </>
         ) : (
@@ -386,24 +418,39 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   )
 }
 
-function PageRow({ page, selectedId, onSelect, onToggleFavorite }: {
+function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, hasChildren }: {
   page: Page, selectedId: string | null,
   onSelect: (p: Page) => void,
   onToggleFavorite: (id: string) => void,
+  hasChildren?: boolean,
+  onDrillDown?: (p: Page) => void,
 }) {
   return (
     <div
-      onClick={() => onSelect(page)}
+      onClick={() => hasChildren && onDrillDown ? onDrillDown(page) : onSelect(page)}
       className={`flex items-center gap-2 px-3 py-3 rounded-xl cursor-pointer transition-colors mobile-row-hover ${selectedId === page.id ? 'mobile-row-selected' : ''}`}
     >
       <span className="text-xl flex-shrink-0">{page.icon || '📄'}</span>
       <span className="flex-1 min-w-0 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</span>
-      <button
-        onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
-        className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
-style={{ color: page.favorite ? 'var(--accent)' : 'var(--text-faint)' }}      >
-        {page.favorite ? '★' : '☆'}
-      </button>
+      {hasChildren ? (
+        <>
+          <button
+            onClick={e => { e.stopPropagation(); onSelect(page) }}
+            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-xs transition-colors"
+            style={{ color: 'var(--text-faint)' }}
+            title="Ouvrir"
+          >↗</button>
+          <span className="flex-shrink-0 text-sm" style={{ color: 'var(--text-faint)' }}>›</span>
+        </>
+      ) : (
+        <button
+          onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
+          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
+          style={{ color: page.favorite ? 'var(--accent)' : 'var(--text-faint)' }}
+        >
+          {page.favorite ? '★' : '☆'}
+        </button>
+      )}
     </div>
   )
 }
