@@ -19,13 +19,18 @@ export default function RootLayout({
         {/* Favicon standard */}
         <link rel="icon" href="/favicon-32x32.png" />
 
-        {/* iOS / iPadOS home screen icon (CRUCIAL) */}
+        {/* PWA manifest */}
+        <link rel="manifest" href="/manifest.json" />
+
+        {/* iOS / iPadOS home screen icon */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-        {/* Optionnel mais propre pour iOS */}
+        {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Idée" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#f0f0ec" />
 
         {/* Polices Playfair Display / Inter */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
