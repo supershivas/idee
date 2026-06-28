@@ -523,7 +523,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   // Sticky header: observe the page title element via IntersectionObserver
   // sticky header : apparaît dès que l'on a scrollé > 80px dans le panneau
   useEffect(() => {
-    if (isMobile) return
     const container = mainScrollRef.current
     if (!container) return
     setScrolledPast(container.scrollTop > 80)
@@ -1234,11 +1233,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           )}
           {selected ? (
             <>
-              {scrolledPast && !isMobile && (
+              {scrolledPast && (
                 <>
                   <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
                   <div className="sticky top-0 z-20 flex items-center gap-1 px-2"
-                    style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
+                    style={{ height: isMobile ? 'calc(44px + env(safe-area-inset-top, 0px))' : '44px', paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : undefined, background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
                     {selected.type === 'journal' ? (
                       <>
                         <button
