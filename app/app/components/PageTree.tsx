@@ -6,7 +6,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Page } from '../types'
 
 // ─── SortablePageItem ─────────────────────────────────────────────────────────
-export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, dropIndicator, isMobile, onRename, onToggleFavorite }: {
+export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onAdd, onToggle, isOpen, dropIndicator, isMobile, onRename, onToggleFavorite, onContextMenu }: {
   page: Page, pages: Page[], depth: number, selectedId: string | null,
   onSelect: (p: Page) => void, onAdd: (id: string) => void,
   onToggle: (id: string) => void, isOpen: boolean,
@@ -14,6 +14,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
   isMobile: boolean,
   onRename: (id: string, title: string) => void,
   onToggleFavorite: (id: string) => void,
+  onContextMenu?: (e: React.MouseEvent, id: string) => void,
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }
@@ -51,6 +52,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
 
       {/* ── Row ── */}
       <div
+        onContextMenu={e => { e.preventDefault(); onContextMenu?.(e, page.id) }}
         className={`flex items-center gap-1 pr-1 rounded-md group transition-colors
           ${isSelected ? 'sidebar-selected' : 'sidebar-item-hover'}`}
         style={{
@@ -138,7 +140,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
 }
 
 // ─── PageTree ─────────────────────────────────────────────────────────────────
-export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onToggleFavorite }: {
+export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, onToggle, openMap, overId, overPosition, isMobile, onRename, onToggleFavorite, onContextMenu }: {
   pages: Page[], parentId: string | null, depth: number, selectedId: string | null,
   onSelect: (p: Page) => void, onAdd: (id: string | null) => void,
   onToggle: (id: string) => void, openMap: Record<string, boolean>,
@@ -146,6 +148,7 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
   isMobile: boolean,
   onRename: (id: string, title: string) => void,
   onToggleFavorite: (id: string) => void,
+  onContextMenu?: (e: React.MouseEvent, id: string) => void,
 }) {
   const children = pages
     .filter(p => p.parent_id === parentId && !p.deleted_at)
@@ -163,13 +166,14 @@ export function PageTree({ pages, parentId, depth, selectedId, onSelect, onAdd, 
             dropIndicator={overId === page.id && overPosition ? { position: overPosition } : null}
             isMobile={isMobile} onRename={onRename}
             onToggleFavorite={onToggleFavorite}
+            onContextMenu={onContextMenu}
           />
           {openMap[page.id] && (
             <PageTree pages={pages} parentId={page.id} depth={depth + 1}
               selectedId={selectedId} onSelect={onSelect} onAdd={onAdd}
               onToggle={onToggle} openMap={openMap} overId={overId} overPosition={overPosition}
               isMobile={isMobile} onRename={onRename}
-              onToggleFavorite={onToggleFavorite} />
+              onToggleFavorite={onToggleFavorite} onContextMenu={onContextMenu} />
           )}
         </div>
       ))}

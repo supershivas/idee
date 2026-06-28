@@ -38,6 +38,10 @@ import ReviewMode from './components/ReviewMode'
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
 
+function normalizeStr(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
 function getAncestorIds(pages: Page[], pageId: string): string[] {
   const ids: string[] = []
   let current = pages.find(p => p.id === pageId)
@@ -85,7 +89,7 @@ function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCloseSpli
 
   const hasQuery = query.trim().length > 0
   const filtered = hasQuery
-    ? allActive.filter(p => (p.title || '').toLowerCase().includes(query.toLowerCase()))
+    ? allActive.filter(p => normalizeStr(p.title || '').includes(normalizeStr(query)))
     : []
 
   function PageRow({ p }: { p: Page }) {
@@ -132,8 +136,8 @@ function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCloseSpli
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Rechercher une page…"
-            className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: 'var(--text-primary)' }}
+            className="flex-1 outline-none text-sm"
+            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }}
           />
           <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
         </div>
@@ -186,6 +190,145 @@ function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCloseSpli
   )
 }
 
+// ─── MoveToModal ──────────────────────────────────────────────────────────────
+function MoveToModal({ page, pages, onMove, onClose }: {
+  page: Page
+  pages: Page[]
+  onMove: (parentId: string | null) => void
+  onClose: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  function getDescendantIds(id: string): string[] {
+    const children = pages.filter(p => p.parent_id === id && !p.deleted_at)
+    return children.flatMap(c => [c.id, ...getDescendantIds(c.id)])
+  }
+  const excluded = new Set([page.id, ...getDescendantIds(page.id)])
+  const candidates = pages.filter(p => !p.deleted_at && p.type !== 'journal' && !excluded.has(p.id))
+  const filtered = query.trim()
+    ? candidates.filter(p => normalizeStr(p.title || '').includes(normalizeStr(query)))
+    : candidates.slice(0, 12)
+
+  function Row({ p }: { p: Page }) {
+    return (
+      <button onClick={() => onMove(p.id)}
+        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+        style={{ color: 'var(--text-primary)' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+        <span className="flex-shrink-0">{p.icon || '📄'}</span>
+        <span className="flex-1 truncate">{p.title || 'Sans titre'}</span>
+        {p.parent_id && <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>sous-page</span>}
+      </button>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-[400] flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.55)' }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="flex flex-col rounded-2xl overflow-hidden"
+        style={{ width: 400, maxHeight: '66vh', background: 'var(--card-bg)', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', border: '1px solid var(--border)' }}>
+        <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+          <i className="ti ti-folder-symlink" style={{ color: 'var(--text-muted)', fontSize: '15px' }} />
+          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Déplacer vers…"
+            className="flex-1 outline-none text-sm"
+            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }} />
+          <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
+        </div>
+        <div className="overflow-y-auto flex-1 pb-1">
+          <button onClick={() => onMove(null)}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+            style={{ color: 'var(--accent)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <i className="ti ti-home text-base flex-shrink-0" />
+            <span>Aucun parent (page racine)</span>
+          </button>
+          <div style={{ height: '1px', background: 'var(--border)', margin: '2px 16px' }} />
+          {filtered.length === 0
+            ? <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>Aucune page trouvée</p>
+            : filtered.map(p => <Row key={p.id} p={p} />)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── SidebarContextMenu ───────────────────────────────────────────────────────
+function SidebarContextMenu({ x, y, page, isFavorite, onClose, onOpenSplit, onAddSubpage, onMoveTo, onDuplicate, onRename, onToggleFavorite, onTrash }: {
+  x: number; y: number; page: Page; isFavorite: boolean
+  onClose: () => void
+  onOpenSplit: () => void
+  onAddSubpage: () => void
+  onMoveTo: () => void
+  onDuplicate: () => void
+  onRename: () => void
+  onToggleFavorite: () => void
+  onTrash: () => void
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    setTimeout(() => document.addEventListener('mousedown', handle), 0)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  // Clamp to viewport
+  const menuW = 220, menuH = 280
+  const cx = Math.min(x, window.innerWidth - menuW - 8)
+  const cy = Math.min(y, window.innerHeight - menuH - 8)
+
+  function Item({ icon, label, onClick, danger }: { icon: string; label: string; onClick: () => void; danger?: boolean }) {
+    return (
+      <button onClick={() => { onClick(); onClose() }}
+        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors"
+        style={{ color: danger ? '#ef4444' : 'var(--text-primary)' }}
+        onMouseEnter={e => (e.currentTarget.style.background = danger ? 'rgba(239,68,68,0.08)' : 'var(--hover-bg)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+        <i className={`ti ti-${icon}`} style={{ fontSize: '14px', width: '16px', flexShrink: 0 }} />
+        {label}
+      </button>
+    )
+  }
+  function Sep() {
+    return <div style={{ height: '1px', background: 'var(--border)', margin: '3px 8px' }} />
+  }
+
+  return (
+    <div ref={menuRef}
+      className="fixed z-[500] rounded-xl py-1.5 overflow-hidden"
+      style={{ left: cx, top: cy, width: menuW, background: 'var(--card-bg)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)' }}>
+      <div className="px-3 py-1.5 text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+        {page.icon || '📄'} {page.title || 'Sans titre'}
+      </div>
+      <Sep />
+      <Item icon="layout-columns" label="Ouvrir en vue partagée" onClick={onOpenSplit} />
+      <Sep />
+      <Item icon="file-plus" label="Ajouter une sous-page" onClick={onAddSubpage} />
+      <Item icon="folder-symlink" label="Déplacer vers…" onClick={onMoveTo} />
+      <Item icon="copy" label="Dupliquer" onClick={onDuplicate} />
+      <Sep />
+      <Item icon={isFavorite ? 'star-off' : 'star'} label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} onClick={onToggleFavorite} />
+      <Sep />
+      <Item icon="trash" label="Déplacer vers la corbeille" onClick={onTrash} danger />
+    </div>
+  )
+}
+
 export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [saving, setSaving] = useState(false)
@@ -203,6 +346,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [showReview, setShowReview] = useState(false)
   const { theme, setTheme } = useTheme()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; pageId: string } | null>(null)
+  const [moveToPageId, setMoveToPageId] = useState<string | null>(null)
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
@@ -533,6 +678,23 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     await createClient().from('pages').update({ title }).eq('id', id)
   }
 
+  async function movePage(id: string, newParentId: string | null) {
+    setPages(prev => prev.map(p => p.id === id ? { ...p, parent_id: newParentId } : p))
+    syncSelectedPage(id, { parent_id: newParentId })
+    if (newParentId) setOpenMap(o => ({ ...o, [newParentId]: true }))
+    await createClient().from('pages').update({ parent_id: newParentId }).eq('id', id)
+    toast('Page déplacée.', 'success')
+  }
+
+  async function duplicatePage(id: string) {
+    const page = pages.find(p => p.id === id)
+    if (!page) return
+    const { data } = await createClient().from('pages')
+      .insert({ title: (page.title || 'Sans titre') + ' (copie)', content: page.content, user_id: userId, parent_id: page.parent_id, position: page.position + 0.5, icon: page.icon, type: page.type })
+      .select().single()
+    if (data) { setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id) }
+  }
+
   async function updateContent(content: string, pageId?: string) {
     const targetId = pageId ?? selected?.id
     if (!targetId) return
@@ -837,7 +999,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <PageTree pages={activePages} parentId={null} depth={0} selectedId={selected?.id || null}
               onSelect={selectPage} onAdd={addPage} onToggle={toggleOpen} openMap={openMap}
               overId={overId} overPosition={overPosition} isMobile={false}
-              onRename={renamePage} onToggleFavorite={toggleFavorite} />
+              onRename={renamePage} onToggleFavorite={toggleFavorite}
+              onContextMenu={(e, id) => setContextMenu({ x: e.clientX, y: e.clientY, pageId: id })} />
             <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
               {activeDragPage && (
                 <div
@@ -1306,6 +1469,41 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           hideCloseSplit
         />
       )}
+      {contextMenu && (() => {
+        const page = pages.find(p => p.id === contextMenu.pageId)
+        if (!page) return null
+        return (
+          <SidebarContextMenu
+            x={contextMenu.x} y={contextMenu.y}
+            page={page}
+            isFavorite={!!page.favorite}
+            onClose={() => setContextMenu(null)}
+            onOpenSplit={() => { setSplitMode(true); setSelectedRight(page) }}
+            onAddSubpage={() => { addPage(page.id); setOpenMap(o => ({ ...o, [page.id]: true })) }}
+            onMoveTo={() => { setMoveToPageId(page.id); setContextMenu(null) }}
+            onDuplicate={() => duplicatePage(page.id)}
+            onRename={() => {
+              // déclenche inline rename via double-clic simulé sur l'item
+              const el = document.querySelector(`[data-page-rename="${page.id}"]`) as HTMLElement | null
+              el?.click()
+            }}
+            onToggleFavorite={() => toggleFavorite(page.id)}
+            onTrash={() => setConfirmDeleteId(page.id)}
+          />
+        )
+      })()}
+      {moveToPageId && (() => {
+        const page = pages.find(p => p.id === moveToPageId)
+        if (!page) return null
+        return (
+          <MoveToModal
+            page={page}
+            pages={activePages}
+            onMove={parentId => { movePage(moveToPageId, parentId); setMoveToPageId(null) }}
+            onClose={() => setMoveToPageId(null)}
+          />
+        )
+      })()}
       <Toaster />
     </div>
   )
