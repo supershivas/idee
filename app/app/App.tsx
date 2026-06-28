@@ -1056,12 +1056,43 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               {scrolledPast && !isMobile && (
                 <>
                   <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-                  <div className="sticky top-0 z-20 flex items-center gap-2 px-5"
+                  <div className="sticky top-0 z-20 flex items-center gap-2 px-3"
                     style={{ height: '44px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
-                    <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
-                    <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
-                      {selected.title || 'Sans titre'}
-                    </span>
+                    {selected.type === 'journal' ? (
+                      <button
+                        onClick={() => { setSelected(null); setShowJournal(true) }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors"
+                        style={{ color: 'var(--accent)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <svg width="6" height="10" viewBox="0 0 6 10" fill="none"><path d="M5 1L1 5l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Journal
+                      </button>
+                    ) : selected.parent_id ? (
+                      <div className="flex items-center gap-1 text-xs min-w-0">
+                        <button
+                          onClick={() => { const p = activePages.find(p => p.id === selected.parent_id); if (p) selectPage(p) }}
+                          className="px-2 py-1 rounded-lg transition-colors truncate max-w-[160px]"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          {activePages.find(p => p.id === selected.parent_id)?.title || 'Sans titre'}
+                        </button>
+                        <span style={{ color: 'var(--text-faint)' }}>/</span>
+                        <span className="px-1 font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                          {selected.title || 'Sans titre'}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-lg flex-shrink-0">{selected.icon || '📄'}</span>
+                        <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                          {selected.title || 'Sans titre'}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </>
               )}
@@ -1074,6 +1105,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
                     else setSelected(null)
                   }}
+                  backLabel={selected.type === 'journal' ? 'Journal' : 'Pages'}
                   saving={saving}
                 />
                 <PageHeader

@@ -533,6 +533,9 @@ Image.extend({
               className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>H1</button>
             <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
               className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>H2</button>
+            <button onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('blockquote') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
+              title="Citation">❝</button>
             <div className="w-px bg-white/20 self-stretch mx-0.5" />
             <button
               onClick={() => {
