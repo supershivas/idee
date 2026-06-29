@@ -467,7 +467,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     const ro = new ResizeObserver(() => recalcPositions())
     els.forEach(el => ro.observe(el))
     return () => ro.disconnect()
-  }, [visible.length, recalcPositions])
+  }, [comments.length, recalcPositions])
 
   // Selection detection
   const handleSelectionEnd = useCallback(() => {
