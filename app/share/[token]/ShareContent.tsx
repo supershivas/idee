@@ -265,7 +265,13 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
       {replies.length > 0 && (
         <div className="border-t border-gray-100 flex flex-col divide-y divide-gray-100">
           {replies.map(r => (
-            <ReplyItem key={r.id} comment={r} authorToken={authorToken} onUpdate={onUpdate} onDelete={onDelete} />
+            <ReplyItem key={r.id} comment={r} authorToken={authorToken} onUpdate={onUpdate} onDelete={onDelete}
+              commentsEnabled={commentsEnabled}
+              onReplyTo={name => {
+                setShowReplyForm(true)
+                setReplyText(prev => prev ? prev : `@${name} `)
+              }}
+            />
           ))}
         </div>
       )}
@@ -294,9 +300,11 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
   )
 }
 
-function ReplyItem({ comment, authorToken, onUpdate, onDelete }: {
+function ReplyItem({ comment, authorToken, onUpdate, onDelete, onReplyTo, commentsEnabled }: {
   comment: Comment; authorToken: string
   onUpdate: (c: Comment) => void; onDelete: (id: string) => void
+  onReplyTo?: (authorName: string) => void
+  commentsEnabled?: boolean
 }) {
   const isOwn = comment.author_token === authorToken
   const [editing, setEditing] = useState(false)
@@ -351,6 +359,12 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete }: {
         </div>
       ) : (
         <p className="text-[12px] text-gray-600 whitespace-pre-wrap leading-snug">{comment.content}</p>
+      )}
+      {!editing && commentsEnabled && (
+        <button onClick={() => onReplyTo?.(comment.author_name)}
+          className="text-[10px] text-gray-400 hover:text-gray-600 mt-0.5 transition-colors">
+          ↩ Répondre
+        </button>
       )}
     </div>
   )
