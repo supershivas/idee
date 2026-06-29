@@ -48,8 +48,7 @@ function timeAgo(iso: string) {
   return `il y a ${Math.floor(h / 24)}j`
 }
 
-function groupReactions(reactions: Reaction[]): { emoji: string; count: number; mine: boolean }[] {
-  const authorToken = typeof window !== 'undefined' ? localStorage.getItem(AUTHOR_TOKEN_KEY) : ''
+function groupReactions(reactions: Reaction[], authorToken: string): { emoji: string; count: number; mine: boolean }[] {
   const map: Record<string, { count: number; mine: boolean }> = {}
   for (const r of reactions) {
     if (!map[r.emoji]) map[r.emoji] = { count: 0, mine: false }
@@ -57,6 +56,34 @@ function groupReactions(reactions: Reaction[]): { emoji: string; count: number; 
     if (r.author_token === authorToken) map[r.emoji].mine = true
   }
   return Object.entries(map).map(([emoji, v]) => ({ emoji, ...v }))
+}
+
+// Encoche emoji sur le côté droit d'un commentaire (visible au hover)
+function EmojiPickerTab({ onPick, className = '', style }: { onPick: (emoji: string) => void; className?: string; style?: React.CSSProperties }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className={className} style={{ position: 'absolute', ...style }}>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
+        className="w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
+        title="Réagir"
+        style={{ fontSize: '11px' }}
+      >
+        😊
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 flex bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 gap-1 z-20">
+            {REACTION_EMOJIS.map(e => (
+              <button key={e} onClick={ev => { ev.stopPropagation(); onPick(e); setOpen(false) }}
+                className="text-sm hover:scale-125 transition-transform px-1">{e}</button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 function removeHighlights() {
@@ -180,122 +207,120 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
     setReplySubmitting(false)
   }
 
-  const grouped = groupReactions(comment.reactions || [])
+  const grouped = groupReactions(comment.reactions || [], authorToken)
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm text-[13px] overflow-hidden ${comment.pinned ? 'border-amber-200' : 'border-gray-200'}`}>
-      {/* Selected text anchor */}
-      {comment.selected_text && (
-        <button
-          onClick={() => onHighlight(comment.selected_text!)}
-          className="w-full text-left px-3 pt-2.5 pb-1.5 border-b border-gray-100 flex items-start gap-2 group"
-        >
-          <span className="w-0.5 flex-shrink-0 self-stretch rounded-full mt-0.5" style={{ background: '#C0392B' }} />
-          <span className="text-[11px] text-gray-400 italic line-clamp-2 group-hover:text-gray-600 transition-colors leading-snug">
-            {comment.selected_text}
-          </span>
-        </button>
-      )}
-
-      {/* Main comment */}
-      <div className="px-3 py-2.5">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5">
-            {comment.pinned && <span className="text-[10px] text-amber-600 font-medium">📌</span>}
-            <span className="font-semibold text-gray-800 text-[12px]">{comment.author_name}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {comment.edited_at && <span className="text-[10px] text-gray-400">modifié</span>}
-            <span className="text-[10px] text-gray-400">{timeAgo(comment.created_at)}</span>
-            {isOwn && !editing && (
-              <div className="flex gap-0.5">
-                <button onClick={() => { setEditValue(comment.content); setEditing(true) }}
-                  className="text-[11px] text-gray-400 hover:text-gray-600 px-0.5">✎</button>
-                <button onClick={deleteComment} className="text-[11px] text-gray-400 hover:text-red-500 px-0.5">×</button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {editing ? (
-          <div className="flex flex-col gap-1.5">
-            <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus
-              className="w-full text-xs rounded-lg px-2 py-1.5 outline-none border border-gray-200 bg-gray-50 resize-none" />
-            <div className="flex gap-2">
-              <button onClick={saveEdit} disabled={saving || !editValue.trim()}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-900 text-white disabled:opacity-50">
-                {saving ? '…' : 'Sauvegarder'}
-              </button>
-              <button onClick={() => setEditing(false)} className="text-[11px] text-gray-500">Annuler</button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-[13px] text-gray-700 whitespace-pre-wrap leading-snug">{comment.content}</p>
+    // Outer wrapper — overflow visible pour l'encoche emoji droite
+    <div className="relative" style={{ isolation: 'isolate' }}>
+      <div
+        className={`bg-white rounded-xl border shadow-sm text-[13px] overflow-hidden group/card ${comment.pinned ? 'border-amber-200' : 'border-gray-200'}`}
+      >
+        {/* Selected text anchor */}
+        {comment.selected_text && (
+          <button
+            onClick={() => onHighlight(comment.selected_text!)}
+            className="w-full text-left px-3 pt-2.5 pb-1.5 border-b border-gray-100 flex items-start gap-2 group"
+          >
+            <span className="w-0.5 flex-shrink-0 self-stretch rounded-full mt-0.5" style={{ background: '#C0392B' }} />
+            <span className="text-[11px] text-gray-400 italic line-clamp-2 group-hover:text-gray-600 transition-colors leading-snug">
+              {comment.selected_text}
+            </span>
+          </button>
         )}
 
-        {/* Reactions */}
-        <div className="flex items-center gap-1 mt-2 flex-wrap">
-          {grouped.map(r => (
-            <button key={r.emoji} onClick={() => toggleReaction(r.emoji)}
-              className={`flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-full border transition-colors ${r.mine ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
-              {r.emoji} {r.count}
-            </button>
-          ))}
-          <div className="relative group">
-            <button className="text-[11px] text-gray-400 hover:text-gray-600 px-1 py-0.5 rounded-full border border-transparent hover:border-gray-200 transition-colors">
-              {grouped.length === 0 ? '😊+' : '+'}
-            </button>
-            <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 gap-1 z-10">
-              {REACTION_EMOJIS.map(e => (
-                <button key={e} onClick={() => toggleReaction(e)}
-                  className="text-sm hover:scale-125 transition-transform px-1">{e}</button>
-              ))}
+        {/* Main comment */}
+        <div className="px-3 py-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5">
+              {comment.pinned && <span className="text-[10px] text-amber-600 font-medium">📌</span>}
+              <span className="font-semibold text-gray-800 text-[12px]">{comment.author_name}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {comment.edited_at && <span className="text-[10px] text-gray-400">modifié</span>}
+              <span className="text-[10px] text-gray-400">{timeAgo(comment.created_at)}</span>
+              {isOwn && !editing && (
+                <div className="flex gap-0.5">
+                  <button onClick={() => { setEditValue(comment.content); setEditing(true) }}
+                    className="text-[11px] text-gray-400 hover:text-gray-600 px-0.5">✎</button>
+                  <button onClick={deleteComment} className="text-[11px] text-gray-400 hover:text-red-500 px-0.5">×</button>
+                </div>
+              )}
             </div>
           </div>
-          {commentsEnabled && (
-            <button onClick={() => setShowReplyForm(v => !v)}
-              className="text-[11px] text-gray-400 hover:text-gray-600 ml-auto transition-colors">
-              ↩ Répondre
-            </button>
+
+          {editing ? (
+            <div className="flex flex-col gap-1.5">
+              <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus
+                className="w-full text-xs rounded-lg px-2 py-1.5 outline-none border border-gray-200 bg-gray-50 resize-none" />
+              <div className="flex gap-2">
+                <button onClick={saveEdit} disabled={saving || !editValue.trim()}
+                  className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-900 text-white disabled:opacity-50">
+                  {saving ? '…' : 'Sauvegarder'}
+                </button>
+                <button onClick={() => setEditing(false)} className="text-[11px] text-gray-500">Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[13px] text-gray-700 whitespace-pre-wrap leading-snug">{comment.content}</p>
+          )}
+
+          {/* Réactions inline */}
+          {grouped.length > 0 && (
+            <div className="flex items-center gap-1 mt-2 flex-wrap">
+              {grouped.map(r => (
+                <button key={r.emoji} onClick={() => toggleReaction(r.emoji)}
+                  className={`flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-full border transition-colors ${r.mine ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
+                  {r.emoji} {r.count}
+                </button>
+              ))}
+            </div>
           )}
         </div>
+
+        {/* Replies */}
+        {replies.length > 0 && (
+          <div className="border-t border-gray-100 flex flex-col divide-y divide-gray-100">
+            {replies.map((r, idx) => (
+              <ReplyItem key={r.id} comment={r} authorToken={authorToken} onUpdate={onUpdate} onDelete={onDelete}
+                commentsEnabled={commentsEnabled}
+                // Bouton Répondre uniquement sur la dernière réponse
+                onReplyTo={idx === replies.length - 1 ? name => {
+                  setShowReplyForm(true)
+                  setReplyText(prev => prev ? prev : `@${name} `)
+                } : undefined}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Inline reply form */}
+        {showReplyForm && (
+          <form onSubmit={submitReply} className="border-t border-gray-100 px-3 py-2.5 flex flex-col gap-1.5 bg-gray-50">
+            <input value={replyPseudo} onChange={e => setReplyPseudo(e.target.value)}
+              placeholder="Votre prénom" maxLength={50} required
+              className="w-full text-[12px] rounded-lg px-2.5 py-1.5 outline-none border border-gray-200 bg-white" />
+            <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+              placeholder="Votre réponse…" maxLength={2000} required rows={2} autoFocus
+              className="w-full text-[12px] rounded-lg px-2.5 py-1.5 outline-none border border-gray-200 bg-white resize-none" />
+            {replyError && <p className="text-[11px] text-red-500">{replyError}</p>}
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => { setShowReplyForm(false); setReplyText('') }}
+                className="text-[11px] text-gray-500">Annuler</button>
+              <button type="submit" disabled={replySubmitting || !replyPseudo.trim() || !replyText.trim()}
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-900 text-white disabled:opacity-50">
+                {replySubmitting ? '…' : 'Envoyer'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
-      {/* Replies */}
-      {replies.length > 0 && (
-        <div className="border-t border-gray-100 flex flex-col divide-y divide-gray-100">
-          {replies.map(r => (
-            <ReplyItem key={r.id} comment={r} authorToken={authorToken} onUpdate={onUpdate} onDelete={onDelete}
-              commentsEnabled={commentsEnabled}
-              onReplyTo={name => {
-                setShowReplyForm(true)
-                setReplyText(prev => prev ? prev : `@${name} `)
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Inline reply form */}
-      {showReplyForm && (
-        <form onSubmit={submitReply} className="border-t border-gray-100 px-3 py-2.5 flex flex-col gap-1.5 bg-gray-50">
-          <input value={replyPseudo} onChange={e => setReplyPseudo(e.target.value)}
-            placeholder="Votre prénom" maxLength={50} required
-            className="w-full text-[12px] rounded-lg px-2.5 py-1.5 outline-none border border-gray-200 bg-white" />
-          <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
-            placeholder="Votre réponse…" maxLength={2000} required rows={2} autoFocus
-            className="w-full text-[12px] rounded-lg px-2.5 py-1.5 outline-none border border-gray-200 bg-white resize-none" />
-          {replyError && <p className="text-[11px] text-red-500">{replyError}</p>}
-          <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => { setShowReplyForm(false); setReplyText('') }}
-              className="text-[11px] text-gray-500">Annuler</button>
-            <button type="submit" disabled={replySubmitting || !replyPseudo.trim() || !replyText.trim()}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-900 text-white disabled:opacity-50">
-              {replySubmitting ? '…' : 'Envoyer'}
-            </button>
-          </div>
-        </form>
-      )}
+      {/* Encoche emoji — visible au hover de la card */}
+      <EmojiPickerTab
+        onPick={toggleReaction}
+        className="opacity-0 group-hover/card:opacity-100 transition-opacity"
+        style={{ right: '-6px', top: '10px', transform: 'translateX(100%)' }}
+      />
     </div>
   )
 }
@@ -333,8 +358,25 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete, onReplyTo, commen
     onDelete(comment.id)
   }
 
+  async function toggleReaction(emoji: string) {
+    const res = await fetch('/api/reactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment_id: comment.id, emoji, author_token: authorToken }),
+    })
+    if (!res.ok) return
+    const { action } = await res.json()
+    const reactions = comment.reactions || []
+    const newReactions = action === 'added'
+      ? [...reactions, { emoji, author_token: authorToken }]
+      : reactions.filter(r => !(r.emoji === emoji && r.author_token === authorToken))
+    onUpdate({ ...comment, reactions: newReactions })
+  }
+
+  const grouped = groupReactions(comment.reactions || [], authorToken)
+
   return (
-    <div className="px-3 py-2">
+    <div className="relative group/reply px-3 py-2">
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-[11px] font-semibold text-gray-700">{comment.author_name}</span>
         <div className="flex items-center gap-1.5">
@@ -360,12 +402,33 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete, onReplyTo, commen
       ) : (
         <p className="text-[12px] text-gray-600 whitespace-pre-wrap leading-snug">{comment.content}</p>
       )}
-      {!editing && commentsEnabled && (
-        <button onClick={() => onReplyTo?.(comment.author_name)}
+
+      {/* Réactions inline */}
+      {grouped.length > 0 && (
+        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+          {grouped.map(r => (
+            <button key={r.emoji} onClick={() => toggleReaction(r.emoji)}
+              className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${r.mine ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
+              {r.emoji} {r.count}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Répondre — uniquement sur la dernière réponse */}
+      {!editing && commentsEnabled && onReplyTo && (
+        <button onClick={() => onReplyTo(comment.author_name)}
           className="text-[10px] text-gray-400 hover:text-gray-600 mt-0.5 transition-colors">
           ↩ Répondre
         </button>
       )}
+
+      {/* Encoche emoji — visible au hover */}
+      <EmojiPickerTab
+        onPick={toggleReaction}
+        className="opacity-0 group-hover/reply:opacity-100 transition-opacity"
+        style={{ right: '4px', top: '6px', transform: 'translateX(100%)' }}
+      />
     </div>
   )
 }
@@ -402,7 +465,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_comments', filter: `page_id=eq.${pageId}` },
         payload => setComments(prev => prev.map(c => c.id === (payload.new as Comment).id ? { ...c, ...(payload.new as Comment) } : c)))
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'page_comments' },
-        payload => setComments(prev => prev.filter(c => c.id !== (payload.old as any).id)))
+        payload => setComments(prev => prev.filter(c => c.id !== (payload.old as Comment).id)))
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [pageId])
@@ -440,7 +503,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       items.push({ id: c.id, desiredTop })
     }
 
-    // Sort: anchored comments by desiredTop, then unanchored at end
     items.sort((a, b) => {
       if (a.desiredTop < 0 && b.desiredTop < 0) return 0
       if (a.desiredTop < 0) return 1
@@ -467,14 +529,11 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     recalcPositions()
   }, [recalcPositions])
 
-  // Re-run after card heights settle (handles dynamic content)
   useEffect(() => {
     const timer = setTimeout(recalcPositions, 50)
     return () => clearTimeout(timer)
   }, [recalcPositions])
 
-  // ResizeObserver : recalcule les positions dès qu'une card change de hauteur
-  // (formulaire de réponse ouvert, replies ajoutées, etc.)
   useEffect(() => {
     const els = Object.values(cardRefs.current).filter(Boolean) as HTMLDivElement[]
     if (els.length === 0) return
@@ -483,7 +542,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     return () => ro.disconnect()
   }, [comments.length, recalcPositions])
 
-  // Selection detection
   const handleSelectionEnd = useCallback(() => {
     const sel = window.getSelection()
     if (!sel || sel.isCollapsed || !sel.toString().trim()) { setBubble(null); setSelRects([]); return }
@@ -546,7 +604,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     } catch (err) { setError(err instanceof Error ? err.message : 'Erreur réseau') } finally { setSubmitting(false) }
   }
 
-  // Reply submit — needs page_id from closure
   async function submitReplyWithPageId(commentId: string, replyPseudo: string, replyText: string, authorToken: string): Promise<{ ok: boolean; data?: Comment; error?: string }> {
     try {
       const res = await fetch('/api/comments', {
@@ -563,7 +620,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       const text = await res.text()
       const data = text ? JSON.parse(text) : {}
       if (!res.ok) return { ok: false, error: data.error || `Erreur ${res.status}` }
-      // Ajoute immédiatement la réponse à l'état local (sans attendre le realtime)
       setComments(prev => prev.find(c => c.id === data.id) ? prev : [...prev, { ...data, reactions: data.reactions ?? [] }])
       return { ok: true, data }
     } catch (err) {
@@ -594,14 +650,12 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     }
     const comment = visible.find(c => c.id === hoveredCommentId)
 
-    // Surlignage rouge pâle sur le texte sélectionné
     if (comment?.selected_text && contentRef.current) {
       highlightText(comment.selected_text, contentRef.current, false)
     } else {
       removeHighlights()
     }
 
-    // Ligne pointillée de connexion
     if (!comment?.selected_text || !contentRef.current || !wrapperRef.current) { setConnectorLine(null); return }
     const wrapperRect = wrapperRef.current.getBoundingClientRect()
     const cardEl = cardRefs.current[hoveredCommentId]
@@ -629,7 +683,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     }
   }, [hoveredCommentId, visible])
 
-  // Compute total height of right column (for wrapper min-height)
   const rightColHeight = visible.reduce((acc, c) => {
     const pos = positions[c.id] ?? 0
     const h = cardRefs.current[c.id]?.offsetHeight ?? 100
@@ -638,7 +691,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
 
   return (
     <>
-      {/* Selection overlay */}
       {selRects.map((r, i) => (
         <div key={i} style={{
           position: 'fixed', left: r.left, top: r.top, width: r.width, height: r.height,
@@ -646,7 +698,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
         }} />
       ))}
 
-      {/* Comment bubble */}
       {bubble && commentsEnabled && (
         <button
           onMouseDown={e => {
@@ -667,7 +718,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
         </button>
       )}
 
-      {/* New comment form modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}
           onClick={() => { setShowForm(false); setSelRects([]) }}>
@@ -701,16 +751,13 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
         </div>
       )}
 
-      {/* Page header */}
       <div className="flex items-center gap-3 mb-2">
         <span className="text-5xl">{pageIcon}</span>
       </div>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">{pageTitle}</h1>
       {subpagesBlock}
 
-      {/* Two-column layout: content left, comments right */}
       <div ref={wrapperRef} className="relative" style={{ minHeight: rightColHeight > 0 ? rightColHeight : undefined }}>
-        {/* Connector line SVG (desktop, hover) */}
         {connectorLine && (
           <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5, overflow: 'visible' }}>
             <path
@@ -722,7 +769,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
             />
           </svg>
         )}
-        {/* Content — padded right on large screens to leave room for comments */}
         <div className={visible.length > 0 ? 'lg:pr-[320px]' : ''}>
           <div ref={contentRef} className="share-content">
             <style>{`
@@ -731,7 +777,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               .prose [data-callout][color="blue"]  { background:rgba(96,165,250,.12); border-left-color:#60a5fa; }
               .prose [data-callout][color="red"]   { background:rgba(239,68,68,.12);  border-left-color:#ef4444; }
               .prose [data-callout][color="green"] { background:rgba(34,197,94,.12);  border-left-color:#22c55e; }
-              /* Task list (checkboxes) */
               .prose ul[data-type="taskList"] { list-style:none; padding-left:0.25rem; }
               .prose ul li:has(> input[type="checkbox"]),
               .prose ul li:has(> label > input[type="checkbox"]) { display:flex; align-items:center; gap:0.5rem; list-style:none; }
@@ -802,7 +847,6 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
         )}
       </div>
 
-      {/* Comment controls bar (always visible) */}
       <div className="mt-10 pt-6 border-t border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {totalCount > 0 && (
