@@ -539,6 +539,8 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       const text = await res.text()
       const data = text ? JSON.parse(text) : {}
       if (!res.ok) return { ok: false, error: data.error || `Erreur ${res.status}` }
+      // Ajoute immédiatement la réponse à l'état local (sans attendre le realtime)
+      setComments(prev => prev.find(c => c.id === data.id) ? prev : [...prev, { ...data, reactions: data.reactions ?? [] }])
       return { ok: true, data }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Erreur réseau' }
@@ -561,8 +563,21 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
   const [connectorLine, setConnectorLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
 
   useEffect(() => {
-    if (!hoveredCommentId) { setConnectorLine(null); return }
+    if (!hoveredCommentId) {
+      setConnectorLine(null)
+      removeHighlights()
+      return
+    }
     const comment = visible.find(c => c.id === hoveredCommentId)
+
+    // Surlignage rouge pâle sur le texte sélectionné
+    if (comment?.selected_text && contentRef.current) {
+      highlightText(comment.selected_text, contentRef.current, false)
+    } else {
+      removeHighlights()
+    }
+
+    // Ligne pointillée de connexion
     if (!comment?.selected_text || !contentRef.current || !wrapperRef.current) { setConnectorLine(null); return }
     const wrapperRect = wrapperRef.current.getBoundingClientRect()
     const cardEl = cardRefs.current[hoveredCommentId]
@@ -712,8 +727,8 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
               <div
                 key={c.id}
                 ref={el => { cardRefs.current[c.id] = el }}
-                onMouseEnter={() => { setHoveredCommentId(c.id); if (c.selected_text) highlightText(c.selected_text, contentRef.current, false) }}
-                onMouseLeave={() => { setHoveredCommentId(null); setConnectorLine(null); removeHighlights() }}
+                onMouseEnter={() => setHoveredCommentId(c.id)}
+                onMouseLeave={() => setHoveredCommentId(null)}
                 style={{
                   position: 'absolute',
                   top: positions[c.id] ?? 0,
