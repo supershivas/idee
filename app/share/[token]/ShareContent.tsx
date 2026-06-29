@@ -459,6 +459,16 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     return () => clearTimeout(timer)
   }, [recalcPositions])
 
+  // ResizeObserver : recalcule les positions dès qu'une card change de hauteur
+  // (formulaire de réponse ouvert, replies ajoutées, etc.)
+  useEffect(() => {
+    const els = Object.values(cardRefs.current).filter(Boolean) as HTMLDivElement[]
+    if (els.length === 0) return
+    const ro = new ResizeObserver(() => recalcPositions())
+    els.forEach(el => ro.observe(el))
+    return () => ro.disconnect()
+  }, [comments.length, recalcPositions])
+
   // Selection detection
   const handleSelectionEnd = useCallback(() => {
     const sel = window.getSelection()
