@@ -45,6 +45,7 @@ const TypographyShortcuts = Extension.create({
 })
 import { Page } from './types'
 import { useKeyboardOffset } from './hooks'
+import { toast } from './components/Toast'
 import { createClient } from '@/lib/supabase/client'
 
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
@@ -113,7 +114,17 @@ function TableBottomSheet({ editor, onClose }: { editor: any, onClose: () => voi
   )
 }
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 Mo
+
 async function uploadFileToSupabase(file: File, userId: string): Promise<string | null> {
+  if (!file.type.startsWith('image/')) {
+    toast('Seules les images peuvent être insérées.', 'error')
+    return null
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    toast('Image trop lourde (max 5 Mo).', 'error')
+    return null
+  }
   try {
     const supabase = createClient()
     const ext = file.name.split('.').pop()
@@ -124,6 +135,7 @@ async function uploadFileToSupabase(file: File, userId: string): Promise<string 
     return data.publicUrl
   } catch (error) {
     console.error('Erreur upload:', error)
+    toast("Échec de l'envoi de l'image — vérifiez votre connexion.", 'error')
     return null
   }
 }

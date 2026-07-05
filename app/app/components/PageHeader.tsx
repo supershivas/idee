@@ -43,6 +43,8 @@ function CoverModal({ page, userId, onApply, onClose }: { page: Page; userId: st
   }
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Seules les images sont acceptées.'); return }
+    if (file.size > 5 * 1024 * 1024) { setError('Image trop lourde (max 5 Mo).'); return }
     setUploading(true); setError('')
     try {
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
