@@ -10,7 +10,17 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
-  const sorted = [...trashedPages].sort((a, b) =>
+  // Une page supprimée avec son parent est restaurée/purgée avec lui :
+  // on n'affiche que les racines de chaque sous-arbre supprimé.
+  const trashedIds = new Set(trashedPages.map(p => p.id))
+  const roots = trashedPages.filter(p => !p.parent_id || !trashedIds.has(p.parent_id))
+  function countDescendants(id: string): number {
+    return trashedPages
+      .filter(p => p.parent_id === id)
+      .reduce((acc, c) => acc + 1 + countDescendants(c.id), 0)
+  }
+
+  const sorted = [...roots].sort((a, b) =>
     new Date(b.deleted_at!).getTime() - new Date(a.deleted_at!).getTime()
   )
 
@@ -54,6 +64,7 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
                   {daysLeft(page.deleted_at!) > 0
                     ? `Suppression dans ${daysLeft(page.deleted_at!)} jour${daysLeft(page.deleted_at!) > 1 ? 's' : ''}`
                     : 'Suppression imminente'}
+                  {countDescendants(page.id) > 0 && ` · ${countDescendants(page.id)} sous-page${countDescendants(page.id) > 1 ? 's' : ''}`}
                 </p>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
