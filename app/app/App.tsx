@@ -16,8 +16,12 @@ const closestVertical: CollisionDetection = ({ collisionRect, droppableRects, dr
   }
   return bestId != null ? [{ id: bestId }] : []
 }
-import { Page, SaveState } from './types'
-import { useIsMobile, useToggleFavorite } from './hooks'
+import { Page } from './types'
+import { getAncestorIds, getDescendantIds, slugify } from './utils'
+import { useIsMobile, useToggleFavorite, usePageSaver } from './hooks'
+import { PagePickerModal } from './components/PagePickerModal'
+import { MoveToModal } from './components/MoveToModal'
+import { SidebarContextMenu } from './components/SidebarContextMenu'
 import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
 import { PageTree, FavoritesSection } from './components/PageTree'
@@ -38,302 +42,8 @@ import ReviewMode from './components/ReviewMode'
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
 
-function normalizeStr(s: string) {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-}
-
-function getAncestorIds(pages: Page[], pageId: string): string[] {
-  const ids: string[] = []
-  let current = pages.find(p => p.id === pageId)
-  while (current?.parent_id) {
-    ids.push(current.parent_id)
-    current = pages.find(p => p.id === current!.parent_id)
-  }
-  return ids
-}
-
-// Tous les descendants (sous-pages, sous-sous-pages, …), supprimés inclus.
-function getDescendantIds(pages: Page[], rootId: string): string[] {
-  const children = pages.filter(p => p.parent_id === rootId)
-  return children.flatMap(c => [c.id, ...getDescendantIds(pages, c.id)])
-}
-
-function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCloseSplit }: {
-  pages: Page[]
-  onSelect: (p: Page) => void
-  onClose: () => void
-  onCloseSplit: () => void
-  hideCloseSplit?: boolean
-}) {
-  const [query, setQuery] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  const allActive = pages.filter(p => !p.deleted_at)
-  const nonJournal = allActive.filter(p => p.type !== 'journal')
-  const journal = allActive.filter(p => p.type === 'journal')
-
-  const favorites = nonJournal
-    .filter(p => p.favorite)
-    .sort((a, b) => (a.favorite_position ?? 999) - (b.favorite_position ?? 999))
-
-  const recentPages = [...nonJournal]
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-    .slice(0, 7)
-
-  const recentJournal = [...journal]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5)
-
-  const hasQuery = query.trim().length > 0
-  const filtered = hasQuery
-    ? allActive.filter(p => normalizeStr(p.title || '').includes(normalizeStr(query)))
-    : []
-
-  function PageRow({ p }: { p: Page }) {
-    return (
-      <button
-        key={p.id}
-        onClick={() => onSelect(p)}
-        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
-        style={{ color: 'var(--text-primary)' }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-      >
-        <span className="flex-shrink-0">{p.icon || (p.type === 'journal' ? '📝' : '📄')}</span>
-        <span className="flex-1 truncate">{p.title || 'Sans titre'}</span>
-        {p.type === 'journal' && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Journal</span>
-        )}
-      </button>
-    )
-  }
-
-  function SectionLabel({ label }: { label: string }) {
-    return (
-      <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-        {label}
-      </p>
-    )
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-[300] flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.55)' }}
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div
-        className="flex flex-col rounded-2xl overflow-hidden"
-        style={{ width: 420, maxHeight: '72vh', background: 'var(--card-bg)', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', border: '1px solid var(--border)' }}
-      >
-        <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
-          <i className="ti ti-search" style={{ color: 'var(--text-muted)', fontSize: '15px' }} />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Rechercher une page…"
-            className="flex-1 outline-none text-sm"
-            style={{ color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }}
-          />
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
-        </div>
-
-        <div className="overflow-y-auto flex-1 pb-1">
-          {hasQuery ? (
-            filtered.length === 0
-              ? <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>Aucune page trouvée</p>
-              : filtered.map(p => <PageRow key={p.id} p={p} />)
-          ) : (
-            <>
-              {favorites.length > 0 && (
-                <>
-                  <SectionLabel label="Favoris" />
-                  {favorites.map(p => <PageRow key={p.id} p={p} />)}
-                </>
-              )}
-              {recentPages.length > 0 && (
-                <>
-                  <SectionLabel label="Récemment modifiés" />
-                  {recentPages.map(p => <PageRow key={p.id} p={p} />)}
-                </>
-              )}
-              {recentJournal.length > 0 && (
-                <>
-                  <SectionLabel label="Dernières entrées journal" />
-                  {recentJournal.map(p => <PageRow key={p.id} p={p} />)}
-                </>
-              )}
-            </>
-          )}
-        </div>
-
-        {!hideCloseSplit && (
-          <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
-            <button
-              onClick={onCloseSplit}
-              className="w-full text-sm py-2 rounded-lg"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              <i className="ti ti-layout-columns-off mr-2" />
-              Fermer la vue partagée
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ─── MoveToModal ──────────────────────────────────────────────────────────────
-function MoveToModal({ page, pages, onMove, onClose }: {
-  page: Page
-  pages: Page[]
-  onMove: (parentId: string | null) => void
-  onClose: () => void
-}) {
-  const [query, setQuery] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  const excluded = new Set([page.id, ...getDescendantIds(pages, page.id)])
-  const candidates = pages.filter(p => !p.deleted_at && p.type !== 'journal' && !excluded.has(p.id))
-  const filtered = query.trim()
-    ? candidates.filter(p => normalizeStr(p.title || '').includes(normalizeStr(query)))
-    : candidates.slice(0, 12)
-
-  function Row({ p }: { p: Page }) {
-    return (
-      <button onClick={() => onMove(p.id)}
-        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
-        style={{ color: 'var(--text-primary)' }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-        <span className="flex-shrink-0">{p.icon || '📄'}</span>
-        <span className="flex-1 truncate">{p.title || 'Sans titre'}</span>
-        {p.parent_id && <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>sous-page</span>}
-      </button>
-    )
-  }
-
-  return (
-    <div className="fixed inset-0 z-[400] flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.55)' }}
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="flex flex-col rounded-2xl overflow-hidden"
-        style={{ width: 400, maxHeight: '66vh', background: 'var(--card-bg)', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', border: '1px solid var(--border)' }}>
-        <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
-          <i className="ti ti-folder-symlink" style={{ color: 'var(--text-muted)', fontSize: '15px' }} />
-          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Déplacer vers…"
-            className="flex-1 outline-none text-sm"
-            style={{ color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }} />
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
-        </div>
-        <div className="overflow-y-auto flex-1 pb-1">
-          <button onClick={() => onMove(null)}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
-            style={{ color: 'var(--accent)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-            <i className="ti ti-home text-base flex-shrink-0" />
-            <span>Aucun parent (page racine)</span>
-          </button>
-          <div style={{ height: '1px', background: 'var(--border)', margin: '2px 16px' }} />
-          {filtered.length === 0
-            ? <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>Aucune page trouvée</p>
-            : filtered.map(p => <Row key={p.id} p={p} />)}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── SidebarContextMenu ───────────────────────────────────────────────────────
-function SidebarContextMenu({ x, y, page, isFavorite, onClose, onOpenSplit, onAddSubpage, onMoveTo, onDuplicate, onRename, onToggleFavorite, onTrash }: {
-  x: number; y: number; page: Page; isFavorite: boolean
-  onClose: () => void
-  onOpenSplit: () => void
-  onAddSubpage: () => void
-  onMoveTo: () => void
-  onDuplicate: () => void
-  onRename: () => void
-  onToggleFavorite: () => void
-  onTrash: () => void
-}) {
-  const menuRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
-    }
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    setTimeout(() => document.addEventListener('mousedown', handle), 0)
-    document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', onKey) }
-  }, [onClose])
-
-  // Clamp to viewport
-  const menuW = 220, menuH = 280
-  const cx = Math.min(x, window.innerWidth - menuW - 8)
-  const cy = Math.min(y, window.innerHeight - menuH - 8)
-
-  function Item({ icon, label, onClick, danger }: { icon: string; label: string; onClick: () => void; danger?: boolean }) {
-    return (
-      <button onClick={() => { onClick(); onClose() }}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors"
-        style={{ color: danger ? '#ef4444' : 'var(--text-primary)' }}
-        onMouseEnter={e => (e.currentTarget.style.background = danger ? 'rgba(239,68,68,0.08)' : 'var(--hover-bg)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-        <i className={`ti ti-${icon}`} style={{ fontSize: '14px', width: '16px', flexShrink: 0 }} />
-        {label}
-      </button>
-    )
-  }
-  function Sep() {
-    return <div style={{ height: '1px', background: 'var(--border)', margin: '3px 8px' }} />
-  }
-
-  return (
-    <div ref={menuRef}
-      className="fixed z-[500] rounded-xl py-1.5 overflow-hidden"
-      style={{ left: cx, top: cy, width: menuW, background: 'var(--card-bg)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)' }}>
-      <div className="px-3 py-1.5 text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-        {page.icon || '📄'} {page.title || 'Sans titre'}
-      </div>
-      <Sep />
-      <Item icon="layout-columns" label="Ouvrir en vue partagée" onClick={onOpenSplit} />
-      <Sep />
-      <Item icon="file-plus" label="Ajouter une sous-page" onClick={onAddSubpage} />
-      <Item icon="folder-symlink" label="Déplacer vers…" onClick={onMoveTo} />
-      <Item icon="copy" label="Dupliquer" onClick={onDuplicate} />
-      <Sep />
-      <Item icon={isFavorite ? 'star-off' : 'star'} label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} onClick={onToggleFavorite} />
-      <Sep />
-      <Item icon="trash" label="Déplacer vers la corbeille" onClick={onTrash} danger />
-    </div>
-  )
-}
-
 export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
-  const [saveState, setSaveState] = useState<SaveState>('saved')
   const [showTrash, setShowTrash] = useState(false)
   const [showJournal, setShowJournal] = useState(false)
   const [showTags, setShowTags] = useState(false)
@@ -384,6 +94,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
+  const { saveState, queueSave } = usePageSaver(userId, pages)
 
   // Offline / online detection
   useEffect(() => {
@@ -473,15 +184,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       setSelected(prev => prev ? { ...prev, favorite: updated.favorite, favorite_position: updated.favorite_position } : null)
     }
   }, [pages])
-
-  function slugify(title: string) {
-    return title
-      .toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      || 'sans-titre'
-  }
 
   const selectPageRight = useCallback((page: Page | null) => {
     setSelectedRight(page)
@@ -664,97 +366,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       return false
     }
   }
-
-  // ── Sauvegarde différée (contenu + titre) ──────────────────────────────────
-  // Chaque frappe met à jour l'état local immédiatement, mais l'écriture
-  // Supabase est bufferisée par page et débouncée : une rafale de frappes ne
-  // produit qu'un seul UPDATE (avant : une requête par frappe). Les flushs
-  // sont sérialisés via saveChainRef pour garantir l'ordre des écritures, et
-  // les entrées en échec sont remises en file puis retentées automatiquement.
-  const SAVE_DEBOUNCE_MS = 500
-  const SAVE_RETRY_MS = 5000
-  const pendingSavesRef = useRef<Map<string, { content?: string; title?: string }>>(new Map())
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const saveChainRef = useRef<Promise<void>>(Promise.resolve())
-  const lastHistoryAtRef = useRef<Map<string, number>>(new Map())
-  const pagesRef = useRef(pages)
-  useEffect(() => { pagesRef.current = pages }, [pages])
-
-  const flushSaves = useCallback((): Promise<void> => {
-    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null }
-    if (pendingSavesRef.current.size === 0) return saveChainRef.current
-    const entries = Array.from(pendingSavesRef.current.entries())
-    pendingSavesRef.current.clear()
-    setSaveState('saving')
-    saveChainRef.current = saveChainRef.current.then(async () => {
-      let hadError = false
-      for (const [pageId, patch] of entries) {
-        try {
-          const updated_at = new Date().toISOString()
-          const { error } = await createClient().from('pages').update({ ...patch, updated_at }).eq('id', pageId)
-          if (error) throw error
-          // Snapshot d'historique au plus toutes les 2 minutes, par page
-          if (patch.content !== undefined) {
-            const now = Date.now()
-            if (now - (lastHistoryAtRef.current.get(pageId) || 0) > 2 * 60 * 1000) {
-              lastHistoryAtRef.current.set(pageId, now)
-              const page = pagesRef.current.find(p => p.id === pageId)
-              await createClient().from('page_history').insert({
-                page_id: pageId, user_id: userId,
-                title: patch.title ?? page?.title ?? '', content: patch.content,
-              })
-            }
-          }
-        } catch {
-          hadError = true
-          // Remet en file, sans écraser des modifications plus récentes
-          const newer = pendingSavesRef.current.get(pageId) || {}
-          pendingSavesRef.current.set(pageId, { ...patch, ...newer })
-        }
-      }
-      if (hadError) {
-        setSaveState('error')
-        toast('Erreur de sauvegarde — nouvel essai dans quelques secondes.', 'error')
-        if (!saveTimerRef.current) {
-          saveTimerRef.current = setTimeout(() => { saveTimerRef.current = null; void flushSaves() }, SAVE_RETRY_MS)
-        }
-      } else {
-        setSaveState(pendingSavesRef.current.size > 0 ? 'pending' : 'saved')
-      }
-    })
-    return saveChainRef.current
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
-
-  const queueSave = useCallback((pageId: string, patch: { content?: string; title?: string }) => {
-    pendingSavesRef.current.set(pageId, { ...(pendingSavesRef.current.get(pageId) || {}), ...patch })
-    setSaveState('pending')
-    // Onglet en arrière-plan : les timers sont throttlés, on écrit tout de suite
-    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') { void flushSaves(); return }
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => { saveTimerRef.current = null; void flushSaves() }, SAVE_DEBOUNCE_MS)
-  }, [flushSaves])
-
-  // Flush quand l'onglet passe en arrière-plan ; à la fermeture, si des
-  // modifications n'ont pas encore été écrites, on tente le flush et on
-  // affiche la confirmation native du navigateur.
-  useEffect(() => {
-    function onVisibilityChange() {
-      if (document.visibilityState === 'hidden') void flushSaves()
-    }
-    function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (pendingSavesRef.current.size > 0) {
-        void flushSaves()
-        e.preventDefault()
-      }
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('beforeunload', onBeforeUnload)
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('beforeunload', onBeforeUnload)
-    }
-  }, [flushSaves])
 
   function updateTitle(value: string, pageId: string) {
     const updated_at = new Date().toISOString()
