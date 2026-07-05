@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-interface Reaction { emoji: string; author_token: string }
+interface Reaction { emoji: string }
 interface Comment {
   id: string
   parent_id: string | null

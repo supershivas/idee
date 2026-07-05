@@ -46,11 +46,20 @@ export default async function SharePage({ params }: { params: { token: string } 
     .select('id, title, icon, share_token, is_shared')
     .eq('parent_id', page.id)
 
-  const { data: comments } = await supabase
+  // IMPORTANT : ne jamais sélectionner author_token ici — ce token est la
+  // preuve de propriété des commentaires et partirait dans le HTML public.
+  // is_own/mine sont recalculés côté client via GET /api/comments.
+  const { data: rawComments } = await supabase
     .from('page_comments')
-    .select('*')
+    .select('id, page_id, parent_id, author_name, content, selected_text, created_at, edited_at, resolved, pinned, reactions:page_comment_reactions(emoji)')
     .eq('page_id', page.id)
     .order('created_at', { ascending: true })
+
+  const comments = (rawComments || []).map(c => ({
+    ...c,
+    is_own: false,
+    reactions: (c.reactions || []).map(r => ({ emoji: r.emoji, mine: false })),
+  }))
 
   const subpagesBlock = subpages && subpages.length > 0 ? (
     <div className="mb-6 pb-6 border-b border-gray-100">
@@ -79,7 +88,7 @@ export default async function SharePage({ params }: { params: { token: string } 
         pageIcon={page.icon || '📄'}
         pageTitle={page.title || 'Sans titre'}
         safeContent={safeContent}
-        initialComments={(comments || []) as any}
+        initialComments={comments as any}
         commentsEnabled={page.comments_enabled !== false}
         subpagesBlock={subpagesBlock}
       />
