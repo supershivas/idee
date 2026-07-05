@@ -2,7 +2,9 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-interface Reaction { emoji: string; author_token: string }
+// Le serveur ne renvoie jamais author_token (preuve de propriété) : il
+// calcule is_own / mine à partir du header x-author-token du demandeur.
+interface Reaction { emoji: string; mine: boolean }
 interface Comment {
   id: string
   parent_id: string | null
@@ -13,7 +15,7 @@ interface Comment {
   edited_at?: string | null
   resolved: boolean
   pinned: boolean
-  author_token: string | null
+  is_own: boolean
   reactions: Reaction[]
 }
 
@@ -48,14 +50,26 @@ function timeAgo(iso: string) {
   return `il y a ${Math.floor(h / 24)}j`
 }
 
-function groupReactions(reactions: Reaction[], authorToken: string): { emoji: string; count: number; mine: boolean }[] {
+function groupReactions(reactions: Reaction[]): { emoji: string; count: number; mine: boolean }[] {
   const map: Record<string, { count: number; mine: boolean }> = {}
   for (const r of reactions) {
     if (!map[r.emoji]) map[r.emoji] = { count: 0, mine: false }
     map[r.emoji].count++
-    if (r.author_token === authorToken) map[r.emoji].mine = true
+    if (r.mine) map[r.emoji].mine = true
   }
   return Object.entries(map).map(([emoji, v]) => ({ emoji, ...v }))
+}
+
+// Convertit une ligne brute reçue via Supabase Realtime en Comment sûr :
+// le payload realtime contient author_token (ligne complète), on le compare
+// localement à notre propre token puis on le retire de l'état React.
+function commentFromRealtime(row: Record<string, unknown>): Comment {
+  const { author_token, ...rest } = row
+  return {
+    ...(rest as unknown as Comment),
+    is_own: author_token != null && author_token === getAuthorToken(),
+    reactions: [],
+  }
 }
 
 // Encoche emoji sur le côté droit d'un commentaire (visible au hover)
@@ -140,7 +154,7 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
   onReply: (pseudo: string, text: string) => Promise<{ ok: boolean; error?: string }>
   authorToken: string
 }) {
-  const isOwn = comment.author_token === authorToken
+  const isOwn = comment.is_own
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState(comment.content)
   const [saving, setSaving] = useState(false)
@@ -186,8 +200,8 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
     if (!res.ok) return
     const { action } = await res.json()
     const newReactions = action === 'added'
-      ? [...comment.reactions, { emoji, author_token: authorToken }]
-      : comment.reactions.filter(r => !(r.emoji === emoji && r.author_token === authorToken))
+      ? [...comment.reactions, { emoji, mine: true }]
+      : comment.reactions.filter(r => !(r.emoji === emoji && r.mine))
     onUpdate({ ...comment, reactions: newReactions })
   }
 
@@ -207,7 +221,7 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
     setReplySubmitting(false)
   }
 
-  const grouped = groupReactions(comment.reactions || [], authorToken)
+  const grouped = groupReactions(comment.reactions || [])
 
   return (
     // Outer wrapper — overflow visible pour l'encoche emoji droite
@@ -331,7 +345,7 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete, onReplyTo, commen
   onReplyTo?: (authorName: string) => void
   commentsEnabled?: boolean
 }) {
-  const isOwn = comment.author_token === authorToken
+  const isOwn = comment.is_own
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState(comment.content)
   const [saving, setSaving] = useState(false)
@@ -368,12 +382,12 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete, onReplyTo, commen
     const { action } = await res.json()
     const reactions = comment.reactions || []
     const newReactions = action === 'added'
-      ? [...reactions, { emoji, author_token: authorToken }]
-      : reactions.filter(r => !(r.emoji === emoji && r.author_token === authorToken))
+      ? [...reactions, { emoji, mine: true }]
+      : reactions.filter(r => !(r.emoji === emoji && r.mine))
     onUpdate({ ...comment, reactions: newReactions })
   }
 
-  const grouped = groupReactions(comment.reactions || [], authorToken)
+  const grouped = groupReactions(comment.reactions || [])
 
   return (
     <div className="relative group/reply px-3 py-2">
@@ -455,15 +469,33 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
     setPseudo(localStorage.getItem(PSEUDO_KEY) || '')
   }, [])
 
-  // Realtime subscription
+  // Le SSR envoie les commentaires sans information de propriété (is_own /
+  // mine à false partout). On refait un GET avec notre token pour que le
+  // serveur nous dise lesquels sont à nous.
+  useEffect(() => {
+    fetch(`/api/comments?pageId=${pageId}`, { headers: { 'x-author-token': getAuthorToken() } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (Array.isArray(data)) setComments(data) })
+      .catch(() => {})
+  }, [pageId])
+
+  // Realtime subscription — les payloads contiennent la ligne brute
+  // (author_token inclus) : on passe par commentFromRealtime pour ne jamais
+  // stocker ce token dans l'état React.
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
       .channel(`comments:${pageId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'page_comments', filter: `page_id=eq.${pageId}` },
-        payload => setComments(prev => prev.find(c => c.id === (payload.new as Comment).id) ? prev : [...prev, { ...(payload.new as Comment), reactions: [] }]))
+        payload => {
+          const incoming = commentFromRealtime(payload.new as Record<string, unknown>)
+          setComments(prev => prev.find(c => c.id === incoming.id) ? prev : [...prev, incoming])
+        })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_comments', filter: `page_id=eq.${pageId}` },
-        payload => setComments(prev => prev.map(c => c.id === (payload.new as Comment).id ? { ...c, ...(payload.new as Comment) } : c)))
+        payload => {
+          const incoming = commentFromRealtime(payload.new as Record<string, unknown>)
+          setComments(prev => prev.map(c => c.id === incoming.id ? { ...c, ...incoming, reactions: c.reactions } : c))
+        })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'page_comments' },
         payload => setComments(prev => prev.filter(c => c.id !== (payload.old as Comment).id)))
       .subscribe()

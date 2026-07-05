@@ -1,19 +1,36 @@
 import { createClient } from '@/lib/supabase/server'
+import { COMMENT_COLUMNS, sanitizeComment } from '@/lib/comments'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
   try {
     const pageId = req.nextUrl.searchParams.get('pageId')
     if (!pageId) return NextResponse.json({ error: 'missing pageId' }, { status: 400 })
+    const requesterToken = req.headers.get('x-author-token')
     const supabase = await createClient()
+
+    // Accès : page partagée publiquement, ou propriétaire authentifié.
+    const { data: page } = await supabase
+      .from('pages')
+      .select('id, is_shared, user_id')
+      .eq('id', pageId)
+      .single()
+    if (!page) return NextResponse.json({ error: 'Page introuvable' }, { status: 404 })
+    if (!page.is_shared) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || user.id !== page.user_id) {
+        return NextResponse.json({ error: 'Page introuvable' }, { status: 404 })
+      }
+    }
+
     const { data, error } = await supabase
       .from('page_comments')
-      .select('*, reactions:page_comment_reactions(emoji, author_token)')
+      .select(COMMENT_COLUMNS)
       .eq('page_id', pageId)
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data)
+    return NextResponse.json((data || []).map(c => sanitizeComment(c, requesterToken)))
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Erreur serveur' }, { status: 500 })
   }
@@ -29,11 +46,14 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: page } = await supabase
       .from('pages')
-      .select('id')
+      .select('id, comments_enabled')
       .eq('id', page_id)
       .eq('is_shared', true)
       .single()
     if (!page) return NextResponse.json({ error: 'Page introuvable ou non partagée' }, { status: 404 })
+    if (page.comments_enabled === false) {
+      return NextResponse.json({ error: 'Les commentaires sont désactivés sur cette page' }, { status: 403 })
+    }
 
     const row: Record<string, unknown> = {
       page_id,
@@ -50,7 +70,7 @@ export async function POST(req: NextRequest) {
       .select()
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ...data, reactions: [] })
+    return NextResponse.json(sanitizeComment({ ...data, reactions: [] }, author_token))
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Erreur serveur' }, { status: 500 })
   }
