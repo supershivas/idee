@@ -1,0 +1,27 @@
+# CI minimale : typecheck + lint + build sur chaque PR et sur main.
+# Le build utilise des variables Supabase factices : les pages qui touchent
+# à la base sont dynamiques (rendues à la demande), seule la compilation
+# est vérifiée ici.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
