@@ -52,6 +52,12 @@ function getAncestorIds(pages: Page[], pageId: string): string[] {
   return ids
 }
 
+// Tous les descendants (sous-pages, sous-sous-pages, …), supprimés inclus.
+function getDescendantIds(pages: Page[], rootId: string): string[] {
+  const children = pages.filter(p => p.parent_id === rootId)
+  return children.flatMap(c => [c.id, ...getDescendantIds(pages, c.id)])
+}
+
 function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCloseSplit }: {
   pages: Page[]
   onSelect: (p: Page) => void
@@ -207,11 +213,7 @@ function MoveToModal({ page, pages, onMove, onClose }: {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  function getDescendantIds(id: string): string[] {
-    const children = pages.filter(p => p.parent_id === id && !p.deleted_at)
-    return children.flatMap(c => [c.id, ...getDescendantIds(c.id)])
-  }
-  const excluded = new Set([page.id, ...getDescendantIds(page.id)])
+  const excluded = new Set([page.id, ...getDescendantIds(pages, page.id)])
   const candidates = pages.filter(p => !p.deleted_at && p.type !== 'journal' && !excluded.has(p.id))
   const filtered = query.trim()
     ? candidates.filter(p => normalizeStr(p.title || '').includes(normalizeStr(query)))
@@ -784,31 +786,53 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   async function deletePage(id: string) {
     const deletedAt = new Date().toISOString()
     const wasJournal = selected?.id === id && selected?.type === 'journal'
-    setPages(prev => prev.map(p => p.id === id || p.parent_id === id ? { ...p, deleted_at: deletedAt } : p))
-    if (selected?.id === id) {
+    // Tout le sous-arbre part à la corbeille avec le même horodatage ; les
+    // descendants déjà à la corbeille gardent le leur (supprimés séparément).
+    const ids = [id, ...getDescendantIds(pages, id).filter(did => !pages.find(p => p.id === did)?.deleted_at)]
+    const idSet = new Set(ids)
+    setPages(prev => prev.map(p => idSet.has(p.id) ? { ...p, deleted_at: deletedAt } : p))
+    if (selected && idSet.has(selected.id)) {
       if (wasJournal) {
         setSelected(null)
         setShowJournal(true)
       } else {
-        setSelected(activePages.find(p => p.id !== id && p.type !== 'journal') || null)
+        setSelected(activePages.find(p => !idSet.has(p.id) && p.type !== 'journal') || null)
       }
     }
-    if (selectedRight?.id === id) setSelectedRight(null)
+    if (selectedRight && idSet.has(selectedRight.id)) setSelectedRight(null)
     toast('Déplacé dans la corbeille.', 'info', { label: 'Annuler', onAction: () => restorePage(id) })
-    await createClient().from('pages').update({ deleted_at: deletedAt }).eq('id', id)
-    const children = pages.filter(p => p.parent_id === id)
-    if (children.length) await createClient().from('pages').update({ deleted_at: deletedAt }).in('id', children.map(c => c.id))
+    await createClient().from('pages').update({ deleted_at: deletedAt }).in('id', ids)
   }
 
   async function restorePage(id: string) {
-    setPages(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } : p))
-    await createClient().from('pages').update({ deleted_at: null }).eq('id', id)
+    const page = pages.find(p => p.id === id)
+    if (!page) return
+    // Restaure la page et les descendants supprimés dans le même lot (même
+    // horodatage) — ceux mis à la corbeille séparément y restent.
+    const ids = [id, ...getDescendantIds(pages, id).filter(did =>
+      pages.find(p => p.id === did)?.deleted_at === page.deleted_at
+    )]
+    const idSet = new Set(ids)
+    // Si le parent est toujours à la corbeille, la page restaurée serait
+    // invisible dans l'arborescence : on la rattache à la racine.
+    const parentStillTrashed = !!(page.parent_id && pages.find(p => p.id === page.parent_id)?.deleted_at)
+    setPages(prev => prev.map(p => {
+      if (!idSet.has(p.id)) return p
+      const restored = { ...p, deleted_at: null }
+      if (p.id === id && parentStillTrashed) restored.parent_id = null
+      return restored
+    }))
+    await createClient().from('pages').update({ deleted_at: null }).in('id', ids)
+    if (parentStillTrashed) await createClient().from('pages').update({ parent_id: null }).eq('id', id)
     toast('Note restaurée.', 'success')
   }
 
   async function deleteForever(id: string) {
-    setPages(prev => prev.filter(p => p.id !== id))
-    await createClient().from('pages').delete().eq('id', id)
+    // Supprime tout le sous-arbre, sinon les descendants resteraient en base
+    // comme lignes orphelines invisibles.
+    const ids = new Set([id, ...getDescendantIds(pages, id)])
+    setPages(prev => prev.filter(p => !ids.has(p.id)))
+    await createClient().from('pages').delete().in('id', Array.from(ids))
     toast('Supprimée définitivement.', 'info')
   }
 
