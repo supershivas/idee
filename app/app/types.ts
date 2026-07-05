@@ -1,4 +1,9 @@
 export type PageType = 'page' | 'journal'
+
+// État de la sauvegarde différée (contenu + titre) :
+// 'pending' = modifications en attente d'envoi, 'saving' = écriture en cours,
+// 'error' = échec (nouvel essai automatique), 'saved' = tout est persisté.
+export type SaveState = 'saved' | 'pending' | 'saving' | 'error'
 export type Page = {
   id: string
   parent_id: string | null

@@ -16,7 +16,7 @@ const closestVertical: CollisionDetection = ({ collisionRect, droppableRects, dr
   }
   return bestId != null ? [{ id: bestId }] : []
 }
-import { Page } from './types'
+import { Page, SaveState } from './types'
 import { useIsMobile, useToggleFavorite } from './hooks'
 import { SearchBar } from './components/SearchBar'
 import { TrashPanel } from './components/TrashPanel'
@@ -331,7 +331,7 @@ function SidebarContextMenu({ x, y, page, isFavorite, onClose, onOpenSplit, onAd
 
 export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
-  const [saving, setSaving] = useState(false)
+  const [saveState, setSaveState] = useState<SaveState>('saved')
   const [showTrash, setShowTrash] = useState(false)
   const [showJournal, setShowJournal] = useState(false)
   const [showTags, setShowTags] = useState(false)
@@ -357,7 +357,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [scrolledPastRight, setScrolledPastRight] = useState(false)
   const [pagePicker, setPagePicker] = useState<'left' | 'right' | null>(null)
   const [showCmdPalette, setShowCmdPalette] = useState(false)
-  const lastSaveRef = useRef(0)
   const addingPageRef = useRef(false)
   // Swipe-back depuis le bord gauche (mobile)
   const swipeTouchStartX = useRef(0)
@@ -634,21 +633,102 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     if (selectedRight?.id === id) setSelectedRight(prev => prev ? { ...prev, ...patch } : null)
   }
 
-  async function updateTitle(value: string, pageId: string) {
-    const page = pages.find(p => p.id === pageId)
-    if (!page) return
+  // ── Sauvegarde différée (contenu + titre) ──────────────────────────────────
+  // Chaque frappe met à jour l'état local immédiatement, mais l'écriture
+  // Supabase est bufferisée par page et débouncée : une rafale de frappes ne
+  // produit qu'un seul UPDATE (avant : une requête par frappe). Les flushs
+  // sont sérialisés via saveChainRef pour garantir l'ordre des écritures, et
+  // les entrées en échec sont remises en file puis retentées automatiquement.
+  const SAVE_DEBOUNCE_MS = 500
+  const SAVE_RETRY_MS = 5000
+  const pendingSavesRef = useRef<Map<string, { content?: string; title?: string }>>(new Map())
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve())
+  const lastHistoryAtRef = useRef<Map<string, number>>(new Map())
+  const pagesRef = useRef(pages)
+  useEffect(() => { pagesRef.current = pages }, [pages])
+
+  const flushSaves = useCallback((): Promise<void> => {
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null }
+    if (pendingSavesRef.current.size === 0) return saveChainRef.current
+    const entries = Array.from(pendingSavesRef.current.entries())
+    pendingSavesRef.current.clear()
+    setSaveState('saving')
+    saveChainRef.current = saveChainRef.current.then(async () => {
+      let hadError = false
+      for (const [pageId, patch] of entries) {
+        try {
+          const updated_at = new Date().toISOString()
+          const { error } = await createClient().from('pages').update({ ...patch, updated_at }).eq('id', pageId)
+          if (error) throw error
+          // Snapshot d'historique au plus toutes les 2 minutes, par page
+          if (patch.content !== undefined) {
+            const now = Date.now()
+            if (now - (lastHistoryAtRef.current.get(pageId) || 0) > 2 * 60 * 1000) {
+              lastHistoryAtRef.current.set(pageId, now)
+              const page = pagesRef.current.find(p => p.id === pageId)
+              await createClient().from('page_history').insert({
+                page_id: pageId, user_id: userId,
+                title: patch.title ?? page?.title ?? '', content: patch.content,
+              })
+            }
+          }
+        } catch {
+          hadError = true
+          // Remet en file, sans écraser des modifications plus récentes
+          const newer = pendingSavesRef.current.get(pageId) || {}
+          pendingSavesRef.current.set(pageId, { ...patch, ...newer })
+        }
+      }
+      if (hadError) {
+        setSaveState('error')
+        toast('Erreur de sauvegarde — nouvel essai dans quelques secondes.', 'error')
+        if (!saveTimerRef.current) {
+          saveTimerRef.current = setTimeout(() => { saveTimerRef.current = null; void flushSaves() }, SAVE_RETRY_MS)
+        }
+      } else {
+        setSaveState(pendingSavesRef.current.size > 0 ? 'pending' : 'saved')
+      }
+    })
+    return saveChainRef.current
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
+
+  const queueSave = useCallback((pageId: string, patch: { content?: string; title?: string }) => {
+    pendingSavesRef.current.set(pageId, { ...(pendingSavesRef.current.get(pageId) || {}), ...patch })
+    setSaveState('pending')
+    // Onglet en arrière-plan : les timers sont throttlés, on écrit tout de suite
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') { void flushSaves(); return }
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => { saveTimerRef.current = null; void flushSaves() }, SAVE_DEBOUNCE_MS)
+  }, [flushSaves])
+
+  // Flush quand l'onglet passe en arrière-plan ; à la fermeture, si des
+  // modifications n'ont pas encore été écrites, on tente le flush et on
+  // affiche la confirmation native du navigateur.
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') void flushSaves()
+    }
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (pendingSavesRef.current.size > 0) {
+        void flushSaves()
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [flushSaves])
+
+  function updateTitle(value: string, pageId: string) {
     const updated_at = new Date().toISOString()
     syncSelectedPage(pageId, { title: value, updated_at })
     setPages(prev => prev.map(p => p.id === pageId ? { ...p, title: value, updated_at } : p))
-    setSaving(true)
-    try {
-      const { error } = await createClient().from('pages').update({ title: value, updated_at }).eq('id', pageId)
-      if (error) throw error
-    } catch {
-      toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
-    } finally {
-      setSaving(false)
-    }
+    queueSave(pageId, { title: value })
   }
 
   async function updateIcon(id: string, icon: string) {
@@ -692,28 +772,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     if (data) { setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id) }
   }
 
-  async function updateContent(content: string, pageId?: string) {
+  function updateContent(content: string, pageId?: string) {
     const targetId = pageId ?? selected?.id
     if (!targetId) return
-    const page = pages.find(p => p.id === targetId)
-    if (!page) return
     const updated_at = new Date().toISOString()
     syncSelectedPage(targetId, { content, updated_at })
     setPages(prev => prev.map(p => p.id === targetId ? { ...p, content, updated_at } : p))
-    setSaving(true)
-    try {
-      const { error } = await createClient().from('pages').update({ content, updated_at }).eq('id', targetId)
-      if (error) throw error
-      const now = Date.now()
-      if (now - lastSaveRef.current > 2 * 60 * 1000) {
-        lastSaveRef.current = now
-        await createClient().from('page_history').insert({ page_id: targetId, user_id: userId, title: page.title, content })
-      }
-    } catch {
-      toast('Erreur de sauvegarde — vérifiez votre connexion.', 'error')
-    } finally {
-      setSaving(false)
-    }
+    queueSave(targetId, { content })
   }
 
   async function deletePage(id: string) {
@@ -1296,13 +1361,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     else setSelected(null)
                   }}
                   backLabel={selected.type === 'journal' ? 'Journal' : 'Pages'}
-                  saving={saving}
+                  saveState={saveState}
                 />
                 <PageHeader
                   page={selected}
                   pages={[...activePages, ...journalEntries]}
                   userId={userId}
-                  saving={saving}
+                  saveState={saveState}
                   isMobile={isMobile}
                   onBack={() => { setSelected(null); setShowJournal(true) }}
                   onSelectPage={selectPage}
@@ -1381,7 +1446,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     page={selectedRight}
                     pages={[...activePages, ...journalEntries]}
                     userId={userId}
-                    saving={saving}
+                    saveState={saveState}
                     isMobile={false}
                     onBack={() => setSelectedRight(null)}
                     onSelectPage={selectPageRight}

@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useRef, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Page, formatSubtitle } from '../types'
+import { Page, SaveState, formatSubtitle } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
 import { useRelativeTime } from './JournalView'
@@ -11,6 +11,7 @@ import ExportButton from '../ExportButton'
 import ShareButton from '../ShareButton'
 import { toast } from './Toast'
 import { CommentsPanel, useUnreadCommentsCount, useTotalCommentsCount } from './CommentsPanel'
+import { SaveIndicator } from './SaveIndicator'
 import { createClient } from '@/lib/supabase/client'
 import { coverDataUri, coverSeeds } from '@/lib/coverGen'
 
@@ -267,8 +268,8 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
   )
 }
 
-export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onTagClick }: {
-  page: Page; pages: Page[]; userId: string; saving: boolean; isMobile: boolean
+export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onTagClick }: {
+  page: Page; pages: Page[]; userId: string; saveState: SaveState; isMobile: boolean
   onBack: () => void; onSelectPage: (p: Page) => void; onTitleChange: (v: string) => void
   onIconChange: (emoji: string) => void; onTagsChange: (tags: string[]) => void
   onToggleFavorite: (id: string) => void; onDelete: () => void; onConvertToJournal: () => void
@@ -299,9 +300,7 @@ export function PageHeader({ page, pages, userId, saving, isMobile, onBack, onSe
           <BreadcrumbInline pages={pages} selected={page} onSelect={onSelectPage} />
         )}
         <div className="flex items-center gap-1 flex-shrink-0">
-          <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-          </span>
+          <SaveIndicator saveState={saveState} />
           {page.is_shared && page.share_token && (
             <a
               href={`/share/${page.share_token}`}
