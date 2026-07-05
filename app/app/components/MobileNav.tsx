@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Page } from '../types'
+import { Page, SaveState } from '../types'
+import { SaveIndicator } from './SaveIndicator'
 
 const MOBILE_JOURNAL_PAGE = 30
 
@@ -463,10 +464,10 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
   )
 }
 
-export function MobileTopBar({ onBack, backLabel = 'Pages', saving }: {
+export function MobileTopBar({ onBack, backLabel = 'Pages', saveState }: {
   onBack: () => void
   backLabel?: string
-  saving: boolean
+  saveState: SaveState
 }) {
   return (
     <div className="md:hidden flex items-center gap-2 px-3 pb-1 flex-shrink-0"
@@ -482,9 +483,7 @@ export function MobileTopBar({ onBack, backLabel = 'Pages', saving }: {
         <span className="text-sm font-medium ml-0.5">{backLabel}</span>
       </button>
       <div className="flex-1" />
-      <span className={`w-4 h-4 flex items-center justify-center transition-opacity ${saving ? 'opacity-100' : 'opacity-0'}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-      </span>
+      <SaveIndicator saveState={saveState} />
     </div>
   )
 }
