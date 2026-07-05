@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from './components/Toast'
 import type { Page } from './types'
 
 export function useIsMobile() {
@@ -48,7 +49,8 @@ export function useToggleFavorite(
       ? Math.max(0, ...pages.filter(p => p.favorite && p.id !== id).map(p => p.favorite_position ?? 0)) + 1
       : null
     setPages(prev => prev.map(p => p.id === id ? { ...p, favorite: newVal, favorite_position: newPos } : p))
-    await createClient().from('pages').update({ favorite: newVal, favorite_position: newPos }).eq('id', id)
+    const { error } = await createClient().from('pages').update({ favorite: newVal, favorite_position: newPos }).eq('id', id)
+    if (error) toast('Erreur de sauvegarde du favori — vérifiez votre connexion.', 'error')
   }, [pages, setPages])
 }
 
@@ -61,10 +63,11 @@ export function useReorderFavorites(
       if (idx === -1) return p
       return { ...p, favorite_position: idx }
     }))
-    await Promise.all(
+    const results = await Promise.all(
       orderedIds.map((id, idx) =>
         createClient().from('pages').update({ favorite_position: idx }).eq('id', id)
       )
     )
+    if (results.some(r => r.error)) toast('Erreur lors du réordonnancement des favoris.', 'error')
   }, [setPages])
 }

@@ -411,8 +411,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const [sidebarHidden, setSidebarHidden] = useState(false)
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
-    try { setSidebarWidth(parseInt(localStorage.getItem('sidebar_width') || String(SIDEBAR_DEFAULT), 10)) } catch {}
+    try {
+      const parsed = parseInt(localStorage.getItem('sidebar_width') || '', 10)
+      // Valeur corrompue ou absente → largeur par défaut (sinon width: NaNpx)
+      if (Number.isFinite(parsed)) setSidebarWidth(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parsed)))
+    } catch {}
     setMounted(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const isResizing = useRef(false)
 
@@ -553,7 +558,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
   }, [splitMode])
 
-  // Keyboard shortcuts — bare keys (only when not typing in a field/editor)
+  // Keyboard shortcuts — bare keys (only when not typing in a field/editor).
+  // Les handlers passent par une ref pour que l'écouteur ne soit abonné
+  // qu'une seule fois (avant : réabonnement à chaque render, les fonctions
+  // n'étant pas mémoïsées).
+  const shortcutsRef = useRef({ confirmDeleteId, deletePage, addPage, addJournalEntry })
+  useEffect(() => { shortcutsRef.current = { confirmDeleteId, deletePage, addPage, addJournalEntry } })
   useEffect(() => {
     function isTyping() {
       const el = document.activeElement as HTMLElement | null
@@ -578,6 +588,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         setShowTrash(false)
         return
       }
+      const { confirmDeleteId, deletePage, addPage, addJournalEntry } = shortcutsRef.current
       if (e.key === 'Enter' && !e.shiftKey && confirmDeleteId && (document.activeElement as HTMLElement | null)?.tagName !== 'TEXTAREA') {
         e.preventDefault()
         deletePage(confirmDeleteId)
@@ -595,7 +606,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [addPage, addJournalEntry, confirmDeleteId, deletePage])
+  }, [])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   function toggleOpen(id: string) { setOpenMap(o => ({ ...o, [id]: !o[id] })) }
@@ -606,10 +617,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     try {
       const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
       const icon = template?.icon || icons[Math.floor(Math.random() * icons.length)]
-      const { data } = await createClient().from('pages')
+      const { data, error } = await createClient().from('pages')
         .insert({ title: template?.title || 'Sans titre', content: template?.content || '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
         .select().single()
-      if (data) { setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true })) }
+      if (error || !data) { toast('Impossible de créer la page — vérifiez votre connexion.', 'error'); return }
+      setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true }))
     } finally {
       addingPageRef.current = false
     }
@@ -618,21 +630,39 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   async function addJournalEntry() {
     const mots = ['Réflexion', 'Fragment', 'Éclat', 'Lueur', 'Souffle', 'Trace', 'Murmure', 'Impression', 'Intuition', 'Instant', 'Étincelle', 'Écho', 'Envol', 'Vibration', 'Pensée', 'Grain', 'Sillon', 'Élancement']
     const title = mots[Math.floor(Math.random() * mots.length)]
-    const { data } = await createClient().from('pages')
+    const { data, error } = await createClient().from('pages')
       .insert({ title, content: '', user_id: userId, parent_id: null, position: pages.length, icon: '📝', type: 'journal' })
       .select().single()
-    if (data) { setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false) }
+    if (error || !data) { toast('Impossible de créer l\'entrée — vérifiez votre connexion.', 'error'); return }
+    setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false)
   }
 
   async function convertToJournal(id: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, type: 'journal' as const, parent_id: null } : p))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, type: 'journal' as const, parent_id: null } : null)
-    await createClient().from('pages').update({ type: 'journal', parent_id: null }).eq('id', id)
+    await persist(createClient().from('pages').update({ type: 'journal', parent_id: null }).eq('id', id))
   }
 
   function syncSelectedPage(id: string, patch: Partial<Page>) {
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, ...patch } : null)
     if (selectedRight?.id === id) setSelectedRight(prev => prev ? { ...prev, ...patch } : null)
+  }
+
+  // Écritures « fire-and-forget » : vérifie l'erreur Supabase et prévient
+  // l'utilisateur au lieu d'échouer en silence (l'état local optimiste
+  // resterait sinon désynchronisé de la base sans que personne ne le sache).
+  async function persist(
+    query: PromiseLike<{ error: unknown }>,
+    message = 'Erreur de sauvegarde — vérifiez votre connexion.'
+  ): Promise<boolean> {
+    try {
+      const { error } = await query
+      if (error) throw error
+      return true
+    } catch {
+      toast(message, 'error')
+      return false
+    }
   }
 
   // ── Sauvegarde différée (contenu + titre) ──────────────────────────────────
@@ -736,42 +766,44 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   async function updateIcon(id: string, icon: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, icon } : p))
     syncSelectedPage(id, { icon })
-    await createClient().from('pages').update({ icon }).eq('id', id)
+    await persist(createClient().from('pages').update({ icon }).eq('id', id))
   }
 
   async function updateTags(id: string, tags: string[]) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, tags } : p))
     syncSelectedPage(id, { tags })
-    await createClient().from('pages').update({ tags }).eq('id', id)
+    await persist(createClient().from('pages').update({ tags }).eq('id', id))
   }
 
   async function updateCreatedAt(id: string, iso: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, created_at: iso } : p))
     syncSelectedPage(id, { created_at: iso })
-    await createClient().from('pages').update({ created_at: iso }).eq('id', id)
+    await persist(createClient().from('pages').update({ created_at: iso }).eq('id', id))
   }
 
   async function renamePage(id: string, title: string) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, title } : p))
     syncSelectedPage(id, { title })
-    await createClient().from('pages').update({ title }).eq('id', id)
+    await persist(createClient().from('pages').update({ title }).eq('id', id))
   }
 
   async function movePage(id: string, newParentId: string | null) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, parent_id: newParentId } : p))
     syncSelectedPage(id, { parent_id: newParentId })
     if (newParentId) setOpenMap(o => ({ ...o, [newParentId]: true }))
-    await createClient().from('pages').update({ parent_id: newParentId }).eq('id', id)
-    toast('Page déplacée.', 'success')
+    if (await persist(createClient().from('pages').update({ parent_id: newParentId }).eq('id', id))) {
+      toast('Page déplacée.', 'success')
+    }
   }
 
   async function duplicatePage(id: string) {
     const page = pages.find(p => p.id === id)
     if (!page) return
-    const { data } = await createClient().from('pages')
+    const { data, error } = await createClient().from('pages')
       .insert({ title: (page.title || 'Sans titre') + ' (copie)', content: page.content, user_id: userId, parent_id: page.parent_id, position: page.position + 0.5, icon: page.icon, type: page.type })
       .select().single()
-    if (data) { setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id) }
+    if (error || !data) { toast('Erreur lors de la duplication.', 'error'); return }
+    setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id)
   }
 
   function updateContent(content: string, pageId?: string) {
@@ -801,7 +833,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
     if (selectedRight && idSet.has(selectedRight.id)) setSelectedRight(null)
     toast('Déplacé dans la corbeille.', 'info', { label: 'Annuler', onAction: () => restorePage(id) })
-    await createClient().from('pages').update({ deleted_at: deletedAt }).in('id', ids)
+    await persist(createClient().from('pages').update({ deleted_at: deletedAt }).in('id', ids))
   }
 
   async function restorePage(id: string) {
@@ -822,9 +854,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       if (p.id === id && parentStillTrashed) restored.parent_id = null
       return restored
     }))
-    await createClient().from('pages').update({ deleted_at: null }).in('id', ids)
-    if (parentStillTrashed) await createClient().from('pages').update({ parent_id: null }).eq('id', id)
-    toast('Note restaurée.', 'success')
+    const ok = await persist(createClient().from('pages').update({ deleted_at: null }).in('id', ids))
+    if (ok && parentStillTrashed) await persist(createClient().from('pages').update({ parent_id: null }).eq('id', id))
+    if (ok) toast('Note restaurée.', 'success')
   }
 
   async function deleteForever(id: string) {
@@ -832,8 +864,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     // comme lignes orphelines invisibles.
     const ids = new Set([id, ...getDescendantIds(pages, id)])
     setPages(prev => prev.filter(p => !ids.has(p.id)))
-    await createClient().from('pages').delete().in('id', Array.from(ids))
-    toast('Supprimée définitivement.', 'info')
+    if (await persist(createClient().from('pages').delete().in('id', Array.from(ids)), 'Erreur lors de la suppression définitive.')) {
+      toast('Supprimée définitivement.', 'info')
+    }
   }
 
   async function logout() {
@@ -871,7 +904,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     const updates = siblings.map((p, i) => ({ id: p.id, position: i, parent_id: newParentId }))
     setPages(prev => prev.map(p => { const u = updates.find(u => u.id === p.id); return u ? { ...p, position: u.position, parent_id: u.parent_id as string | null } : p }))
     if (position === 'inside') setOpenMap(o => ({ ...o, [targetId]: true }))
-    await Promise.all(updates.map(u => createClient().from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)))
+    const results = await Promise.all(updates.map(u => createClient().from('pages').update({ position: u.position, parent_id: u.parent_id }).eq('id', u.id)))
+    if (results.some(r => r.error)) toast('Erreur lors du réordonnancement — vérifiez votre connexion.', 'error')
   }, [pages])
 
   function handleDragStart(e: DragStartEvent) { setActiveDragId(e.active.id as string) }
@@ -1059,7 +1093,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onReorderFavorites={async (orderedIds) => {
               const updates = orderedIds.map((id, i) => ({ id, favorite_position: i }))
               setPages(prev => prev.map(p => { const u = updates.find(u => u.id === p.id); return u ? { ...p, favorite_position: u.favorite_position } : p }))
-              await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
+              const results = await Promise.all(updates.map(u => createClient().from('pages').update({ favorite_position: u.favorite_position }).eq('id', u.id)))
+              if (results.some(r => r.error)) toast('Erreur lors du réordonnancement des favoris.', 'error')
             }}
             onContextMenu={(e, id) => setContextMenu({ x: e.clientX, y: e.clientY, pageId: id })}
           />
