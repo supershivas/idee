@@ -32,7 +32,7 @@ const TypographyShortcuts = Extension.create({
       [/->(\s)$/, '→$1'],
       [/<-(\s)$/, '←$1'],
       [/=>(\s)$/, '⇒$1'],
-      [/\.\.\./, '…'],
+      [/\.\.\.$/, '…'],
       [/--(\s)$/, '—$1'],
     ]
     return rules.map(([find, replace]) =>
