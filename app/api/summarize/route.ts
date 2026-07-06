@@ -1,31 +1,38 @@
+import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
   return NextResponse.json({ ok: true, groq: !!process.env.GROQ_API_KEY })
 }
 
-// In-memory rate limiter: 10 req/min par IP
-const rateMap = new Map<string, number[]>()
-const RATE_WINDOW = 60_000
+// Rate-limit partagé (10 req/min par IP) via une fonction Postgres atomique
+// (voir supabase/migrations/0001_rate_limits.sql). Contrairement à l'ancien
+// compteur in-memory, il fonctionne sur Vercel où chaque requête peut tomber
+// sur une instance serverless différente.
+// Fail-open : si la fonction n'est pas encore déployée ou que la base est
+// injoignable, on laisse passer plutôt que de casser la fonctionnalité.
+const RATE_WINDOW_SECONDS = 60
 const RATE_LIMIT = 10
 
-function checkRate(ip: string): boolean {
-  const now = Date.now()
-  const hits = (rateMap.get(ip) || []).filter(t => now - t < RATE_WINDOW)
-  if (hits.length >= RATE_LIMIT) return false
-  hits.push(now)
-  rateMap.set(ip, hits)
-  if (rateMap.size > 5000) {
-    for (const [key, times] of rateMap) {
-      if (times.every(t => now - t >= RATE_WINDOW)) rateMap.delete(key)
-    }
+async function isRateLimited(ip: string): Promise<boolean> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_bucket: `summarize:${ip}`,
+      p_max: RATE_LIMIT,
+      p_window_seconds: RATE_WINDOW_SECONDS,
+    })
+    if (error) { console.error('check_rate_limit error:', error.message); return false }
+    return data === false // la fonction renvoie true tant que c'est autorisé
+  } catch (err) {
+    console.error('Rate limit check failed:', err)
+    return false
   }
-  return true
 }
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-  if (!checkRate(ip)) {
+  if (await isRateLimited(ip)) {
     return NextResponse.json({ error: 'Trop de requêtes, réessaie dans une minute.' }, { status: 429 })
   }
 
