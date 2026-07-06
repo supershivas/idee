@@ -3,6 +3,35 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from './components/Toast'
 import type { Page, SaveState } from './types'
 
+// ── Synchronisation temps réel de `pages` (multi-onglets / multi-appareils) ──
+// S'abonne aux changements Postgres de la table `pages` pour l'utilisateur et
+// délègue à des handlers stockés dans une ref (abonnement unique, pas de
+// réabonnement à chaque render). Le filtrage DELETE se fait côté client :
+// la ligne `old` d'un DELETE ne contient que la clé primaire (pas user_id),
+// donc on ne peut pas filtrer sur user_id côté serveur — on ne retire que
+// les pages déjà présentes dans l'état local (donc déjà autorisées).
+export function useRealtimePages(userId: string, handlers: {
+  onUpsert: (row: Page) => void
+  onDelete: (id: string) => void
+}) {
+  const ref = useRef(handlers)
+  useEffect(() => { ref.current = handlers })
+
+  useEffect(() => {
+    const client = createClient()
+    const channel = client
+      .channel(`pages-sync:${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pages', filter: `user_id=eq.${userId}` },
+        payload => ref.current.onUpsert(payload.new as Page))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pages', filter: `user_id=eq.${userId}` },
+        payload => ref.current.onUpsert(payload.new as Page))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'pages' },
+        payload => { const id = (payload.old as { id?: string })?.id; if (id) ref.current.onDelete(id) })
+      .subscribe()
+    return () => { client.removeChannel(channel) }
+  }, [userId])
+}
+
 // ── Sauvegarde différée (contenu + titre) ───────────────────────────────────
 // L'état local est mis à jour à chaque frappe par l'appelant, mais l'écriture
 // Supabase est bufferisée par page et débouncée : une rafale de frappes ne

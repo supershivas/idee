@@ -1,6 +1,22 @@
 # idee
 Home-made note editor
 
+## Configuration requise côté Supabase
+
+**Synchronisation temps réel des notes (multi-onglets / multi-appareils).**
+L'app s'abonne aux changements de la table `pages` via Supabase Realtime.
+Pour que ça fonctionne, la table doit être ajoutée à la publication :
+
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE pages;
+-- Optionnel mais recommandé pour propager les suppressions de façon fiable
+-- entre appareils (sinon la ligne « old » d'un DELETE ne contient que l'id) :
+ALTER TABLE pages REPLICA IDENTITY FULL;
+```
+
+Sans cette publication, l'app continue de fonctionner normalement mais les
+modifications faites sur un autre appareil n'apparaissent pas en direct.
+
 ## Sécurité — actions recommandées côté Supabase
 
 Ces points ne peuvent pas être corrigés dans le code de l'app et doivent
