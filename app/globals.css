@@ -482,6 +482,15 @@ input, textarea {
 .mobile-row-hover:active { background: var(--selected-bg); }
 .mobile-row-selected { background: var(--selected-bg); }
 
+/* ─── Survol : fond léger au hover ───────────────────────────────────────────*/
+/* Remplace les paires onMouseEnter/onMouseLeave qui ne faisaient que basculer
+   le fond vers --hover-bg. À n'utiliser que sur des éléments SANS `background`
+   inline (sinon le style inline l'emporte sur ce :hover). */
+.u-hover-bg { transition: background-color 0.12s ease; }
+.u-hover-bg:hover { background: var(--hover-bg); }
+.u-hover-danger { transition: background-color 0.12s ease; }
+.u-hover-danger:hover { background: rgba(239, 68, 68, 0.08); }
+
 /* ─── Task list ──────────────────────────────────────────────────────────────*/
 .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
 .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: center; gap: 0.5rem; }

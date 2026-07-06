@@ -40,10 +40,8 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Suppression définitive après 30 jours</p>
           </div>
           <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-lg transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>✕</button>
+            className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
+            style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -53,10 +51,8 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
               <p className="text-sm">La corbeille est vide</p>
             </div>
           ) : sorted.map(page => (
-            <div key={page.id} className="flex items-center gap-3 px-5 py-3 transition-colors"
-              style={{ borderBottom: '1px solid var(--border-light)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <div key={page.id} className="u-hover-bg flex items-center gap-3 px-5 py-3"
+              style={{ borderBottom: '1px solid var(--border-light)' }}>
               <span className="text-2xl flex-shrink-0 opacity-60">{page.icon || '📄'}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</p>
