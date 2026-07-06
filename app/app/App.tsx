@@ -19,7 +19,7 @@ const closestVertical: CollisionDetection = ({ collisionRect, droppableRects, dr
 import { Page } from './types'
 import { PAGE_META_COLUMNS } from '@/lib/pageColumns'
 import { getAncestorIds, getDescendantIds, slugify } from './utils'
-import { useIsMobile, useToggleFavorite, usePageSaver } from './hooks'
+import { useIsMobile, useToggleFavorite, usePageSaver, useRealtimePages } from './hooks'
 import { PagePickerModal } from './components/PagePickerModal'
 import { MoveToModal } from './components/MoveToModal'
 import { SidebarContextMenu } from './components/SidebarContextMenu'
@@ -128,6 +128,17 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     setHydratedIds(hydratedRef.current)
   }, [])
 
+  // Contenus produits/chargés localement par page : sert à reconnaître l'écho
+  // de nos propres sauvegardes Realtime et à ne pas le confondre avec une
+  // édition venue d'un autre appareil. Borné aux ~12 dernières valeurs.
+  const localContentsRef = useRef<Map<string, string[]>>(new Map())
+  const recordLocalContent = useCallback((pageId: string, content: string) => {
+    const list = localContentsRef.current.get(pageId) || []
+    list.push(content)
+    if (list.length > 12) list.shift()
+    localContentsRef.current.set(pageId, list)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -155,12 +166,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     const { data, error } = await createClient().from('pages').select('content').eq('id', pageId).single()
     if (error) return
     const content = data?.content ?? ''
+    recordLocalContent(pageId, content)
     hydratedRef.current = new Set(hydratedRef.current).add(pageId)
     setHydratedIds(hydratedRef.current)
     setPages(prev => prev.map(p => p.id === pageId ? { ...p, content } : p))
     setSelected(prev => prev?.id === pageId ? { ...prev, content } : prev)
     setSelectedRight(prev => prev?.id === pageId ? { ...prev, content } : prev)
-  }, [])
+  }, [recordLocalContent])
 
   // Offline / online detection
   useEffect(() => {
@@ -229,6 +241,82 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
     return null
   })
+
+  // ── Synchronisation temps réel (multi-onglets / multi-appareils) ──────────
+  // Refs pour lire l'état courant sans réabonner le canal Realtime.
+  const pagesRef = useRef(pages)
+  useEffect(() => { pagesRef.current = pages }, [pages])
+  const selectedRef = useRef(selected)
+  useEffect(() => { selectedRef.current = selected })
+  const selectedRightRef = useRef(selectedRight)
+  useEffect(() => { selectedRightRef.current = selectedRight })
+  // Throttle des notifications « modifiée ailleurs » (une par page / 20 s).
+  const externalEditAtRef = useRef<Map<string, number>>(new Map())
+  // Nonce pour forcer le remount de l'éditeur lors d'un rechargement manuel.
+  const [editorNonce, setEditorNonce] = useState(0)
+
+  const reloadPageContent = useCallback(async (pageId: string) => {
+    const { data, error } = await createClient().from('pages').select('content').eq('id', pageId).single()
+    if (error) return
+    const content = data?.content ?? ''
+    recordLocalContent(pageId, content)
+    setPages(prev => prev.map(p => p.id === pageId ? { ...p, content } : p))
+    setSelected(prev => prev?.id === pageId ? { ...prev, content } : prev)
+    setSelectedRight(prev => prev?.id === pageId ? { ...prev, content } : prev)
+    setEditorNonce(n => n + 1)
+  }, [recordLocalContent])
+
+  const applyRemoteUpsert = useCallback((row: Page) => {
+    const existing = pagesRef.current.find(p => p.id === row.id)
+    const { content: incoming, ...meta } = row as Page & { content?: string }
+
+    if (!existing) {
+      // Page créée sur un autre appareil.
+      if (incoming !== undefined) markHydrated(row.id)
+      setPages(prev => prev.find(p => p.id === row.id) ? prev : [...prev, row])
+      return
+    }
+
+    const openHere = selectedRef.current?.id === row.id || selectedRightRef.current?.id === row.id
+    const contentDiffers = incoming !== undefined && incoming !== existing.content
+    const isOwnEcho = incoming !== undefined && (localContentsRef.current.get(row.id) || []).includes(incoming)
+
+    if (openHere && contentDiffers && !isOwnEcho) {
+      // Édition distante d'une note ouverte ici : on ne clobbe jamais
+      // l'éditeur. Métadonnées appliquées, contenu conservé, l'utilisateur
+      // peut recharger pour voir la dernière version.
+      const now = Date.now()
+      if (now - (externalEditAtRef.current.get(row.id) || 0) > 20000) {
+        externalEditAtRef.current.set(row.id, now)
+        toast(`« ${row.title || 'Sans titre'} » a été modifiée sur un autre appareil.`, 'info',
+          { label: 'Recharger', onAction: () => void reloadPageContent(row.id) })
+      }
+      setPages(prev => prev.map(p => p.id === row.id ? { ...p, ...meta } : p))
+      setSelected(prev => prev?.id === row.id ? { ...prev, ...meta } : prev)
+      setSelectedRight(prev => prev?.id === row.id ? { ...prev, ...meta } : prev)
+      return
+    }
+
+    // Page non ouverte (ou écho / contenu identique) : on applique tout.
+    // Pour une page ouverte dont le contenu ne diffère pas, inutile de
+    // toucher au contenu (évite un remount inutile de l'éditeur).
+    const applyContent = incoming !== undefined && !openHere
+    if (applyContent) markHydrated(row.id)
+    setPages(prev => prev.map(p => p.id === row.id
+      ? { ...p, ...meta, content: applyContent ? incoming! : p.content }
+      : p))
+    setSelected(prev => prev?.id === row.id ? { ...prev, ...meta } : prev)
+    setSelectedRight(prev => prev?.id === row.id ? { ...prev, ...meta } : prev)
+  }, [markHydrated, reloadPageContent])
+
+  const applyRemoteDelete = useCallback((id: string) => {
+    if (!pagesRef.current.find(p => p.id === id)) return
+    setPages(prev => prev.filter(p => p.id !== id))
+    setSelected(prev => prev?.id === id ? null : prev)
+    setSelectedRight(prev => prev?.id === id ? null : prev)
+  }, [])
+
+  useRealtimePages(userId, { onUpsert: applyRemoteUpsert, onDelete: applyRemoteDelete })
 
   useEffect(() => {
     if (initialPageId) return
@@ -501,6 +589,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     const targetId = pageId ?? selected?.id
     if (!targetId) return
     const updated_at = new Date().toISOString()
+    recordLocalContent(targetId, content) // pour reconnaître l'écho Realtime
     syncSelectedPage(targetId, { content, updated_at })
     setPages(prev => prev.map(p => p.id === targetId ? { ...p, content, updated_at } : p))
     queueSave(targetId, { content })
@@ -1156,7 +1245,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 )}
                 {hydratedIds.has(selected.id) ? (
                   <Editor
-                    key={selected.id}
+                    key={`${selected.id}:${editorNonce}`}
                     page={selected}
                     pages={[...activePages, ...journalEntries]}
                     onUpdate={content => updateContent(content, selected.id)}
@@ -1238,7 +1327,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   )}
                   {hydratedIds.has(selectedRight.id) ? (
                     <Editor
-                      key={`right-${selectedRight.id}`}
+                      key={`right-${selectedRight.id}:${editorNonce}`}
                       page={selectedRight}
                       pages={[...activePages, ...journalEntries]}
                       onUpdate={content => updateContent(content, selectedRight.id)}
