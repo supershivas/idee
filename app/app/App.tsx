@@ -17,6 +17,7 @@ const closestVertical: CollisionDetection = ({ collisionRect, droppableRects, dr
   return bestId != null ? [{ id: bestId }] : []
 }
 import { Page } from './types'
+import { PAGE_META_COLUMNS } from '@/lib/pageColumns'
 import { getAncestorIds, getDescendantIds, slugify } from './utils'
 import { useIsMobile, useToggleFavorite, usePageSaver } from './hooks'
 import { PagePickerModal } from './components/PagePickerModal'
@@ -41,6 +42,20 @@ import ReviewMode from './components/ReviewMode'
 
 export type { Page }
 const lastPageKey = (userId: string) => `idee_last_page_${userId}`
+
+// Placeholder affiché le temps que le corps d'une note se charge (fenêtre
+// très courte : hydratation de fond ou fetch à la demande).
+function ContentLoading({ isMobile }: { isMobile: boolean }) {
+  return (
+    <div className="py-6" style={{ paddingLeft: isMobile ? 16 : 52, paddingRight: isMobile ? 16 : 52 }}>
+      <div className="animate-pulse flex flex-col gap-3" style={{ maxWidth: 720 }}>
+        <div style={{ height: 14, width: '85%', borderRadius: 6, background: 'var(--hover-bg)' }} />
+        <div style={{ height: 14, width: '70%', borderRadius: 6, background: 'var(--hover-bg)' }} />
+        <div style={{ height: 14, width: '78%', borderRadius: 6, background: 'var(--hover-bg)' }} />
+      </div>
+    </div>
+  )
+}
 
 export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
@@ -95,6 +110,57 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
   const { saveState, queueSave } = usePageSaver(userId, pages)
+
+  // ── Hydratation du contenu ──────────────────────────────────────────────
+  // Le serveur ne renvoie pas `content` (sauf pour la page ouverte via l'URL).
+  // On garde la trace des pages dont le corps est chargé : au montage, une
+  // seule requête récupère tous les contenus en arrière-plan ; une page
+  // sélectionnée avant la fin de l'hydratation est chargée à la demande.
+  const [hydratedIds, setHydratedIds] = useState<Set<string>>(
+    () => new Set(initialPages.filter(p => p.content != null).map(p => p.id))
+  )
+  const hydratedRef = useRef(hydratedIds)
+  useEffect(() => { hydratedRef.current = hydratedIds }, [hydratedIds])
+
+  // Marque une page comme ayant son contenu chargé (nouvelle page, doublon…).
+  const markHydrated = useCallback((id: string) => {
+    hydratedRef.current = new Set(hydratedRef.current).add(id)
+    setHydratedIds(hydratedRef.current)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await createClient().from('pages').select('id, content')
+      if (cancelled || error || !data) return
+      const byId = new Map(data.map(r => [r.id as string, (r.content ?? '') as string]))
+      // On ne remplit que les pages non encore hydratées : ne jamais écraser
+      // le contenu d'une page déjà chargée (potentiellement en cours d'édition).
+      setPages(prev => prev.map(p =>
+        hydratedRef.current.has(p.id) ? p : { ...p, content: byId.get(p.id) ?? '' }
+      ))
+      // Union (pas remplacement) : ne pas « déshydrater » une page créée
+      // pendant la fenêtre de chargement.
+      setHydratedIds(new Set([...hydratedRef.current, ...data.map(r => r.id as string)]))
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Charge à la demande le contenu d'une page pas encore hydratée (cas d'une
+  // sélection avant la fin de l'hydratation de fond, p. ex. dernière page
+  // restaurée depuis localStorage).
+  const ensureContent = useCallback(async (pageId: string) => {
+    if (hydratedRef.current.has(pageId)) return
+    const { data, error } = await createClient().from('pages').select('content').eq('id', pageId).single()
+    if (error) return
+    const content = data?.content ?? ''
+    hydratedRef.current = new Set(hydratedRef.current).add(pageId)
+    setHydratedIds(hydratedRef.current)
+    setPages(prev => prev.map(p => p.id === pageId ? { ...p, content } : p))
+    setSelected(prev => prev?.id === pageId ? { ...prev, content } : prev)
+    setSelectedRight(prev => prev?.id === pageId ? { ...prev, content } : prev)
+  }, [])
 
   // Offline / online detection
   useEffect(() => {
@@ -169,8 +235,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     try {
       const lastId = localStorage.getItem(lastPageKey(userId))
       const page = initialPages.find(p => p.id === lastId && !p.deleted_at)
-      if (page) setSelected(page)
+      if (page) { setSelected(page); void ensureContent(page.id) }
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -188,8 +255,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const selectPageRight = useCallback((page: Page | null) => {
     setSelectedRight(page)
     setScrolledPastRight(false)
+    if (page) void ensureContent(page.id)
     if (mainScrollRefRight.current) mainScrollRefRight.current.scrollTop = 0
-  }, [])
+  }, [ensureContent])
 
   const selectPage = useCallback((page: Page | null) => {
     setShowSettings(false)
@@ -198,6 +266,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     setShowTrash(false)
     setSelected(page)
     if (page) {
+      void ensureContent(page.id)
       const slug = `${slugify(page.title || 'sans-titre')}--${page.id}`
       try { window.history.replaceState({}, '', `/app/p/${slug}`) } catch {}
       try { localStorage.setItem(lastPageKey(userId), page.id) } catch {}
@@ -218,7 +287,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       toOpen.forEach(id => { next[id] = true })
       return next
     })
-  }, [pages, userId])
+  }, [pages, userId, ensureContent])
 
   useEffect(() => {
     if (!selected) return
@@ -323,6 +392,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         .insert({ title: template?.title || 'Sans titre', content: template?.content || '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
         .select().single()
       if (error || !data) { toast('Impossible de créer la page — vérifiez votre connexion.', 'error'); return }
+      markHydrated(data.id)
       setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id); if (parentId) setOpenMap(o => ({ ...o, [parentId]: true }))
     } finally {
       addingPageRef.current = false
@@ -336,6 +406,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       .insert({ title, content: '', user_id: userId, parent_id: null, position: pages.length, icon: '📝', type: 'journal' })
       .select().single()
     if (error || !data) { toast('Impossible de créer l\'entrée — vérifiez votre connexion.', 'error'); return }
+    markHydrated(data.id)
     setPages(prev => [...prev, data]); selectPage(data); setShowJournal(false)
   }
 
@@ -410,11 +481,20 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   async function duplicatePage(id: string) {
     const page = pages.find(p => p.id === id)
     if (!page) return
+    // Le contenu peut ne pas être encore hydraté : on le lit directement en
+    // base pour ne pas dupliquer une note vide.
+    let content = page.content
+    if (!hydratedRef.current.has(id)) {
+      const { data: row } = await createClient().from('pages').select('content').eq('id', id).single()
+      content = row?.content ?? ''
+    }
     const { data, error } = await createClient().from('pages')
-      .insert({ title: (page.title || 'Sans titre') + ' (copie)', content: page.content, user_id: userId, parent_id: page.parent_id, position: page.position + 0.5, icon: page.icon, type: page.type })
-      .select().single()
+      .insert({ title: (page.title || 'Sans titre') + ' (copie)', content, user_id: userId, parent_id: page.parent_id, position: page.position + 0.5, icon: page.icon, type: page.type })
+      .select(PAGE_META_COLUMNS).single()
     if (error || !data) { toast('Erreur lors de la duplication.', 'error'); return }
-    setPages(prev => [...prev, data]); selectPage(data); setJustCreatedId(data.id)
+    const created = { ...data, content } as Page
+    markHydrated(created.id)
+    setPages(prev => [...prev, created]); selectPage(created); setJustCreatedId(created.id)
   }
 
   function updateContent(content: string, pageId?: string) {
@@ -492,6 +572,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         .upsert({ ...p, user_id: userId }, { onConflict: 'id', ignoreDuplicates: false })
         .select().single()
       if (error || !data) { errors++; continue }
+      markHydrated(data.id) // l'upsert renvoie le content complet
       setPages(prev => {
         const exists = prev.find(x => x.id === data.id)
         return exists ? prev.map(x => x.id === data.id ? data : x) : [...prev, data]
@@ -1073,17 +1154,21 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     onAddSubpage={() => addPage(selected.id)}
                   />
                 )}
-                <Editor
-                  key={selected.id}
-                  page={selected}
-                  pages={[...activePages, ...journalEntries]}
-                  onUpdate={content => updateContent(content, selected.id)}
-                  onAddSubpage={() => addPage(selected.id)}
-                  onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
-                  userId={userId}
-                  isMobile={isMobile}
-                  focusMode={sidebarHidden}
-                />
+                {hydratedIds.has(selected.id) ? (
+                  <Editor
+                    key={selected.id}
+                    page={selected}
+                    pages={[...activePages, ...journalEntries]}
+                    onUpdate={content => updateContent(content, selected.id)}
+                    onAddSubpage={() => addPage(selected.id)}
+                    onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
+                    userId={userId}
+                    isMobile={isMobile}
+                    focusMode={sidebarHidden}
+                  />
+                ) : (
+                  <ContentLoading isMobile={isMobile} />
+                )}
               </div>
             </>
           ) : (
@@ -1151,17 +1236,21 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                       onAddSubpage={() => addPage(selectedRight.id)}
                     />
                   )}
-                  <Editor
-                    key={`right-${selectedRight.id}`}
-                    page={selectedRight}
-                    pages={[...activePages, ...journalEntries]}
-                    onUpdate={content => updateContent(content, selectedRight.id)}
-                    onAddSubpage={() => addPage(selectedRight.id)}
-                    onNavigate={p => selectPageRight(p)}
-                    userId={userId}
-                    isMobile={false}
-                    focusMode={false}
-                  />
+                  {hydratedIds.has(selectedRight.id) ? (
+                    <Editor
+                      key={`right-${selectedRight.id}`}
+                      page={selectedRight}
+                      pages={[...activePages, ...journalEntries]}
+                      onUpdate={content => updateContent(content, selectedRight.id)}
+                      onAddSubpage={() => addPage(selectedRight.id)}
+                      onNavigate={p => selectPageRight(p)}
+                      userId={userId}
+                      isMobile={false}
+                      focusMode={false}
+                    />
+                  ) : (
+                    <ContentLoading isMobile={false} />
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-1 items-center justify-center h-full min-h-[50vh]">

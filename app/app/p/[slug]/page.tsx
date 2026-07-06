@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { PAGE_META_COLUMNS } from '@/lib/pageColumns'
 import { redirect, notFound } from 'next/navigation'
 import App from '../../App'
 
@@ -22,7 +23,7 @@ export default async function PageSlugRoute({ params }: { params: { slug: string
 
   const { data: pages } = await supabase
     .from('pages')
-    .select('*')
+    .select(PAGE_META_COLUMNS)
     .order('position', { ascending: true })
 
   // Vérifier que la page existe et appartient à l'utilisateur
@@ -33,9 +34,19 @@ export default async function PageSlugRoute({ params }: { params: { slug: string
   const canonical = `${slugify(page.title || 'sans-titre')}--${page.id}`
   if (params.slug !== canonical) redirect(`/app/p/${canonical}`)
 
+  // Contenu de la page ouverte (chemin critique : affichage immédiat).
+  const { data: contentRow } = await supabase
+    .from('pages')
+    .select('content')
+    .eq('id', pageId)
+    .single()
+  const initialPages = (pages || []).map(p =>
+    p.id === pageId ? { ...p, content: contentRow?.content ?? '' } : p
+  )
+
   return (
     <App
-      initialPages={pages || []}
+      initialPages={initialPages as any}
       userId={user.id}
       userEmail={user.email}
       initialPageId={pageId}
