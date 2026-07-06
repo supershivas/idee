@@ -55,10 +55,8 @@ export default function TemplateModal({ onSelect, onClose }: {
         <div className="flex flex-col gap-1">
           <button
             onClick={() => onSelect({ icon: '📄', title: 'Sans titre', content: '' })}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            className="u-hover-bg flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left"
+            style={{ color: 'var(--text-secondary)' }}>
             <span className="text-lg">📄</span>
             <div>
               <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Page vide</p>
@@ -68,10 +66,8 @@ export default function TemplateModal({ onSelect, onClose }: {
           {TEMPLATES.map(t => (
             <button key={t.title}
               onClick={() => onSelect(t)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              className="u-hover-bg flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left"
+              style={{ color: 'var(--text-secondary)' }}>
               <span className="text-lg">{t.icon}</span>
               <div>
                 <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{t.title}</p>

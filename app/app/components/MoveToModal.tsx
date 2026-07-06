@@ -30,10 +30,8 @@ export function MoveToModal({ page, pages, onMove, onClose }: {
   function Row({ p }: { p: Page }) {
     return (
       <button onClick={() => onMove(p.id)}
-        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
-        style={{ color: 'var(--text-primary)' }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+        className="u-hover-bg w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+        style={{ color: 'var(--text-primary)' }}>
         <span className="flex-shrink-0">{p.icon || '📄'}</span>
         <span className="flex-1 truncate">{p.title || 'Sans titre'}</span>
         {p.parent_id && <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>sous-page</span>}
@@ -57,10 +55,8 @@ export function MoveToModal({ page, pages, onMove, onClose }: {
         </div>
         <div className="overflow-y-auto flex-1 pb-1">
           <button onClick={() => onMove(null)}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
-            style={{ color: 'var(--accent)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            className="u-hover-bg w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+            style={{ color: 'var(--accent)' }}>
             <i className="ti ti-home text-base flex-shrink-0" />
             <span>Aucun parent (page racine)</span>
           </button>

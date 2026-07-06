@@ -233,10 +233,8 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
         )}
         {filteredPages.map(page => (
           <button key={page.id} onClick={() => onSelect(page)}
-            className="w-full text-left flex items-center gap-3 px-6 py-3 transition-colors"
-            style={{ borderTop: '1px solid var(--border-light)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            className="u-hover-bg w-full text-left flex items-center gap-3 px-6 py-3"
+            style={{ borderTop: '1px solid var(--border-light)' }}>
             <span className="text-lg flex-shrink-0">{page.icon || '📄'}</span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</p>

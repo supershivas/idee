@@ -33,10 +33,8 @@ export function SidebarContextMenu({ x, y, page, isFavorite, onClose, onOpenSpli
   function Item({ icon, label, onClick, danger }: { icon: string; label: string; onClick: () => void; danger?: boolean }) {
     return (
       <button onClick={() => { onClick(); onClose() }}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors"
-        style={{ color: danger ? '#ef4444' : 'var(--text-primary)' }}
-        onMouseEnter={e => (e.currentTarget.style.background = danger ? 'rgba(239,68,68,0.08)' : 'var(--hover-bg)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+        className={`${danger ? 'u-hover-danger' : 'u-hover-bg'} w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left`}
+        style={{ color: danger ? '#ef4444' : 'var(--text-primary)' }}>
         <i className={`ti ti-${icon}`} style={{ fontSize: '14px', width: '16px', flexShrink: 0 }} />
         {label}
       </button>

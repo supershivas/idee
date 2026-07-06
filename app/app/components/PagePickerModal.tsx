@@ -50,10 +50,8 @@ export function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCl
       <button
         key={p.id}
         onClick={() => onSelect(p)}
-        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+        className="u-hover-bg w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
         style={{ color: 'var(--text-primary)' }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
       >
         <span className="flex-shrink-0">{p.icon || (p.type === 'journal' ? '📝' : '📄')}</span>
         <span className="flex-1 truncate">{p.title || 'Sans titre'}</span>
@@ -128,10 +126,8 @@ export function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCl
           <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
             <button
               onClick={onCloseSplit}
-              className="w-full text-sm py-2 rounded-lg"
+              className="u-hover-bg w-full text-sm py-2 rounded-lg"
               style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <i className="ti ti-layout-columns-off mr-2" />
               Fermer la vue partagée

@@ -49,9 +49,7 @@ export default function RecentView({ pages, onSelect }: {
         {items.map(p => (
           <button key={p.id}
             onClick={() => onSelect(p)}
-            className="w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors"
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            className="u-hover-bg w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm">
             <span>{p.icon || '📄'}</span>
             <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
             <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--text-faint)' }}>{formatAgo(p.updated_at)}</span>
@@ -74,9 +72,7 @@ export default function RecentView({ pages, onSelect }: {
             return (
               <button key={p.id}
                 onClick={() => onSelect(p)}
-                className="w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors"
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                className="u-hover-bg w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm">
                 <span>{p.icon || '📄'}</span>
                 <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
                 <span className="text-[10px] flex-shrink-0 font-medium" style={{ color: '#ef4444' }}>📅 {d}</span>
@@ -93,9 +89,7 @@ export default function RecentView({ pages, onSelect }: {
             return (
               <button key={p.id}
                 onClick={() => onSelect(p)}
-                className="w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors"
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                className="u-hover-bg w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm">
                 <span>{p.icon || '📄'}</span>
                 <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
                 <span className="text-[10px] flex-shrink-0 font-medium" style={{ color: '#f59e0b' }}>📅 {d}</span>
