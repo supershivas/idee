@@ -252,6 +252,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   useEffect(() => { selectedRightRef.current = selectedRight })
   // Throttle des notifications « modifiée ailleurs » (une par page / 20 s).
   const externalEditAtRef = useRef<Map<string, number>>(new Map())
+  // Pages supprimées localement (corbeille ou définitivement). Un écho Realtime
+  // périmé de nos propres écritures (une sauvegarde encore « en vol » au moment
+  // de la suppression) porte l'ancien état (deleted_at à null) et ferait
+  // « ressusciter » la note. On ignore donc tout événement Realtime pour ces
+  // pages, jusqu'à une éventuelle restauration.
+  const deletedTombstoneRef = useRef<Set<string>>(new Set())
   // Nonce pour forcer le remount de l'éditeur lors d'un rechargement manuel.
   const [editorNonce, setEditorNonce] = useState(0)
 
@@ -267,6 +273,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   }, [recordLocalContent])
 
   const applyRemoteUpsert = useCallback((row: Page) => {
+    // Ne jamais ressusciter une page supprimée localement via un écho périmé.
+    if (deletedTombstoneRef.current.has(row.id)) return
     const existing = pagesRef.current.find(p => p.id === row.id)
     const { content: incoming, ...meta } = row as Page & { content?: string }
 
@@ -602,6 +610,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     // descendants déjà à la corbeille gardent le leur (supprimés séparément).
     const ids = [id, ...getDescendantIds(pages, id).filter(did => !pages.find(p => p.id === did)?.deleted_at)]
     const idSet = new Set(ids)
+    ids.forEach(i => deletedTombstoneRef.current.add(i))
     setPages(prev => prev.map(p => idSet.has(p.id) ? { ...p, deleted_at: deletedAt } : p))
     if (selected && idSet.has(selected.id)) {
       if (wasJournal) {
@@ -625,6 +634,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       pages.find(p => p.id === did)?.deleted_at === page.deleted_at
     )]
     const idSet = new Set(ids)
+    // La page redevient active : on lève le tombstone pour de nouveau accepter
+    // ses événements Realtime.
+    ids.forEach(i => deletedTombstoneRef.current.delete(i))
     // Si le parent est toujours à la corbeille, la page restaurée serait
     // invisible dans l'arborescence : on la rattache à la racine.
     const parentStillTrashed = !!(page.parent_id && pages.find(p => p.id === page.parent_id)?.deleted_at)
@@ -645,6 +657,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     const ids = new Set([id, ...getDescendantIds(pages, id)])
     const deleted = pages.filter(p => ids.has(p.id))
     const surviving = pages.filter(p => !ids.has(p.id))
+    ids.forEach(i => deletedTombstoneRef.current.add(i))
     setPages(prev => prev.filter(p => !ids.has(p.id)))
     if (await persist(createClient().from('pages').delete().in('id', Array.from(ids)), 'Erreur lors de la suppression définitive.')) {
       toast('Supprimée définitivement.', 'info')
@@ -713,6 +726,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         .select().single()
       if (error || !data) { errors++; continue }
       markHydrated(data.id) // l'upsert renvoie le content complet
+      deletedTombstoneRef.current.delete(data.id) // ré-import éventuel d'un id supprimé
       setPages(prev => {
         const exists = prev.find(x => x.id === data.id)
         return exists ? prev.map(x => x.id === data.id ? data : x) : [...prev, data]
