@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { COMMENT_COLUMNS, sanitizeComment } from '@/lib/comments'
+import { COMMENT_COLUMNS, sanitizeComment, broadcastCommentEvent } from '@/lib/comments'
 import { NextRequest, NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       .select(COMMENT_COLUMNS)
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await broadcastCommentEvent(data.page_id as string, 'update', sanitizeComment(data))
     return NextResponse.json(sanitizeComment(data, author_token))
   }
 
@@ -42,6 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       .select(COMMENT_COLUMNS)
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await broadcastCommentEvent(data.page_id as string, 'update', sanitizeComment(data))
     return NextResponse.json(sanitizeComment(data, author_token))
   }
 
@@ -64,5 +66,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   const { error } = await supabase.from('page_comments').delete().eq('id', params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await broadcastCommentEvent(comment.page_id as string, 'delete', { id: params.id })
   return NextResponse.json({ ok: true })
 }

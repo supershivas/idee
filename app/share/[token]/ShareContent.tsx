@@ -60,18 +60,6 @@ function groupReactions(reactions: Reaction[]): { emoji: string; count: number; 
   return Object.entries(map).map(([emoji, v]) => ({ emoji, ...v }))
 }
 
-// Convertit une ligne brute reçue via Supabase Realtime en Comment sûr :
-// le payload realtime contient author_token (ligne complète), on le compare
-// localement à notre propre token puis on le retire de l'état React.
-function commentFromRealtime(row: Record<string, unknown>): Comment {
-  const { author_token, ...rest } = row
-  return {
-    ...(rest as unknown as Comment),
-    is_own: author_token != null && author_token === getAuthorToken(),
-    reactions: [],
-  }
-}
-
 // Encoche emoji sur le côté droit d'un commentaire (visible au hover)
 function EmojiPickerTab({ onPick, className = '', style }: { onPick: (emoji: string) => void; className?: string; style?: React.CSSProperties }) {
   const [open, setOpen] = useState(false)
@@ -479,25 +467,30 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
       .catch(() => {})
   }, [pageId])
 
-  // Realtime subscription — les payloads contiennent la ligne brute
-  // (author_token inclus) : on passe par commentFromRealtime pour ne jamais
-  // stocker ce token dans l'état React.
+  // Mises à jour en direct via un canal Broadcast (et NON postgres_changes,
+  // qui diffuserait author_token). Le serveur émet des payloads déjà assainis
+  // (is_own/mine à false) après chaque écriture. Chaque client conserve sa
+  // propre propriété : on ne remplace jamais is_own ni reactions d'un
+  // commentaire déjà présent localement (l'auteur les tient à jour via ses
+  // maj optimistes) — on ne fusionne que les champs modifiés à distance.
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
       .channel(`comments:${pageId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'page_comments', filter: `page_id=eq.${pageId}` },
-        payload => {
-          const incoming = commentFromRealtime(payload.new as Record<string, unknown>)
-          setComments(prev => prev.find(c => c.id === incoming.id) ? prev : [...prev, incoming])
-        })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_comments', filter: `page_id=eq.${pageId}` },
-        payload => {
-          const incoming = commentFromRealtime(payload.new as Record<string, unknown>)
-          setComments(prev => prev.map(c => c.id === incoming.id ? { ...c, ...incoming, reactions: c.reactions } : c))
-        })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'page_comments' },
-        payload => setComments(prev => prev.filter(c => c.id !== (payload.old as Comment).id)))
+      .on('broadcast', { event: 'insert' }, ({ payload }) => {
+        const c = payload as Comment
+        setComments(prev => prev.find(x => x.id === c.id) ? prev : [...prev, { ...c, reactions: c.reactions || [] }])
+      })
+      .on('broadcast', { event: 'update' }, ({ payload }) => {
+        const c = payload as Comment
+        setComments(prev => prev.map(x => x.id === c.id
+          ? { ...x, content: c.content, selected_text: c.selected_text, resolved: c.resolved, pinned: c.pinned, edited_at: c.edited_at }
+          : x))
+      })
+      .on('broadcast', { event: 'delete' }, ({ payload }) => {
+        const { id } = payload as { id: string }
+        setComments(prev => prev.filter(x => x.id !== id))
+      })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [pageId])

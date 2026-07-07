@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { COMMENT_COLUMNS, sanitizeComment } from '@/lib/comments'
+import { COMMENT_COLUMNS, sanitizeComment, broadcastCommentEvent } from '@/lib/comments'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -70,6 +70,9 @@ export async function POST(req: NextRequest) {
       .select()
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // Diffuse le nouveau commentaire (payload assaini, sans author_token) aux
+    // autres visiteurs de la page.
+    await broadcastCommentEvent(page_id, 'insert', sanitizeComment({ ...data, reactions: [] }))
     return NextResponse.json(sanitizeComment({ ...data, reactions: [] }, author_token))
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Erreur serveur' }, { status: 500 })
