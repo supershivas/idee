@@ -28,3 +28,29 @@ export function sanitizeComment(row: RawComment, requesterToken?: string | null)
     })),
   }
 }
+
+// Diffuse un événement commentaire à tous les visiteurs de la page partagée,
+// via un canal Supabase Broadcast (et NON postgres_changes, qui exposerait
+// author_token). Le payload doit déjà être assaini (sanitizeComment sans
+// token → is_own/mine à false ; chaque client garde sa propre propriété via
+// ses maj optimistes). Émission depuis le serveur par l'endpoint REST
+// Realtime : stateless, pas de WebSocket par requête. Fire-and-forget —
+// un échec de diffusion ne doit pas faire échouer l'écriture principale.
+export async function broadcastCommentEvent(
+  pageId: string,
+  event: 'insert' | 'update' | 'delete',
+  payload: unknown
+) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return
+  try {
+    await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ messages: [{ topic: `comments:${pageId}`, event, payload }] }),
+    })
+  } catch (err) {
+    console.error('broadcastCommentEvent failed:', err)
+  }
+}
