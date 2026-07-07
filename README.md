@@ -29,9 +29,10 @@ Ces points ne peuvent pas être corrigés dans le code de l'app et doivent
    `GET /api/comments` renvoyant toutes les colonnes) sont corrigés côté code.
 
    ⚠️ **Ne pas** ajouter `page_comments` à la publication pour activer le
-   live des commentaires : cela rouvrirait la fuite. Si ce live devient
-   souhaité, passer par un canal *Broadcast* assaini côté serveur (payload
-   sans `author_token`).
+   live des commentaires : cela rouvrirait la fuite. Le live est désormais
+   assuré autrement — via un canal Supabase **Broadcast** dont le payload est
+   assaini côté serveur (sans `author_token`), voir `broadcastCommentEvent`
+   dans `lib/comments.ts` et l'abonnement `broadcast` dans `ShareContent`.
 
 2. **Buckets Storage `images` / `covers`** : ajouter une limite de taille et
    un filtre de type MIME côté serveur (le contrôle client, désormais en
