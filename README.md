@@ -22,19 +22,16 @@ modifications faites sur un autre appareil n'apparaissent pas en direct.
 Ces points ne peuvent pas être corrigés dans le code de l'app et doivent
 être appliqués dans le dashboard Supabase :
 
-1. **Realtime sur `page_comments` (fuite `author_token`)** : les événements
-   diffusent la ligne complète (colonne `author_token` incluse — c'est la
-   preuve de propriété des commentaires) à tout client abonné au channel.
-   Fermer la fuite en retirant la table de la publication :
+1. **Realtime sur `page_comments` (fuite `author_token`) — rien à faire.**
+   `page_comments` n'est **pas** dans la publication `supabase_realtime` :
+   le vecteur de fuite « diffusion du `author_token` en temps réel » n'existe
+   donc pas. Les vrais vecteurs (SSR `select('*')` de la page partagée, et
+   `GET /api/comments` renvoyant toutes les colonnes) sont corrigés côté code.
 
-   ```sql
-   ALTER PUBLICATION supabase_realtime DROP TABLE page_comments;
-   ```
-
-   Conséquence : sur une page partagée, deux visiteurs simultanés ne verront
-   plus apparaître **en direct** les commentaires de l'autre (il faut
-   rafraîchir). Le chargement initial et ses propres actions restent
-   instantanés.
+   ⚠️ **Ne pas** ajouter `page_comments` à la publication pour activer le
+   live des commentaires : cela rouvrirait la fuite. Si ce live devient
+   souhaité, passer par un canal *Broadcast* assaini côté serveur (payload
+   sans `author_token`).
 
 2. **Buckets Storage `images` / `covers`** : ajouter une limite de taille et
    un filtre de type MIME côté serveur (le contrôle client, désormais en
