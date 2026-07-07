@@ -30,3 +30,27 @@ export function slugify(title: string) {
     .replace(/^-|-$/g, '')
     || 'sans-titre'
 }
+
+// Extrait les chemins d'objets Storage (relatifs au bucket) présents dans un
+// texte, à partir des URLs publiques Supabase du bucket donné. Ex. :
+//   https://<proj>.supabase.co/storage/v1/object/public/images/<uid>/<file>
+//   → "<uid>/<file>"
+// Utilisé pour retrouver les images/couvertures uploadées d'une note afin de
+// les supprimer du Storage quand la note est supprimée définitivement.
+export function extractStoragePaths(text: string, bucket: string, supabaseUrl: string): string[] {
+  if (!text || !supabaseUrl) return []
+  const base = `${supabaseUrl}/storage/v1/object/public/${bucket}/`
+  const paths: string[] = []
+  let idx = text.indexOf(base)
+  while (idx !== -1) {
+    const start = idx + base.length
+    // Le chemin s'arrête au premier caractère de fin d'URL (guillemet,
+    // parenthèse, espace, chevron…).
+    const match = text.slice(start).match(/^[^"')\s<>\\]+/)
+    if (match) {
+      try { paths.push(decodeURIComponent(match[0])) } catch { paths.push(match[0]) }
+    }
+    idx = text.indexOf(base, start)
+  }
+  return paths
+}

@@ -45,8 +45,25 @@ Ces points ne peuvent pas être corrigés dans le code de l'app et doivent
    where id in ('images', 'covers');
    ```
 
-   Prévoir aussi un nettoyage périodique des fichiers orphelins (images
-   supprimées avec leur note).
+   **Nettoyage des images orphelines** — ✅ **géré côté code** : à la
+   suppression **définitive** d'une note (corbeille → supprimer / vider), ses
+   images et sa couverture uploadées sont retirées du Storage, sauf si une
+   autre note les référence encore. Pour que cette suppression aboutisse, le
+   rôle authentifié doit avoir le droit de supprimer ses propres objets —
+   ajouter cette policy (une fois) :
+
+   ```sql
+   create policy "Users delete own storage objects"
+     on storage.objects for delete to authenticated
+     using (
+       bucket_id in ('images', 'covers')
+       and (storage.foldername(name))[1] = auth.uid()::text
+     );
+   ```
+
+   Sans cette policy, le nettoyage échoue silencieusement (les fichiers
+   restent, sans autre conséquence). Les fichiers déjà orphelins avant ce
+   correctif ne sont pas rattrapés automatiquement.
 
 3. **Rate-limit `/api/summarize`** — ✅ **corrigé côté code**, nécessite une
    migration. Appliquer une fois `supabase/migrations/0001_rate_limits.sql`
