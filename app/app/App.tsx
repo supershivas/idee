@@ -18,7 +18,7 @@ const closestVertical: CollisionDetection = ({ collisionRect, droppableRects, dr
 }
 import { Page } from './types'
 import { PAGE_META_COLUMNS } from '@/lib/pageColumns'
-import { getAncestorIds, getDescendantIds, slugify } from './utils'
+import { getAncestorIds, getDescendantIds, slugify, extractStoragePaths } from './utils'
 import { useIsMobile, useToggleFavorite, usePageSaver, useRealtimePages } from './hooks'
 import { PagePickerModal } from './components/PagePickerModal'
 import { MoveToModal } from './components/MoveToModal'
@@ -643,9 +643,60 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     // Supprime tout le sous-arbre, sinon les descendants resteraient en base
     // comme lignes orphelines invisibles.
     const ids = new Set([id, ...getDescendantIds(pages, id)])
+    const deleted = pages.filter(p => ids.has(p.id))
+    const surviving = pages.filter(p => !ids.has(p.id))
     setPages(prev => prev.filter(p => !ids.has(p.id)))
     if (await persist(createClient().from('pages').delete().in('id', Array.from(ids)), 'Erreur lors de la suppression définitive.')) {
       toast('Supprimée définitivement.', 'info')
+      // Nettoyage best-effort des objets Storage désormais orphelins.
+      void cleanupOrphanStorage(deleted, surviving)
+    }
+  }
+
+  // Supprime du Storage les images / couvertures uploadées des pages
+  // définitivement supprimées, sauf si un autre page survivante les référence
+  // encore (les doublons partagent les mêmes URLs). Best-effort : toute erreur
+  // (droits Storage manquants, réseau) laisse simplement l'objet en place.
+  async function cleanupOrphanStorage(deleted: Page[], surviving: Page[]) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    if (!supabaseUrl) return
+    // Sécurité : ne rien supprimer si le contenu d'une page survivante n'est
+    // pas encore hydraté — on risquerait d'effacer une image encore utilisée.
+    if (!surviving.every(p => hydratedRef.current.has(p.id))) return
+
+    // Contenu des pages supprimées (peut ne pas être hydraté à ce moment).
+    let deletedFull = deleted
+    const missing = deleted.filter(p => !hydratedRef.current.has(p.id))
+    if (missing.length) {
+      const { data } = await createClient().from('pages').select('id, content').in('id', missing.map(p => p.id))
+      const byId = new Map((data || []).map(r => [r.id as string, (r.content ?? '') as string]))
+      deletedFull = deleted.map(p => byId.has(p.id) ? { ...p, content: byId.get(p.id)! } : p)
+    }
+
+    const collect = (list: Page[], bucket: 'images' | 'covers') => {
+      const set = new Set<string>()
+      for (const p of list) {
+        extractStoragePaths(p.content || '', bucket, supabaseUrl).forEach(x => set.add(x))
+        if (p.cover_url) extractStoragePaths(p.cover_url, bucket, supabaseUrl).forEach(x => set.add(x))
+      }
+      return set
+    }
+    const delImages = collect(deletedFull, 'images')
+    const delCovers = collect(deletedFull, 'covers')
+    if (delImages.size === 0 && delCovers.size === 0) return
+
+    const survImages = collect(surviving, 'images')
+    const survCovers = collect(surviving, 'covers')
+    const imagesToRemove = [...delImages].filter(x => !survImages.has(x))
+    const coversToRemove = [...delCovers].filter(x => !survCovers.has(x))
+
+    if (imagesToRemove.length) {
+      const { error } = await createClient().storage.from('images').remove(imagesToRemove)
+      if (error) console.error('Nettoyage images orphelines:', error.message)
+    }
+    if (coversToRemove.length) {
+      const { error } = await createClient().storage.from('covers').remove(coversToRemove)
+      if (error) console.error('Nettoyage couvertures orphelines:', error.message)
     }
   }
 
