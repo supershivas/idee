@@ -491,10 +491,28 @@ input, textarea {
 .u-hover-danger { transition: background-color 0.12s ease; }
 .u-hover-danger:hover { background: rgba(239, 68, 68, 0.08); }
 
+/* ─── Alignement listes, tâches & poignée de drag (consolidé) ────────────────*/
+/* Source unique de vérité pour l'alignement vertical dans l'éditeur. Trois
+   éléments doivent rester sur la baseline du texte : la puce/le numéro des
+   listes, la case à cocher des tâches, et la poignée de drag (⠿) — cette
+   dernière se centrant sur la line-height *calculée* du bloc survolé.
+   Règle : une line-height explicite et identique (1.7) partout, et surtout
+   PAS de marge verticale sur les <p> imbriqués dans un item de liste (ils
+   hériteraient de `.prose p { margin: .5rem 0 }` et pousseraient le texte
+   vers le bas, désalignant puce/case). */
+.prose ul, .prose ol { line-height: 1.7; }
+.prose li,
+.prose li > p,
+.prose li > div > p { line-height: 1.7; }
+.prose li > p,
+.prose li > div > p { margin: 0; }
+
 /* ─── Task list ──────────────────────────────────────────────────────────────*/
 .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
-.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: center; gap: 0.5rem; }
-.ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; display: flex; align-items: center; cursor: pointer; }
+/* flex-start + label calé sur une hauteur d'une ligne : la case s'aligne sur
+   la 1re ligne de texte, y compris pour un item multi-lignes. */
+.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
+.ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; display: flex; align-items: center; height: 1.7em; cursor: pointer; }
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] { cursor: pointer; width: 1rem; height: 1rem; }
 .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
 .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { opacity: 0.6; text-decoration: line-through; }
