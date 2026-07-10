@@ -119,7 +119,7 @@ function TableBottomSheet({ editor, onClose }: { editor: any, onClose: () => voi
             <button key={c.label} title={c.label}
               onClick={() => { (editor.chain().focus() as any).setCellAttribute('backgroundColor', c.value).run(); onClose() }}
               className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
-              style={{ background: c.value || 'transparent', border: c.value ? '1px solid rgba(0,0,0,0.12)' : '1px solid var(--border)' }}>
+              style={{ background: c.swatch || 'transparent', border: c.swatch ? '1px solid rgba(0,0,0,0.15)' : '1px solid var(--border)' }}>
               {c.value === null && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>⦸</span>}
             </button>
           ))}
@@ -612,8 +612,9 @@ Image.extend({
                     width: 14,
                     height: 14,
                     borderRadius: '50%',
-                    background: c.bg,
-                    border: isActive ? `2px solid ${c.text}` : `1.5px solid ${c.border}`,
+                    // Affichage saturé (menu) ; la pill appliquée reste pastel.
+                    background: c.swatch,
+                    border: isActive ? '2px solid #fff' : '1.5px solid rgba(255,255,255,0.25)',
                     flexShrink: 0,
                     cursor: 'pointer',
                     padding: 0,

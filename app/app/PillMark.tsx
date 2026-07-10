@@ -1,11 +1,14 @@
 import { Mark, mergeAttributes } from '@tiptap/core'
 
+// bg/text/border = couleurs RÉELLEMENT appliquées (pastel, inchangées).
+// swatch = pastille plus saturée, uniquement pour l'affichage dans les menus
+// (les pastels sont indistinguables sur le fond sombre de la barre).
 export const PILL_COLORS = [
-  { id: 'blue',   bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' },
-  { id: 'green',  bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' },
-  { id: 'yellow', bg: '#fef9c3', text: '#a16207', border: '#fef08a' },
-  { id: 'pink',   bg: '#fce7f3', text: '#be185d', border: '#fbcfe8' },
-  { id: 'purple', bg: '#ede9fe', text: '#6d28d9', border: '#ddd6fe' },
+  { id: 'blue',   bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe', swatch: '#3b82f6' },
+  { id: 'green',  bg: '#dcfce7', text: '#15803d', border: '#bbf7d0', swatch: '#22c55e' },
+  { id: 'yellow', bg: '#fef9c3', text: '#a16207', border: '#fef08a', swatch: '#eab308' },
+  { id: 'pink',   bg: '#fce7f3', text: '#be185d', border: '#fbcfe8', swatch: '#ec4899' },
+  { id: 'purple', bg: '#ede9fe', text: '#6d28d9', border: '#ddd6fe', swatch: '#8b5cf6' },
 ] as const
 
 export type PillColorId = (typeof PILL_COLORS)[number]['id']
