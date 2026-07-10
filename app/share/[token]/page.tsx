@@ -36,6 +36,13 @@ export default async function SharePage({ params }: { params: { token: string } 
       a: ['href', 'rel', 'target'],
       span: ['class', 'style', 'data-pill'],
       div: ['class', 'data-callout', 'data-color', 'color', 'emoji'],
+      // Cellules colorées : data-bg + style (filtré à background-color ci-dessous).
+      td: ['class', 'colspan', 'rowspan', 'data-bg', 'style'],
+      th: ['class', 'colspan', 'rowspan', 'data-bg', 'style'],
+    },
+    // Seul background-color (couleurs pastel de la palette) est toléré en style.
+    allowedStyles: {
+      '*': { 'background-color': [/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, /^rgb\(/] },
     },
     allowedSchemes: ['https', 'http', 'data'],
     allowedSchemesAppliedToAttributes: ['href', 'src'],
