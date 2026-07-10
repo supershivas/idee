@@ -14,6 +14,7 @@ import TableRow from '@tiptap/extension-table-row'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import { Plugin } from '@tiptap/pm/state'
+import { CellSelection } from '@tiptap/pm/tables'
 import { SlashCommands } from './SlashCommands'
 import { PillMark, PILL_COLORS, PillColorId } from './PillMark'
 import { DragHandleExtension } from './DragHandle'
@@ -23,6 +24,30 @@ import { CalloutExtension } from './CalloutNode'
 import { Extension } from '@tiptap/core'
 import { InputRule } from '@tiptap/core'
 import { Backlinks } from './Backlinks'
+
+// Attribut de couleur de fond pour les cellules de tableau (cellule + en-tête).
+const cellBackgroundAttr = {
+  backgroundColor: {
+    default: null as string | null,
+    parseHTML: (el: HTMLElement) => el.getAttribute('data-bg') || null,
+    renderHTML: (attrs: { backgroundColor?: string | null }) =>
+      attrs.backgroundColor
+        ? { 'data-bg': attrs.backgroundColor, style: `background-color:${attrs.backgroundColor}` }
+        : {},
+  },
+}
+
+// Palette de fonds de cellule (pastels doux + neutre) ; null = aucun.
+const CELL_COLORS: { label: string; value: string | null }[] = [
+  { label: 'Aucun', value: null },
+  { label: 'Rouge', value: '#fbe4e4' },
+  { label: 'Orange', value: '#faebdd' },
+  { label: 'Jaune', value: '#fbf3db' },
+  { label: 'Vert', value: '#ddedea' },
+  { label: 'Bleu', value: '#ddebf1' },
+  { label: 'Violet', value: '#eae4f2' },
+  { label: 'Gris', value: '#ebeced' },
+]
 
 const TypographyShortcuts = Extension.create({
   name: 'typographyShortcuts',
@@ -99,6 +124,17 @@ function TableBottomSheet({ editor, onClose }: { editor: any, onClose: () => voi
     <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
       <div className="w-full rounded-t-2xl shadow-2xl" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
         <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-4" style={{ background: 'var(--border)' }} />
+        <p className="text-xs font-medium uppercase tracking-wide px-5 mb-2" style={{ color: 'var(--text-muted)' }}>Couleur de cellule</p>
+        <div className="flex items-center gap-2 px-5 pb-3">
+          {CELL_COLORS.map(c => (
+            <button key={c.label} title={c.label}
+              onClick={() => { (editor.chain().focus() as any).setCellAttribute('backgroundColor', c.value).run(); onClose() }}
+              className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{ background: c.value || 'transparent', border: c.value ? '1px solid rgba(0,0,0,0.12)' : '1px solid var(--border)' }}>
+              {c.value === null && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>⦸</span>}
+            </button>
+          ))}
+        </div>
         <p className="text-xs font-medium uppercase tracking-wide px-5 mb-2" style={{ color: 'var(--text-muted)' }}>Tableau</p>
         {actions.map((a, i) => (
           <button key={i} onClick={() => { a.fn(); onClose() }}
@@ -329,7 +365,11 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
         },
       }),
       Table.configure({ resizable: !isMobile }),
-      TableHeader, TableCell, TableRow,
+      // Cellules colorées : attribut backgroundColor sérialisé en data-bg +
+      // style inline (l'inline l'emporte sur le survol de ligne du CSS).
+      TableHeader.extend({ addAttributes() { return { ...this.parent?.(), ...cellBackgroundAttr } } }),
+      TableCell.extend({ addAttributes() { return { ...this.parent?.(), ...cellBackgroundAttr } } }),
+      TableRow,
       subpageExtension,
       wikiLinkExtension,
       CalloutExtension,
@@ -521,10 +561,14 @@ Image.extend({
       {editor && (
         <BubbleMenu
           editor={editor}
+          pluginKey="formatMenu"
           shouldShow={({ editor, state }) => {
             const { selection } = state
             const { empty } = selection
-            return !empty && !editor.isActive('table')
+            // Sélection de texte (y compris dans une cellule) → mise en forme.
+            // Sélection de cellules → c'est la barre Tableau qui prend le relais.
+            if (selection instanceof CellSelection) return false
+            return !empty
           }}
           tippyOptions={{ placement: 'top', offset: [0, 8], animation: 'fade', maxWidth: 'none' }}
         >
@@ -602,7 +646,18 @@ Image.extend({
       )}
 
       {editor && !isMobile && (
-        <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('table')} tippyOptions={{ placement: 'top', offset: [0, 8] }}>
+        <BubbleMenu
+          editor={editor}
+          pluginKey="tableMenu"
+          shouldShow={({ editor, state }) => {
+            // Barre Tableau : quand le curseur est dans une cellule (sans
+            // sélection de texte) ou qu'une sélection de cellules est active.
+            // Si du texte est sélectionné, c'est la barre de mise en forme.
+            if (!editor.isActive('table')) return false
+            return state.selection.empty || state.selection instanceof CellSelection
+          }}
+          tippyOptions={{ placement: 'top', offset: [0, 8], maxWidth: 'none' }}
+        >
           <div className="flex items-center gap-0.5 rounded-xl shadow-lg px-2 py-1.5"
             style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--sidebar-border)' }}>
             <span className="text-xs mr-1 font-medium" style={{ color: 'var(--sidebar-muted)' }}>Tableau</span>
@@ -633,6 +688,24 @@ Image.extend({
                 {a.label}
               </button>
             ))}
+            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
+            {/* Couleur de fond de la cellule (ou des cellules sélectionnées) */}
+            <div className="flex items-center gap-1 px-1">
+              {CELL_COLORS.map(c => (
+                <button key={c.label} title={c.label}
+                  onClick={() => (editor.chain().focus() as any).setCellAttribute('backgroundColor', c.value).run()}
+                  className="w-4 h-4 rounded-full flex-shrink-0 transition-transform hover:scale-110"
+                  style={{
+                    background: c.value || 'transparent',
+                    border: c.value ? '1px solid rgba(0,0,0,0.12)' : '1px solid var(--sidebar-border)',
+                    position: 'relative',
+                  }}>
+                  {c.value === null && (
+                    <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--sidebar-muted)' }}>⦸</span>
+                  )}
+                </button>
+              ))}
+            </div>
             <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
             <button onClick={() => editor.chain().focus().deleteTable().run()}
               className="px-2 py-1 text-xs rounded transition-colors text-red-500"
@@ -694,15 +767,28 @@ Image.extend({
         </div>
       )}
       <style>{`
-        .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1rem 0; }
+        /* Largeur adaptée au contenu : les colonnes courtes restent étroites,
+           les longues plafonnent et passent à la ligne, et le tableau peut
+           dépasser la largeur de la note (défilement dans le cadre). */
+        .ProseMirror table { border-collapse: collapse; table-layout: auto; width: max-content; min-width: 100%; margin: 0; }
         .ProseMirror table td, .ProseMirror table th {
-          min-width: 2em;
+          min-width: 6ch;
           border: 1px solid var(--prose-table-border);
           padding: 6px 10px; vertical-align: top;
           box-sizing: border-box; position: relative; font-size: 0.9em;
           color: var(--prose-color);
+          overflow-wrap: break-word; word-break: break-word;
         }
-        .ProseMirror table th { background-color: var(--prose-table-th); font-weight: 600; text-align: left; }
+        /* Cap de largeur sur le contenu → colonne longue repliée, courtes
+           gardées ; max-width sur td étant ignoré en dimensionnement auto. */
+        .ProseMirror table td > *, .ProseMirror table th > * { max-width: 22rem; margin: 0; }
+        /* En-tête collant : reste visible au défilement vertical du tableau.
+           box-shadow = filet du bas (les bordures collapse ne « collent » pas). */
+        .ProseMirror table th {
+          background-color: var(--prose-table-th); font-weight: 600; text-align: left;
+          position: sticky; top: 0; z-index: 3;
+          box-shadow: inset 0 -1px 0 var(--prose-table-border);
+        }
         .ProseMirror table tr:hover td { background-color: var(--prose-row-hover); }
         .ProseMirror table .selectedCell:after {
           z-index: 2; position: absolute; content: "";
@@ -713,7 +799,9 @@ Image.extend({
           position: absolute; right: -2px; top: 0; bottom: 0;
           width: 4px; background-color: var(--prose-link); cursor: col-resize; z-index: 20;
         }
-        .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
+        /* Cadre borné → défilement horizontal ET vertical, condition nécessaire
+           pour que l'en-tête sticky fonctionne (le conteneur de scroll). */
+        .ProseMirror .tableWrapper { overflow: auto; max-height: 70vh; margin: 1rem 0; }
         .resize-cursor { cursor: col-resize; }
         .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5rem 0; display: block; }
         .ProseMirror a {
