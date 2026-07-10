@@ -18,6 +18,7 @@ import { CellSelection } from '@tiptap/pm/tables'
 import { SlashCommands } from './SlashCommands'
 import { PillMark, PILL_COLORS, PillColorId } from './PillMark'
 import { DragHandleExtension } from './DragHandle'
+import { TableControlsExtension, CELL_COLORS } from './TableControls'
 import { createSubpageExtension, insertSubpageBlock } from './SubpageNode'
 import { createWikiLinkExtension } from './WikiLinkExtension'
 import { CalloutExtension } from './CalloutNode'
@@ -36,18 +37,6 @@ const cellBackgroundAttr = {
         : {},
   },
 }
-
-// Palette de fonds de cellule (pastels doux + neutre) ; null = aucun.
-const CELL_COLORS: { label: string; value: string | null }[] = [
-  { label: 'Aucun', value: null },
-  { label: 'Rouge', value: '#fbe4e4' },
-  { label: 'Orange', value: '#faebdd' },
-  { label: 'Jaune', value: '#fbf3db' },
-  { label: 'Vert', value: '#ddedea' },
-  { label: 'Bleu', value: '#ddebf1' },
-  { label: 'Violet', value: '#eae4f2' },
-  { label: 'Gris', value: '#ebeced' },
-]
 
 const TypographyShortcuts = Extension.create({
   name: 'typographyShortcuts',
@@ -428,7 +417,7 @@ Image.extend({
         },
       }),
       PillMark,
-      ...(!isMobile ? [DragHandleExtension] : []),
+      ...(!isMobile ? [DragHandleExtension, TableControlsExtension] : []),
     ],
     content: page.content || '',
     onCreate: ({ editor: ed }) => { updateStats(ed) },
@@ -645,75 +634,6 @@ Image.extend({
         </BubbleMenu>
       )}
 
-      {editor && !isMobile && (
-        <BubbleMenu
-          editor={editor}
-          pluginKey="tableMenu"
-          shouldShow={({ editor, state }) => {
-            // Barre Tableau : quand le curseur est dans une cellule (sans
-            // sélection de texte) ou qu'une sélection de cellules est active.
-            // Si du texte est sélectionné, c'est la barre de mise en forme.
-            if (!editor.isActive('table')) return false
-            return state.selection.empty || state.selection instanceof CellSelection
-          }}
-          tippyOptions={{ placement: 'top', offset: [0, 8], maxWidth: 'none' }}
-        >
-          <div className="flex items-center gap-0.5 rounded-xl shadow-lg px-2 py-1.5"
-            style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--sidebar-border)' }}>
-            <span className="text-xs mr-1 font-medium" style={{ color: 'var(--sidebar-muted)' }}>Tableau</span>
-            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
-            {[
-              { label: '← Col', fn: () => editor.chain().focus().addColumnBefore().run() },
-              { label: 'Col →', fn: () => editor.chain().focus().addColumnAfter().run() },
-              { label: '↑ Ligne', fn: () => editor.chain().focus().addRowBefore().run() },
-              { label: 'Ligne ↓', fn: () => editor.chain().focus().addRowAfter().run() },
-            ].map((a, i) => (
-              <button key={i} onClick={a.fn}
-                className="px-2 py-1 text-xs rounded transition-colors"
-                style={{ color: 'var(--sidebar-icon)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}>
-                {a.label}
-              </button>
-            ))}
-            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
-            {[
-              { label: '− Col', fn: () => editor.chain().focus().deleteColumn().run() },
-              { label: '− Ligne', fn: () => editor.chain().focus().deleteRow().run() },
-            ].map((a, i) => (
-              <button key={i} onClick={a.fn}
-                className="px-2 py-1 text-xs rounded transition-colors text-red-400"
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                {a.label}
-              </button>
-            ))}
-            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
-            {/* Couleur de fond de la cellule (ou des cellules sélectionnées) */}
-            <div className="flex items-center gap-1 px-1">
-              {CELL_COLORS.map(c => (
-                <button key={c.label} title={c.label}
-                  onClick={() => (editor.chain().focus() as any).setCellAttribute('backgroundColor', c.value).run()}
-                  className="w-4 h-4 rounded-full flex-shrink-0 transition-transform hover:scale-110"
-                  style={{
-                    background: c.value || 'transparent',
-                    border: c.value ? '1px solid rgba(0,0,0,0.12)' : '1px solid var(--sidebar-border)',
-                    position: 'relative',
-                  }}>
-                  {c.value === null && (
-                    <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--sidebar-muted)' }}>⦸</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="w-px self-stretch mx-1" style={{ background: 'var(--sidebar-border)' }} />
-            <button onClick={() => editor.chain().focus().deleteTable().run()}
-              className="px-2 py-1 text-xs rounded transition-colors text-red-500"
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>🗑</button>
-          </div>
-        </BubbleMenu>
-      )}
 
       {!isMobile && (
         <div className="editor-toolbar flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto flex-shrink-0"
