@@ -7,15 +7,18 @@ import { createRoot } from 'react-dom/client'
 import { useState, useEffect, useRef } from 'react'
 
 // Palette de fonds de cellule (partagée avec la feuille mobile d'Editor.tsx).
-export const CELL_COLORS: { label: string; value: string | null }[] = [
+// value = couleur RÉELLEMENT appliquée à la cellule (pastel, inchangée).
+// swatch = version plus saturée, uniquement pour la pastille des menus
+// (les pastels sont peu distinguables entre elles à l'affichage).
+export const CELL_COLORS: { label: string; value: string | null; swatch?: string }[] = [
   { label: 'Aucun', value: null },
-  { label: 'Rouge', value: '#fbe4e4' },
-  { label: 'Orange', value: '#faebdd' },
-  { label: 'Jaune', value: '#fbf3db' },
-  { label: 'Vert', value: '#ddedea' },
-  { label: 'Bleu', value: '#ddebf1' },
-  { label: 'Violet', value: '#eae4f2' },
-  { label: 'Gris', value: '#ebeced' },
+  { label: 'Rouge', value: '#fbe4e4', swatch: '#ef9a9a' },
+  { label: 'Orange', value: '#faebdd', swatch: '#f0b27a' },
+  { label: 'Jaune', value: '#fbf3db', swatch: '#f2d16b' },
+  { label: 'Vert', value: '#ddedea', swatch: '#80cbc4' },
+  { label: 'Bleu', value: '#ddebf1', swatch: '#8fc1de' },
+  { label: 'Violet', value: '#eae4f2', swatch: '#b39ddb' },
+  { label: 'Gris', value: '#ebeced', swatch: '#b0b4b8' },
 ]
 
 type Rect = { left: number; top: number; width: number; height: number }
@@ -102,7 +105,7 @@ function ColorRow({ onPick }: { onPick: (v: string | null) => void }) {
           onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
           onClick={e => { e.preventDefault(); e.stopPropagation(); onPick(c.value) }}
           className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center hover:scale-110 transition-transform"
-          style={{ background: c.value || 'transparent', border: c.value ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.3)' }}>
+          style={{ background: c.swatch || 'transparent', border: c.swatch ? '1px solid rgba(0,0,0,0.2)' : '1px solid rgba(255,255,255,0.3)' }}>
           {c.value === null && <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>⦸</span>}
         </button>
       ))}
