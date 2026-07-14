@@ -703,12 +703,8 @@ Image.extend({
         /* Cap de largeur sur le contenu → colonne longue repliée, courtes
            gardées ; max-width sur td étant ignoré en dimensionnement auto. */
         .ProseMirror table td > *, .ProseMirror table th > * { max-width: 22rem; margin: 0; }
-        /* En-tête collant : reste visible au défilement vertical du tableau.
-           box-shadow = filet du bas (les bordures collapse ne « collent » pas). */
         .ProseMirror table th {
           background-color: var(--prose-table-th); font-weight: 600; text-align: left;
-          position: sticky; top: 0; z-index: 3;
-          box-shadow: inset 0 -1px 0 var(--prose-table-border);
         }
         .ProseMirror table tr:hover td { background-color: var(--prose-row-hover); }
         .ProseMirror table .selectedCell:after {
@@ -720,9 +716,8 @@ Image.extend({
           position: absolute; right: -2px; top: 0; bottom: 0;
           width: 4px; background-color: var(--prose-link); cursor: col-resize; z-index: 20;
         }
-        /* Cadre borné → défilement horizontal ET vertical, condition nécessaire
-           pour que l'en-tête sticky fonctionne (le conteneur de scroll). */
-        .ProseMirror .tableWrapper { overflow: auto; max-height: 70vh; margin: 1rem 0; }
+        /* Défilement HORIZONTAL seulement → une seule barre verticale (page). */
+        .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
         .resize-cursor { cursor: col-resize; }
         .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5rem 0; display: block; }
         .ProseMirror a {

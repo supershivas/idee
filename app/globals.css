@@ -352,8 +352,6 @@ html, body {
 .prose table td > *, .prose table th > * { max-width: 22rem; margin: 0; }
 .prose table th {
   background: var(--prose-table-th); font-weight: 600; text-align: left;
-  position: sticky; top: 0; z-index: 3;
-  box-shadow: inset 0 -1px 0 var(--prose-table-border);
 }
 .prose table tr:hover td { background: var(--prose-row-hover); }
 .prose table .selectedCell:after {
@@ -365,7 +363,10 @@ html, body {
   position: absolute; right: -2px; top: 0; bottom: 0;
   width: 4px; background: var(--prose-link); cursor: col-resize; z-index: 20;
 }
-.prose .tableWrapper { overflow: auto; max-height: 70vh; margin: 1rem 0; }
+/* Défilement HORIZONTAL seulement (tableau large) ; pas de hauteur bornée →
+   le tableau reste dans le flux de la page = une seule barre verticale (celle
+   de la page), pas de double scroll. */
+.prose .tableWrapper { overflow-x: auto; margin: 1rem 0; }
 
 /* Lien page interne */
 .page-link {
