@@ -206,6 +206,16 @@ html, body {
   margin: 0 auto;
   overflow: hidden;
 }
+/* Note en pleine largeur (toggle par note) : la carte occupe le panneau
+   jusqu'à un plafond confortable, avec une petite marge latérale. */
+.page-card.is-wide {
+  max-width: min(1400px, calc(100% - 32px));
+}
+/* En mode focus, l'éditeur est bridé à 660px ; pour une note large on lève
+   ce plafond (spécificité > .focus-mode-content .ProseMirror-focused). */
+.page-card.is-wide .focus-mode-content .ProseMirror-focused {
+  max-width: none;
+}
 
 /* ─── Éditeur Tiptap ─────────────────────────────────────────────────────────*/
 .tiptap {

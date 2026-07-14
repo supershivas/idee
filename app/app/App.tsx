@@ -547,6 +547,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     await persist(createClient().from('pages').update({ icon }).eq('id', id))
   }
 
+  async function toggleFullWidth(id: string) {
+    const page = pages.find(p => p.id === id)
+    if (!page) return
+    const full_width = !page.full_width
+    setPages(prev => prev.map(p => p.id === id ? { ...p, full_width } : p))
+    syncSelectedPage(id, { full_width })
+    await persist(createClient().from('pages').update({ full_width }).eq('id', id))
+  }
+
   async function updateTags(id: string, tags: string[]) {
     setPages(prev => prev.map(p => p.id === id ? { ...p, tags } : p))
     syncSelectedPage(id, { tags })
@@ -1257,7 +1266,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 </>
               )}
               <div
-                className={`page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col${selected.id === justCreatedId ? ' page-new-enter' : ''}`}
+                className={`page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col${selected.full_width ? ' is-wide' : ''}${selected.id === justCreatedId ? ' page-new-enter' : ''}`}
                 onAnimationEnd={() => setJustCreatedId(null)}
               >
                 <MobileTopBar
@@ -1282,6 +1291,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   onToggleFavorite={toggleFavorite}
                   onDelete={() => setConfirmDeleteId(selected.id)}
                   onConvertToJournal={() => convertToJournal(selected.id)}
+                  onToggleFullWidth={() => toggleFullWidth(selected.id)}
                   onCreatedAtChange={iso => updateCreatedAt(selected.id, iso)}
                   onRestore={(title, content) => {
                     syncSelectedPage(selected.id, { title, content })
@@ -1350,7 +1360,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 </button>
               </div>
               {selectedRight ? (
-                <div className="page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col">
+                <div className={`page-card relative z-10 mx-3 md:mx-auto mb-6 flex flex-col${selectedRight.full_width ? ' is-wide' : ''}`}>
                   <PageHeader
                     page={selectedRight}
                     pages={[...activePages, ...journalEntries]}
@@ -1365,6 +1375,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     onToggleFavorite={toggleFavorite}
                     onDelete={() => setConfirmDeleteId(selectedRight.id)}
                     onConvertToJournal={() => convertToJournal(selectedRight.id)}
+                    onToggleFullWidth={() => toggleFullWidth(selectedRight.id)}
                     onCreatedAtChange={iso => updateCreatedAt(selectedRight.id, iso)}
                     onRestore={(title, content) => {
                       syncSelectedPage(selectedRight.id, { title, content })
