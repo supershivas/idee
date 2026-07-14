@@ -429,6 +429,34 @@ Image.extend({
     if (editor) updateStats(editor)
   }, [editor]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // En-tête de tableau sticky sans double barre : on marque `.table-fits` les
+  // wrappers dont le tableau tient dans la largeur → le CSS repasse alors le
+  // wrapper en overflow visible et rend l'en-tête sticky (sur le panneau de la
+  // page). Les tableaux plus larges gardent le scroll horizontal, sans sticky.
+  useEffect(() => {
+    if (!editor) return
+    const root = editor.view.dom as HTMLElement
+    function syncTableFit() {
+      root.querySelectorAll('.tableWrapper').forEach(w => {
+        const wrap = w as HTMLElement
+        const table = wrap.querySelector('table')
+        if (!table) return
+        // tolérance de 1px pour les arrondis sub-pixel
+        wrap.classList.toggle('table-fits', table.scrollWidth <= wrap.clientWidth + 1)
+      })
+    }
+    syncTableFit()
+    const ro = new ResizeObserver(syncTableFit)
+    ro.observe(root)
+    editor.on('update', syncTableFit)
+    window.addEventListener('resize', syncTableFit)
+    return () => {
+      ro.disconnect()
+      editor.off('update', syncTableFit)
+      window.removeEventListener('resize', syncTableFit)
+    }
+  }, [editor])
+
   useEffect(() => {
     if (editor && editor.getHTML() !== (page.content || '')) {
       editor.commands.setContent(page.content || '', false)
@@ -718,6 +746,13 @@ Image.extend({
         }
         /* Défilement HORIZONTAL seulement → une seule barre verticale (page). */
         .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
+        /* En-tête sticky quand le tableau tient (classe .table-fits posée en
+           JS) : wrapper en overflow visible → sticky résolu sur le panneau. */
+        .ProseMirror .tableWrapper.table-fits { overflow: visible; }
+        .ProseMirror .tableWrapper.table-fits th {
+          position: sticky; top: var(--table-sticky-top, 44px); z-index: 2;
+          box-shadow: inset 0 -1px 0 var(--prose-table-border);
+        }
         .resize-cursor { cursor: col-resize; }
         .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5rem 0; display: block; }
         .ProseMirror a {
