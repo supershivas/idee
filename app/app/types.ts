@@ -23,6 +23,7 @@ export type Page = {
   is_shared?: boolean
   share_token?: string | null
   comments_enabled?: boolean
+  full_width?: boolean
 }
 export function formatSubtitle(date: string) {
   return new Date(date).toLocaleString('fr-FR', {

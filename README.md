@@ -3,6 +3,16 @@ Home-made note editor
 
 ## Configuration requise côté Supabase
 
+**Migration `full_width` (note en pleine largeur) — à appliquer AVANT le
+déploiement.** La colonne est ajoutée à la liste des colonnes chargées, donc
+la requête `pages` échouerait tant qu'elle n'existe pas. Contenu de
+`supabase/migrations/0002_full_width.sql` :
+
+```sql
+alter table public.pages
+  add column if not exists full_width boolean not null default false;
+```
+
 **Synchronisation temps réel des notes (multi-onglets / multi-appareils).**
 L'app s'abonne aux changements de la table `pages` via Supabase Realtime.
 Pour que ça fonctionne, la table doit être ajoutée à la publication :

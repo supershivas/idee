@@ -270,11 +270,12 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
   )
 }
 
-export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onTagClick }: {
+export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onToggleFullWidth, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onTagClick }: {
   page: Page; pages: Page[]; userId: string; saveState: SaveState; isMobile: boolean
   onBack: () => void; onSelectPage: (p: Page) => void; onTitleChange: (v: string) => void
   onIconChange: (emoji: string) => void; onTagsChange: (tags: string[]) => void
   onToggleFavorite: (id: string) => void; onDelete: () => void; onConvertToJournal: () => void
+  onToggleFullWidth?: () => void
   onCreatedAtChange?: (iso: string) => void; onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void; onSummaryUpdate?: (summary: string | null) => void
   onTagClick?: (tag: string) => void
@@ -330,7 +331,12 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
               {totalCommentCount > 0 && <span className="font-medium text-[11px]">{totalCommentCount}</span>}
             </button>
           )}
-          <ActionsMenu onDelete={onDelete} onConvertToJournal={isJournal ? undefined : onConvertToJournal}>
+          <ActionsMenu
+            onDelete={onDelete}
+            onConvertToJournal={isJournal ? undefined : onConvertToJournal}
+            onToggleFullWidth={!isMobile && !isJournal ? onToggleFullWidth : undefined}
+            fullWidth={page.full_width}
+          >
             <HistoryButton page={page} onRestore={onRestore} />
             <ExportButton page={page} />
             <ShareButton page={page as any} onUpdate={onShareUpdate} />

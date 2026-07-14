@@ -20,6 +20,15 @@ const IconNotebook = () => (
   </svg>
 )
 
+const IconWidth = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 6.5h11" />
+    <path d="M3 4.5l-2 2 2 2" />
+    <path d="M10 4.5l2 2-2 2" />
+  </svg>
+)
+
 const IconTrash = () => (
   <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
     stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
@@ -57,9 +66,11 @@ function MenuButton({ icon, label, onClick, danger }: {
   )
 }
 
-export function ActionsMenu({ onDelete, onConvertToJournal, children }: {
+export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, fullWidth, children }: {
   onDelete: () => void
   onConvertToJournal?: () => void
+  onToggleFullWidth?: () => void
+  fullWidth?: boolean
   children?: ReactNode
 }) {
   const [open, setOpen]       = useState(false)
@@ -121,6 +132,13 @@ export function ActionsMenu({ onDelete, onConvertToJournal, children }: {
           {children && <div className="p-1">{children}</div>}
           {children && <div style={{ height: '1px', background: 'var(--border)' }} />}
           <div className="p-1">
+            {onToggleFullWidth && (
+              <MenuButton
+                icon={<IconWidth />}
+                label={fullWidth ? 'Largeur normale' : 'Pleine largeur'}
+                onClick={() => { onToggleFullWidth(); setOpen(false) }}
+              />
+            )}
             {onConvertToJournal && (
               <MenuButton
                 icon={<IconNotebook />}
