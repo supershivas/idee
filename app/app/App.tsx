@@ -276,7 +276,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     // Ne jamais ressusciter une page supprimée localement via un écho périmé.
     if (deletedTombstoneRef.current.has(row.id)) return
     const existing = pagesRef.current.find(p => p.id === row.id)
-    const { content: incoming, ...meta } = row as Page & { content?: string }
+    const { content: incoming, ...restMeta } = row as Page & { content?: string }
 
     if (!existing) {
       // Page créée sur un autre appareil.
@@ -288,6 +288,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     const openHere = selectedRef.current?.id === row.id || selectedRightRef.current?.id === row.id
     const contentDiffers = incoming !== undefined && incoming !== existing.content
     const isOwnEcho = incoming !== undefined && (localContentsRef.current.get(row.id) || []).includes(incoming)
+    // Le titre est débounce/sérialisé (usePageSaver) mais reste sujet au même
+    // risque d'écho périmé que le contenu : un flush portant une ancienne
+    // valeur peut revenir après que l'utilisateur a déjà retapé plus loin.
+    // Comme pour le contenu, on ne touche jamais au titre d'une page ouverte
+    // ici — sinon la frappe en cours se fait écraser/tronquer par l'écho.
+    const meta = openHere ? { ...restMeta, title: existing.title } : restMeta
 
     if (openHere && contentDiffers && !isOwnEcho) {
       // Édition distante d'une note ouverte ici : on ne clobbe jamais
