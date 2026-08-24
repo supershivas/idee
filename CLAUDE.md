@@ -26,6 +26,14 @@ synchronisée ici via `./scripts/sync-tokens.sh`, puis reportée dans
 modifier une valeur partagée uniquement ici sans la reporter dans
 design-system et dans source.
 
+## Versioning
+
+Le numéro affiché dans Paramètres (`package.json` → `version`) est
+maintenu à la main, pas auto-généré : bump `patch` pour un correctif,
+`minor` pour une nouvelle fonctionnalité, `major` pour un changement
+notable. La date de mise à jour affichée à côté, elle, reste automatique
+(date du commit courant, lue au build).
+
 ## Workflow Git
 
 - Toujours brancher depuis `main`, jamais commit direct sur `main`.
