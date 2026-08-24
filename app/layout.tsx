@@ -1,4 +1,6 @@
 import './globals.css'
+import PwaUpdater from './PwaUpdater'
+import { getBuildId } from '@/lib/buildId'
 
 export const metadata = {
   title: 'Idée',
@@ -45,6 +47,7 @@ export default function RootLayout({
       </head>
 
       <body className="bg-gray-50 text-gray-900">
+        <PwaUpdater currentBuildId={getBuildId()} />
         {children}
       </body>
     </html>
