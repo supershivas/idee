@@ -216,7 +216,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -228,6 +228,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   journalCount: number
   onAddJournalEntry: () => void
   onShowSettings: () => void
+  onShowTags: () => void
 }) {
   const [showSearch, setShowSearch] = useState(false)
   const [tab, setTab] = useState<'pages' | 'journal'>('pages')
@@ -281,6 +282,12 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           <span className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>Idée</span>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={onShowTags}
+            className="w-9 h-9 flex items-center justify-center rounded-xl"
+            style={{ color: 'var(--text-muted)' }}
+            title="Tags"
+          >🏷️</button>
           <button
             onClick={onShowTrash}
             className="relative w-9 h-9 flex items-center justify-center rounded-xl"
