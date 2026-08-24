@@ -216,11 +216,11 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onMoveTo, onDuplicate, onDeleteRequest }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
-  onAdd: () => void
+  onAdd: (parentId: string | null) => void
   onShowTrash: () => void
   trashedCount: number
   onToggleFavorite: (id: string) => void
@@ -229,6 +229,9 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   onAddJournalEntry: () => void
   onShowSettings: () => void
   onShowTags: () => void
+  onMoveTo: (id: string) => void
+  onDuplicate: (id: string) => void
+  onDeleteRequest: (id: string) => void
 }) {
   const [showSearch, setShowSearch] = useState(false)
   const [tab, setTab] = useState<'pages' | 'journal'>('pages')
@@ -236,6 +239,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   const journalSentinelRef = useRef<HTMLDivElement>(null)
   // drill-down stack : chaque entrée = { id, title, icon } de la page parente
   const [drillStack, setDrillStack] = useState<{ id: string; title: string; icon: string }[]>([])
+  const [actionSheetPage, setActionSheetPage] = useState<Page | null>(null)
 
   const nonJournalPages = pages.filter(function(p) { return p.type !== 'journal' && !p.deleted_at })
   const journalEntries = pages.filter(function(p) { return p.type === 'journal' && !p.deleted_at })
@@ -337,7 +341,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
               <>
                 <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Favoris</p>
                 {favorites.map(function(page) {
-                  return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+                  return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
                 })}
                 <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border-light)' }} />
               </>
@@ -346,7 +350,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
               <>
                 <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Récents</p>
                 {recentPages.map(function(page) {
-                  return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+                  return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
                 })}
                 <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border-light)' }} />
               </>
@@ -383,6 +387,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
               return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite}
                 hasChildren={hasChildren}
                 onDrillDown={function(p) { setDrillStack(function(s) { return [...s, { id: p.id, title: p.title || 'Sans titre', icon: p.icon || '📄' }] }) }}
+                onShowActions={setActionSheetPage}
               />
             })}
           </>
@@ -414,12 +419,12 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         }}
       >
         <button
-          onClick={tab === 'journal' ? onAddJournalEntry : onAdd}
+          onClick={() => tab === 'journal' ? onAddJournalEntry() : onAdd(currentParentId)}
           className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-colors"
           style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
         >
           <span>{tab === 'journal' ? '✏️' : '+'}</span>
-          <span>{tab === 'journal' ? 'Nouvelle entrée' : 'Nouvelle page'}</span>
+          <span>{tab === 'journal' ? 'Nouvelle entrée' : drillStack.length > 0 ? 'Nouvelle sous-page' : 'Nouvelle page'}</span>
         </button>
         <button
           onClick={() => setShowSearch(true)}
@@ -430,16 +435,28 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           <span>Rechercher</span>
         </button>
       </div>
+
+      {actionSheetPage && (
+        <MobilePageActionSheet
+          page={actionSheetPage}
+          onClose={() => setActionSheetPage(null)}
+          onAddSubpage={() => onAdd(actionSheetPage.id)}
+          onMoveTo={() => onMoveTo(actionSheetPage.id)}
+          onDuplicate={() => onDuplicate(actionSheetPage.id)}
+          onDelete={() => onDeleteRequest(actionSheetPage.id)}
+        />
+      )}
     </div>
   )
 }
 
-function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, hasChildren }: {
+function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, hasChildren, onShowActions }: {
   page: Page, selectedId: string | null,
   onSelect: (p: Page) => void,
   onToggleFavorite: (id: string) => void,
   hasChildren?: boolean,
   onDrillDown?: (p: Page) => void,
+  onShowActions?: (p: Page) => void,
 }) {
   return (
     <div
@@ -448,7 +465,24 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
     >
       <span className="text-xl flex-shrink-0">{page.icon || '📄'}</span>
       <span className="flex-1 min-w-0 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</span>
-      {hasChildren ? (
+      {!hasChildren && (
+        <button
+          onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
+          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
+          style={{ color: page.favorite ? 'var(--accent)' : 'var(--text-faint)' }}
+        >
+          {page.favorite ? '★' : '☆'}
+        </button>
+      )}
+      {onShowActions && (
+        <button
+          onClick={e => { e.stopPropagation(); onShowActions(page) }}
+          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-base transition-colors"
+          style={{ color: 'var(--text-faint)' }}
+          title="Plus d'actions"
+        >⋯</button>
+      )}
+      {hasChildren && (
         <>
           <button
             onClick={e => { e.stopPropagation(); onSelect(page) }}
@@ -458,15 +492,48 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
           >↗</button>
           <span className="flex-shrink-0 text-sm" style={{ color: 'var(--text-faint)' }}>›</span>
         </>
-      ) : (
-        <button
-          onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
-          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
-          style={{ color: page.favorite ? 'var(--accent)' : 'var(--text-faint)' }}
-        >
-          {page.favorite ? '★' : '☆'}
-        </button>
       )}
+    </div>
+  )
+}
+
+function MobilePageActionSheet({ page, onClose, onAddSubpage, onMoveTo, onDuplicate, onDelete }: {
+  page: Page
+  onClose: () => void
+  onAddSubpage: () => void
+  onMoveTo: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+}) {
+  function Item({ icon, label, onClick, danger }: { icon: string; label: string; onClick: () => void; danger?: boolean }) {
+    return (
+      <button onClick={() => { onClick(); onClose() }}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-left active:opacity-60"
+        style={{ color: danger ? '#ef4444' : 'var(--text-primary)' }}>
+        <span className="text-lg flex-shrink-0">{icon}</span>
+        <span>{label}</span>
+      </button>
+    )
+  }
+  return (
+    <div className="fixed inset-0 z-[400] flex items-end" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
+      <div className="w-full rounded-t-2xl overflow-hidden" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1" />
+        <div className="px-4 py-3 flex items-center gap-2 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+          <span className="flex-shrink-0">{page.icon || '📄'}</span>
+          <span className="truncate">{page.title || 'Sans titre'}</span>
+        </div>
+        <div className="py-1">
+          <Item icon="➕" label="Ajouter une sous-page" onClick={onAddSubpage} />
+          <Item icon="📂" label="Déplacer vers…" onClick={onMoveTo} />
+          <Item icon="📄" label="Dupliquer" onClick={onDuplicate} />
+        </div>
+        <div style={{ height: '1px', background: 'var(--border)' }} />
+        <div className="py-1">
+          <Item icon="🗑" label="Mettre à la corbeille" onClick={onDelete} danger />
+        </div>
+        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+      </div>
     </div>
   )
 }

@@ -1136,12 +1136,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
             onSelect={p => { selectPage(p); setShowJournal(false) }}
-            onAdd={() => addPage(null)} onShowTrash={() => setShowTrash(true)}
+            onAdd={parentId => addPage(parentId)} onShowTrash={() => setShowTrash(true)}
             trashedCount={trashedPages.length} onToggleFavorite={toggleFavorite}
             onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
             onAddJournalEntry={addJournalEntry}
             onShowSettings={() => setShowSettings(true)}
             onShowTags={() => { setTagsInitialTag(undefined); setShowTags(true) }}
+            onMoveTo={id => setMoveToPageId(id)}
+            onDuplicate={id => duplicatePage(id)}
+            onDeleteRequest={id => setConfirmDeleteId(id)}
           />
         </div>
       )}
