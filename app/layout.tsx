@@ -1,5 +1,6 @@
 import './globals.css'
 import PwaUpdater from './PwaUpdater'
+import ServiceWorkerRegister from './ServiceWorkerRegister'
 import { getBuildId } from '@/lib/buildId'
 
 export const metadata = {
@@ -48,6 +49,7 @@ export default function RootLayout({
 
       <body className="bg-gray-50 text-gray-900">
         <PwaUpdater currentBuildId={getBuildId()} />
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

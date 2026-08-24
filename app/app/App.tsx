@@ -730,6 +730,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
 
   async function logout() {
     await createClient().auth.signOut()
+    // Vide le cache hors-ligne (données Supabase du compte) pour éviter
+    // qu'un autre utilisateur du même appareil ne les retrouve hors-ligne.
+    try {
+      const keys = await caches.keys()
+      await Promise.all(keys.map(k => caches.delete(k)))
+    } catch {}
     window.location.href = '/login'
   }
 
