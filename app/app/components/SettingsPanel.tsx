@@ -4,6 +4,10 @@ import { Page } from '../types'
 
 type Theme = 'light' | 'dark' | 'system'
 
+function formatUpdatedAt(iso: string) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'system'
@@ -220,6 +224,14 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
             >
               Se déconnecter
             </button>
+
+            {/* Informations de version */}
+            <p className="text-center text-[11px] text-gray-400 dark:text-gray-500">
+              Version {process.env.NEXT_PUBLIC_APP_VERSION}
+              {process.env.NEXT_PUBLIC_APP_UPDATED_AT && (
+                <> · Mis à jour le {formatUpdatedAt(process.env.NEXT_PUBLIC_APP_UPDATED_AT)}</>
+              )}
+            </p>
         </div>
 
         <div className="md:hidden flex-shrink-0" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
