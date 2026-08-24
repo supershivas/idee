@@ -1131,7 +1131,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       </div>
 
       {/* ── Mobile : vue liste ── */}
-      {isMobile && !selected && !showJournal && !showTags && (
+      {isMobile && !selected && !showJournal && !showTags && !showReview && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
@@ -1142,6 +1142,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onAddJournalEntry={addJournalEntry}
             onShowSettings={() => setShowSettings(true)}
             onShowTags={() => { setTagsInitialTag(undefined); setShowTags(true) }}
+            onShowReview={() => setShowReview(true)}
             onMoveTo={id => setMoveToPageId(id)}
             onDuplicate={id => duplicatePage(id)}
             onDeleteRequest={id => setConfirmDeleteId(id)}
@@ -1166,6 +1167,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <button onClick={() => setShowTags(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
           <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} initialTag={tagsInitialTag} />
+        </div>
+      )}
+
+      {/* ── Mobile : mode révision ── */}
+      {isMobile && showReview && !selected && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ReviewMode pages={[...activePages, ...journalEntries]} onNavigate={p => { selectPage(p); setShowReview(false) }} onClose={() => setShowReview(false)} />
         </div>
       )}
 
