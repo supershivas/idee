@@ -345,6 +345,42 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
         </div>
       </div>
 
+      {/* Actions — mobile : équivalent de la rangée desktop ci-dessus, MobileTopBar
+          ne gérant que le retour et l'indicateur de sauvegarde. */}
+      <div className="flex md:hidden items-center justify-end gap-1 px-3 pb-1">
+        {page.is_shared && page.share_token && (
+          <a
+            href={`/share/${page.share_token}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md"
+            style={{ color: 'var(--text-muted)' }}
+            title="Voir la page partagée"
+          >
+            <i className="ti ti-world-upload" style={{ fontSize: '15px' }} />
+          </a>
+        )}
+        {page.is_shared && (
+          <button
+            onClick={() => setShowComments(true)}
+            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md"
+            style={{ color: unreadCount > 0 ? 'var(--accent)' : 'var(--text-muted)' }}
+            title="Voir les commentaires"
+          >
+            <i className="ti ti-message" style={{ fontSize: '15px' }} />
+            {totalCommentCount > 0 && <span className="font-medium text-[11px]">{totalCommentCount}</span>}
+          </button>
+        )}
+        <ActionsMenu
+          onDelete={onDelete}
+          onConvertToJournal={isJournal ? undefined : onConvertToJournal}
+        >
+          <HistoryButton page={page} onRestore={onRestore} />
+          <ExportButton page={page} />
+          <ShareButton page={page as any} onUpdate={onShareUpdate} />
+        </ActionsMenu>
+      </div>
+
       <div className="px-6 pt-2 pb-1">
         <div className="flex items-start gap-3 group/title">
           <div className="relative flex-shrink-0">
