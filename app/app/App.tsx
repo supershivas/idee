@@ -1125,7 +1125,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       </div>
 
       {/* ── Mobile : vue liste ── */}
-      {isMobile && !selected && !showJournal && (
+      {isMobile && !selected && !showJournal && !showTags && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
@@ -1135,6 +1135,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
             onAddJournalEntry={addJournalEntry}
             onShowSettings={() => setShowSettings(true)}
+            onShowTags={() => { setTagsInitialTag(undefined); setShowTags(true) }}
           />
         </div>
       )}
@@ -1146,6 +1147,16 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
           <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
+        </div>
+      )}
+
+      {/* ── Mobile : vue tags (accès direct ou depuis un tag de note) ── */}
+      {isMobile && showTags && !selected && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
+            <button onClick={() => setShowTags(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
+          </div>
+          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} initialTag={tagsInitialTag} />
         </div>
       )}
 
