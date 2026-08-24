@@ -28,11 +28,14 @@ design-system et dans source.
 
 ## Versioning
 
-Le numéro affiché dans Paramètres (`package.json` → `version`) est
-maintenu à la main, pas auto-généré : bump `patch` pour un correctif,
-`minor` pour une nouvelle fonctionnalité, `major` pour un changement
-notable. La date de mise à jour affichée à côté, elle, reste automatique
-(date du commit courant, lue au build).
+Le numéro affiché dans Paramètres (`package.json` → `version`) n'est
+**jamais bumpé par l'utilisateur** : à chaque PR qui change le comportement
+de l'app, Claude Code incrémente lui-même `package.json` selon la nature du
+changement — `patch` pour un correctif, `minor` pour une nouvelle
+fonctionnalité, `major` pour un changement notable/structurant. Un PR
+purement doc/config sans impact utilisateur (comme celle-ci) n'a pas besoin
+de bump. La date affichée à côté reste automatique (date du commit courant,
+lue au build).
 
 ## Workflow Git
 
