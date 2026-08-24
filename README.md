@@ -3,6 +3,17 @@ Home-made note editor
 
 ## Configuration requise côté Supabase
 
+**Migration `trash_auto_purge` (suppression définitive après 30 jours).**
+`TrashPanel` affiche déjà un compte à rebours (« Suppression dans N jours »)
+mais rien ne l'appliquait jusqu'ici. Contenu de
+`supabase/migrations/0003_trash_auto_purge.sql` : une fonction
+`purge_old_trash()` exécutée quotidiennement via `pg_cron` (3h UTC).
+Nécessite l'extension `pg_cron` — la migration tente de l'activer en SQL,
+mais si ça échoue (permissions), l'activer d'abord depuis le dashboard :
+Database → Extensions → pg_cron, puis ne relancer que le bloc
+`select cron.schedule(...)` de la migration. Pas de dépendance côté code,
+peut être appliquée à tout moment.
+
 **Migration `full_width` (note en pleine largeur) — à appliquer AVANT le
 déploiement.** La colonne est ajoutée à la liste des colonnes chargées, donc
 la requête `pages` échouerait tant qu'elle n'existe pas. Contenu de
