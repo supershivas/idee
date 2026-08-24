@@ -216,7 +216,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onMoveTo, onDuplicate, onDeleteRequest }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onShowReview, onMoveTo, onDuplicate, onDeleteRequest }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -229,6 +229,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   onAddJournalEntry: () => void
   onShowSettings: () => void
   onShowTags: () => void
+  onShowReview: () => void
   onMoveTo: (id: string) => void
   onDuplicate: (id: string) => void
   onDeleteRequest: (id: string) => void
@@ -292,6 +293,12 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             style={{ color: 'var(--text-muted)' }}
             title="Tags"
           >🏷️</button>
+          <button
+            onClick={onShowReview}
+            className="w-9 h-9 flex items-center justify-center rounded-xl"
+            style={{ color: 'var(--text-muted)' }}
+            title="Mode révision"
+          >🎲</button>
           <button
             onClick={onShowTrash}
             className="relative w-9 h-9 flex items-center justify-center rounded-xl"
