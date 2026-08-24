@@ -243,6 +243,36 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   const [drillStack, setDrillStack] = useState<{ id: string; title: string; icon: string }[]>([])
   const [actionSheetPage, setActionSheetPage] = useState<Page | null>(null)
 
+  // Swipe horizontal Pages ↔ Journal (uniquement au premier niveau, hors
+  // drill-down dans un dossier, pour ne pas interférer avec cette navigation).
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const swipeDirRef = useRef<'horizontal' | 'vertical' | null>(null)
+  function onContentTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    touchStartRef.current = { x: t.clientX, y: t.clientY }
+    swipeDirRef.current = null
+  }
+  function onContentTouchMove(e: React.TouchEvent) {
+    if (!touchStartRef.current) return
+    const t = e.touches[0]
+    const dx = t.clientX - touchStartRef.current.x
+    const dy = t.clientY - touchStartRef.current.y
+    if (swipeDirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      swipeDirRef.current = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'horizontal' : 'vertical'
+    }
+  }
+  function onContentTouchEnd(e: React.TouchEvent) {
+    const start = touchStartRef.current
+    const dir = swipeDirRef.current
+    touchStartRef.current = null
+    swipeDirRef.current = null
+    if (!start || dir !== 'horizontal' || drillStack.length > 0) return
+    const dx = e.changedTouches[0].clientX - start.x
+    if (Math.abs(dx) < 60) return
+    if (dx < 0 && tab === 'pages') setTab('journal')
+    else if (dx > 0 && tab === 'journal') setTab('pages')
+  }
+
   const nonJournalPages = pages.filter(function(p) { return p.type !== 'journal' && !p.deleted_at })
   const journalEntries = pages.filter(function(p) { return p.type === 'journal' && !p.deleted_at })
   const favorites = nonJournalPages.filter(function(p) { return p.favorite }).sort(function(a, b) { return (a.favorite_position ?? 999) - (b.favorite_position ?? 999) })
@@ -348,7 +378,8 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-2">
+      <div className="flex-1 overflow-y-auto px-3 pb-2"
+        onTouchStart={onContentTouchStart} onTouchMove={onContentTouchMove} onTouchEnd={onContentTouchEnd}>
         {tab === 'pages' ? (
           <>
             {favorites.length > 0 && (
