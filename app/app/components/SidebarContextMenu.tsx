@@ -54,6 +54,7 @@ export function SidebarContextMenu({ x, y, page, isFavorite, onClose, onOpenSpli
       <Sep />
       <Item icon="layout-columns" label="Ouvrir en vue partagée" onClick={onOpenSplit} />
       <Sep />
+      <Item icon="edit" label="Renommer" onClick={onRename} />
       <Item icon="file-plus" label="Ajouter une sous-page" onClick={onAddSubpage} />
       <Item icon="folder-symlink" label="Déplacer vers…" onClick={onMoveTo} />
       <Item icon="copy" label="Dupliquer" onClick={onDuplicate} />

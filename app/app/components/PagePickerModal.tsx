@@ -72,13 +72,13 @@ export function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCl
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center"
+      className="fixed inset-0 z-[300] flex items-center justify-center px-4"
       style={{ background: 'rgba(0,0,0,0.55)' }}
       onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="flex flex-col rounded-2xl overflow-hidden"
-        style={{ width: 420, maxHeight: '72vh', background: 'var(--card-bg)', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', border: '1px solid var(--border)' }}
+        className="w-full flex flex-col rounded-2xl overflow-hidden"
+        style={{ maxWidth: 420, maxHeight: '72vh', background: 'var(--card-bg)', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', border: '1px solid var(--border)' }}
       >
         <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
           <i className="ti ti-search" style={{ color: 'var(--text-muted)', fontSize: '15px' }} />

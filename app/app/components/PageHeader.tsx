@@ -404,7 +404,11 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
               rows={1} />
           </div>
           <button onClick={() => onToggleFavorite(page.id)}
-            className={`flex-shrink-0 mt-2 text-xl transition-all ${page.favorite ? 'opacity-100' : 'opacity-0 group-hover/title:opacity-100 hover:!opacity-100'} ${!page.favorite ? 'hidden md:flex' : ''}`}
+            className={`flex-shrink-0 mt-2 text-xl transition-all ${
+              isMobile || page.favorite
+                ? 'flex opacity-100'
+                : 'hidden md:flex opacity-0 group-hover/title:opacity-100 hover:!opacity-100'
+            }`}
             style={{ color: page.favorite ? '#f59e0b' : 'var(--text-faint)' }}
             title={page.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
             {page.favorite ? '★' : '☆'}

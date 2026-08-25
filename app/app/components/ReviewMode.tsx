@@ -70,7 +70,7 @@ export default function ReviewMode({ pages, onNavigate, onClose }: {
             )}
           </div>
           <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
             style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
         <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-8">

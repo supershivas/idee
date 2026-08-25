@@ -83,29 +83,31 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
     <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
         ref={swipe.sheetRef}
-        className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
-        style={{ maxHeight: '90vh', ...swipe.style }}
+        className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
+        style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
+        <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-          <span className="font-semibold text-gray-900 dark:text-white">Historique</span>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Historique</span>
+          <button onClick={onClose}
+            className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
+            style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-gray-400">Chargement…</div>
+          <div className="flex items-center justify-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>Chargement…</div>
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
             <span className="text-3xl">📋</span>
-            <p className="text-sm text-gray-400">Aucun historique pour l'instant.</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Aucun historique pour l'instant.</p>
           </div>
         ) : (
           <div ref={contentRef} className="overflow-y-auto flex-1" style={{ maxHeight: '60vh' }}>
             {groups.map(group => (
               <div key={group.day}>
-                <p className="px-5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                <p className="px-5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   {group.label}
                 </p>
                 {group.entries.map(entry => {
@@ -118,19 +120,19 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
                       }}
                       disabled={!page}
                       className="w-full flex items-center gap-3 px-5 py-2.5 transition-colors text-left disabled:opacity-40"
-                      style={{ borderBottom: '1px solid var(--border-light, #f0ede8)' }}
-                      onMouseEnter={e => { if (page) e.currentTarget.style.background = 'var(--hover-bg, #f5f3ef)' }}
+                      style={{ borderBottom: '1px solid var(--border-light)' }}
+                      onMouseEnter={e => { if (page) e.currentTarget.style.background = 'var(--hover-bg)' }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                     >
                       <span className="text-base flex-shrink-0">{page?.icon || '📄'}</span>
-                      <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary, #1a1714)' }}>
+                      <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                         {entry.title}
                       </span>
                       <span className="text-xs flex-shrink-0 px-2 py-0.5 rounded-full"
-                        style={{ background: 'var(--selected-bg, #ede9e3)', color: 'var(--text-muted, #9c8e82)' }}>
+                        style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
                         {entry.count} modif{entry.count > 1 ? 's' : ''}
                       </span>
-                      {page && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint, #c4b8ac)' }}>→</span>}
+                      {page && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>}
                     </button>
                   )
                 })}

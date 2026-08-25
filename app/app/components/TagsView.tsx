@@ -151,7 +151,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
               {allTags.length} tag{allTags.length !== 1 ? 's' : ''}
             </span>
             <button onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+              className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
               style={{ color: 'var(--text-muted)' }}>✕</button>
           </div>
         </div>
