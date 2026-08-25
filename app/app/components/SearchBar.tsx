@@ -1,55 +1,10 @@
 'use client'
 import { useState, useRef, forwardRef, useImperativeHandle, useMemo, useEffect } from 'react'
 import { Page } from '../types'
+import { tiptapToText, getSnippet, matchesQuery, Highlighted } from '../search'
 
 export interface SearchBarHandle {
   focus: () => void
-}
-
-// Parse Tiptap JSON → texte brut (stack iterative, compatible ES5 target)
-function tiptapToText(content: string): string {
-  if (!content) return ''
-  var doc: any = null
-  try { doc = JSON.parse(content) } catch (_e) {
-    return content.replace(/<[^>]+>/g, ' ')
-  }
-  var parts: string[] = []
-  var stack: any[] = [doc]
-  while (stack.length > 0) {
-    var node = stack.pop()
-    if (!node) continue
-    if (node.type === 'text' && typeof node.text === 'string') {
-      parts.push(node.text)
-    }
-    if (Array.isArray(node.content)) {
-      for (var i = node.content.length - 1; i >= 0; i--) {
-        stack.push(node.content[i])
-      }
-    }
-  }
-  return parts.join(' ')
-}
-
-function getSnippet(text: string, query: string): string | null {
-  var lower = text.toLowerCase()
-  var idx = lower.indexOf(query.toLowerCase())
-  if (idx === -1) return null
-  var start = Math.max(0, idx - 40)
-  var end = Math.min(text.length, idx + query.length + 80)
-  return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
-}
-
-function Highlighted({ text, query }: { text: string; query: string }) {
-  if (!query) return <>{text}</>
-  var idx = text.toLowerCase().indexOf(query.toLowerCase())
-  if (idx === -1) return <>{text}</>
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className="search-highlight">{text.slice(idx, idx + query.length)}</mark>
-      {text.slice(idx + query.length)}
-    </>
-  )
 }
 
 export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: (p: Page) => void }>(
@@ -75,12 +30,9 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
 
     const results = useMemo(function() {
       if (query.length < 2) return []
-      var q = query.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
       return pageTexts
         .filter(function({ page, text }) {
-          var t = (page.title || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-          var b = text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-          return t.includes(q) || b.includes(q)
+          return matchesQuery(page.title || '', text, query)
         })
         .map(function({ page, text }) {
           return { page: page, snippet: getSnippet(text, query) }
