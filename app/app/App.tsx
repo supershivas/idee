@@ -112,14 +112,20 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const searchBarRef = useRef<{ focus: () => void }>(null)
   const mainScrollRef = useRef<HTMLDivElement>(null)
   const mainScrollRefRight = useRef<HTMLDivElement>(null)
-  // Swipe vers le bas pour fermer une note/entrée de journal ouverte,
-  // ancré sur le même scroll que le contenu (armé seulement en haut de
-  // page) — vient s'ajouter au swipe-retour horizontal existant.
+  // Swipe vers le bas pour fermer une note/entrée de journal ouverte —
+  // vient s'ajouter au swipe-retour horizontal existant. Le geste est
+  // rattaché au panneau entier (mainScrollRef) mais n'est « armé sans
+  // condition » que si le toucher démarre en dehors du corps de la note
+  // (noteBodyRef, sous-pages + éditeur) : sur l'en-tête (titre, breadcrumb,
+  // en-tête compact qui apparaît une fois qu'on a scrollé), swipe down
+  // ferme toujours ; dans le corps du texte, seulement depuis le haut du
+  // scroll, pour ne pas voler le geste de scroll-vers-le-haut.
+  const noteBodyRef = useRef<HTMLDivElement>(null)
   const swipeCloseNote = useSwipeDownToDismiss(() => {
     if (!isMobile || !selected) return
     if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
     else setSelected(null)
-  }, mainScrollRef)
+  }, noteBodyRef, mainScrollRef)
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
@@ -1379,32 +1385,34 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   }}
                   onTagClick={tag => { setTagsInitialTag(tag); setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
                 />
-                {selected.type !== 'journal' && (
-                  <SubpagesList
-                    page={selected}
-                    subpages={subpages}
-                    journalSubpages={journalSubpages}
-                    onSelect={selectPage}
-                    onReorder={(a, o, p) => reorderSiblings(a, o, p)}
-                    isMobile={isMobile}
-                    onAddSubpage={() => addPage(selected.id)}
-                  />
-                )}
-                {hydratedIds.has(selected.id) ? (
-                  <Editor
-                    key={`${selected.id}:${editorNonce}`}
-                    page={selected}
-                    pages={[...activePages, ...journalEntries]}
-                    onUpdate={content => updateContent(content, selected.id)}
-                    onAddSubpage={() => addPage(selected.id)}
-                    onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
-                    userId={userId}
-                    isMobile={isMobile}
-                    focusMode={sidebarHidden}
-                  />
-                ) : (
-                  <ContentLoading isMobile={isMobile} />
-                )}
+                <div ref={noteBodyRef}>
+                  {selected.type !== 'journal' && (
+                    <SubpagesList
+                      page={selected}
+                      subpages={subpages}
+                      journalSubpages={journalSubpages}
+                      onSelect={selectPage}
+                      onReorder={(a, o, p) => reorderSiblings(a, o, p)}
+                      isMobile={isMobile}
+                      onAddSubpage={() => addPage(selected.id)}
+                    />
+                  )}
+                  {hydratedIds.has(selected.id) ? (
+                    <Editor
+                      key={`${selected.id}:${editorNonce}`}
+                      page={selected}
+                      pages={[...activePages, ...journalEntries]}
+                      onUpdate={content => updateContent(content, selected.id)}
+                      onAddSubpage={() => addPage(selected.id)}
+                      onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
+                      userId={userId}
+                      isMobile={isMobile}
+                      focusMode={sidebarHidden}
+                    />
+                  ) : (
+                    <ContentLoading isMobile={isMobile} />
+                  )}
+                </div>
               </div>
             </>
           ) : (
