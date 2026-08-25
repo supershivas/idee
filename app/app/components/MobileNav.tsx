@@ -58,8 +58,14 @@ export function useSwipeDownToDismiss(
       const t = e.touches[0]
       const dx = t.clientX - startRef.current.x
       const dy = t.clientY - startRef.current.y
-      if (dirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-        dirRef.current = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'vertical' : 'horizontal'
+      // Verrouille la direction sur un échantillon plus large (24px, pas 10)
+      // pour lisser le tout début du geste, et ne classe « horizontal » que
+      // si ça domine clairement — un swipe du pouce vers le bas part presque
+      // toujours un peu en diagonale (l'arc naturel du pouce), et une
+      // classification prématurée/trop stricte le verrouillait à tort en
+      // horizontal, empêchant la fermeture pour le reste du geste.
+      if (dirRef.current === null && (Math.abs(dx) > 24 || Math.abs(dy) > 24)) {
+        dirRef.current = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'horizontal' : 'vertical'
         if (dirRef.current === 'vertical' && armedRef.current) setDragging(true)
       }
       if (dirRef.current === 'vertical' && armedRef.current && dy > 0) {
