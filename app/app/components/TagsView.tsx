@@ -200,6 +200,35 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
           </div>
         )}
 
+        {/* Pages list — au-dessus du nuage de tags dès qu'un filtre est actif,
+            pour voir les résultats sans avoir à faire défiler les tags. */}
+        {selectedTags.length > 0 && (
+          <div style={{ borderBottom: '1px solid var(--border)' }}>
+            {filteredPages.length === 0 ? (
+              <p className="text-sm px-6 py-5" style={{ color: 'var(--text-muted)' }}>
+                Aucune page avec {selectedTags.length > 1 ? 'ces tags combinés' : 'ce tag'}.
+              </p>
+            ) : filteredPages.map(page => (
+              <button key={page.id} onClick={() => onSelect(page)}
+                className="u-hover-bg w-full text-left flex items-center gap-3 px-6 py-3"
+                style={{ borderTop: '1px solid var(--border-light)' }}>
+                <span className="text-lg flex-shrink-0">{page.icon || '📄'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</p>
+                  {(page.tags || []).length > 0 && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {(page.tags || []).filter(t => !selectedTags.includes(t)).map(t => (
+                        <TagBadge key={t} tag={t} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Empty state */}
         {allTags.length === 0 && (
           <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
@@ -211,7 +240,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
 
         {/* Tag cloud */}
         {allTags.length > 0 && (
-          <div className="px-3 py-3 md:px-6 md:py-5 flex flex-wrap gap-1.5 md:gap-2" style={{ borderBottom: selectedTags.length > 0 ? '1px solid var(--border)' : 'none' }}>
+          <div className="px-3 py-3 md:px-6 md:py-5 flex flex-wrap gap-1.5 md:gap-2">
             {visibleTags.map(tag => {
               const c = tagColor(tag)
               const count = tagCounts[tag]
@@ -241,31 +270,6 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
             )}
           </div>
         )}
-
-        {/* Pages list */}
-        {selectedTags.length > 0 && filteredPages.length === 0 && (
-          <p className="text-sm px-6 py-5" style={{ color: 'var(--text-muted)' }}>
-            Aucune page avec {selectedTags.length > 1 ? 'ces tags combinés' : 'ce tag'}.
-          </p>
-        )}
-        {filteredPages.map(page => (
-          <button key={page.id} onClick={() => onSelect(page)}
-            className="u-hover-bg w-full text-left flex items-center gap-3 px-6 py-3"
-            style={{ borderTop: '1px solid var(--border-light)' }}>
-            <span className="text-lg flex-shrink-0">{page.icon || '📄'}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</p>
-              {(page.tags || []).length > 0 && (
-                <div className="flex gap-1 mt-1 flex-wrap">
-                  {(page.tags || []).filter(t => !selectedTags.includes(t)).map(t => (
-                    <TagBadge key={t} tag={t} />
-                  ))}
-                </div>
-              )}
-            </div>
-            <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>
-          </button>
-        ))}
 
         </div>
       </div>

@@ -38,6 +38,13 @@ const IconTrash = () => (
   </svg>
 )
 
+const IconFolder = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1.5 3.5a1 1 0 0 1 1-1h2.3l1 1.2h4.7a1 1 0 0 1 1 1v5.3a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6.5Z" />
+  </svg>
+)
+
 function MenuButton({ icon, label, onClick, danger }: {
   icon: ReactNode
   label: string
@@ -66,10 +73,11 @@ function MenuButton({ icon, label, onClick, danger }: {
   )
 }
 
-export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, fullWidth, children }: {
+export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, onMoveTo, fullWidth, children }: {
   onDelete: () => void
   onConvertToJournal?: () => void
   onToggleFullWidth?: () => void
+  onMoveTo?: () => void
   fullWidth?: boolean
   children?: ReactNode
 }) {
@@ -144,6 +152,13 @@ export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, f
                 icon={<IconNotebook />}
                 label="Convertir en Journal"
                 onClick={() => { onConvertToJournal(); setOpen(false) }}
+              />
+            )}
+            {onMoveTo && (
+              <MenuButton
+                icon={<IconFolder />}
+                label="Déplacer vers…"
+                onClick={() => { onMoveTo(); setOpen(false) }}
               />
             )}
             <MenuButton

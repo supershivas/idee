@@ -1363,6 +1363,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   onDelete={() => setConfirmDeleteId(selected.id)}
                   onConvertToJournal={() => convertToJournal(selected.id)}
                   onToggleFullWidth={() => toggleFullWidth(selected.id)}
+                  onMoveTo={() => setMoveToPageId(selected.id)}
                   onCreatedAtChange={iso => updateCreatedAt(selected.id, iso)}
                   onRestore={(title, content) => {
                     syncSelectedPage(selected.id, { title, content })
@@ -1447,6 +1448,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                     onDelete={() => setConfirmDeleteId(selectedRight.id)}
                     onConvertToJournal={() => convertToJournal(selectedRight.id)}
                     onToggleFullWidth={() => toggleFullWidth(selectedRight.id)}
+                    onMoveTo={() => setMoveToPageId(selectedRight.id)}
                     onCreatedAtChange={iso => updateCreatedAt(selectedRight.id, iso)}
                     onRestore={(title, content) => {
                       syncSelectedPage(selectedRight.id, { title, content })
