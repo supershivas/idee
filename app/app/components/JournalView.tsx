@@ -46,11 +46,12 @@ export function PageMetadata({ page, inline }: { page: Page; inline?: boolean })
 }
 
 // ─── JournalList ──────────────────────────────────────────────────────────────
-export function JournalList({ entries, selectedId, onSelect, onAdd }: {
+export function JournalList({ entries, selectedId, onSelect, onAdd, scrollRef }: {
   entries: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
   onAdd: () => void
+  scrollRef?: React.RefObject<HTMLDivElement | null>
 }) {
   const [limit, setLimit] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -71,7 +72,7 @@ export function JournalList({ entries, selectedId, onSelect, onAdd }: {
   }, [hasMore])
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
       <div className="page-card my-2 md:my-4" style={{ overflow: "visible" }}>
         {/* Header — empilé sur mobile, horizontal sur desktop */}
         <div className="px-4 md:px-6 pt-5 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>

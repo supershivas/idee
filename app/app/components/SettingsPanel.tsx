@@ -81,28 +81,27 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
     { value: 'system',label: 'Système', icon: '💻' },
   ]
 
-  const swipe = useSwipeDownToDismiss(onClose)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const swipe = useSwipeDownToDismiss(onClose, contentRef)
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
+        ref={swipe.sheetRef}
         className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
         style={{ maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Handle mobile + en-tête : zone de saisie du swipe pour fermer */}
-        <div ref={swipe.headerRef}>
-          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
+        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-            <span className="font-semibold text-gray-900 dark:text-white">Paramètres</span>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
-          </div>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <span className="font-semibold text-gray-900 dark:text-white">Paramètres</span>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
         </div>
 
         {/* Contenu */}
-        <div className="px-5 py-4 space-y-5 overflow-y-auto flex-1">
+        <div ref={contentRef} className="px-5 py-4 space-y-5 overflow-y-auto flex-1">
             {/* Apparence */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Apparence</p>

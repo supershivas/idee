@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Page } from '../types'
 import { useSwipeDownToDismiss } from './MobileNav'
 
@@ -51,30 +51,29 @@ export default function ReviewMode({ pages, onNavigate, onClose }: {
   }, [current, pool, seen])
 
   const remaining = pool.filter(p => !seen.has(p.id)).length
-  const swipe = useSwipeDownToDismiss(onClose)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const swipe = useSwipeDownToDismiss(onClose, contentRef)
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
-      <div className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[560px] md:mx-4 overflow-hidden flex flex-col"
+      <div ref={swipe.sheetRef} className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[560px] md:mx-4 overflow-hidden flex flex-col"
         style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}>
-        <div ref={swipe.headerRef} className="flex-shrink-0">
-          <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
-          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Mode révision</span>
-              {pool.length > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
-                  {remaining} / {pool.length}
-                </span>
-              )}
-            </div>
-            <button onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-              style={{ color: 'var(--text-muted)' }}>✕</button>
+        <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
+        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Mode révision</span>
+            {pool.length > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
+                {remaining} / {pool.length}
+              </span>
+            )}
           </div>
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-8">
+        <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-8">
 
         {!current ? (
           <div className="text-center py-16">

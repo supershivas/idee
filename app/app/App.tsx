@@ -104,13 +104,22 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   // Swipe vers le bas depuis l'en-tête pour fermer la vue Journal mobile
   // (seule vue « poussée » restante — Tags/Récents/Mode révision/Corbeille/
   // Paramètres/Historique gèrent désormais leur propre modale).
-  const swipeCloseJournal = useSwipeDownToDismiss(() => setShowJournal(false))
+  const journalScrollRef = useRef<HTMLDivElement>(null)
+  const swipeCloseJournal = useSwipeDownToDismiss(() => setShowJournal(false), journalScrollRef)
   const pointerYRef = useRef(0)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverOverIdRef = useRef<string | null>(null)
   const searchBarRef = useRef<{ focus: () => void }>(null)
   const mainScrollRef = useRef<HTMLDivElement>(null)
   const mainScrollRefRight = useRef<HTMLDivElement>(null)
+  // Swipe vers le bas pour fermer une note/entrée de journal ouverte,
+  // ancré sur le même scroll que le contenu (armé seulement en haut de
+  // page) — vient s'ajouter au swipe-retour horizontal existant.
+  const swipeCloseNote = useSwipeDownToDismiss(() => {
+    if (!isMobile || !selected) return
+    if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
+    else setSelected(null)
+  }, mainScrollRef)
   const [scrolledPast, setScrolledPast] = useState(false)
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
@@ -1202,11 +1211,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
 
       {/* ── Mobile : vue journal ── */}
       {isMobile && showJournal && !selected && (
-        <div className="flex-1 flex flex-col overflow-hidden" style={swipeCloseJournal.style}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0" ref={swipeCloseJournal.headerRef}>
+        <div ref={swipeCloseJournal.sheetRef} className="flex-1 flex flex-col overflow-hidden" style={swipeCloseJournal.style}>
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
             <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
-          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
+          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} scrollRef={journalScrollRef} />
         </div>
       )}
 
@@ -1258,7 +1267,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       <div className={`${(isMobile && !selected) || showingJournalDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}
         onTouchStart={onSwipeTouchStart} onTouchEnd={onSwipeTouchEnd}>
         {/* Panneau gauche */}
-        <div ref={mainScrollRef} className="flex-1 overflow-y-auto min-w-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)' }}>
+        <div
+          ref={node => { mainScrollRef.current = node; swipeCloseNote.sheetRef.current = node }}
+          className="flex-1 overflow-y-auto min-w-0"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)', ...swipeCloseNote.style }}
+        >
           {splitMode && (
             <div className="sticky top-0 z-30 flex items-center justify-end gap-1 px-2 py-1" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
               <button onClick={() => setPagePicker('left')} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Changer la page">

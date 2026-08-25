@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from '../types'
 import { useSwipeDownToDismiss } from './MobileNav'
@@ -76,22 +76,22 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
     load()
   }, [])
 
-  const swipe = useSwipeDownToDismiss(onClose)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const swipe = useSwipeDownToDismiss(onClose, contentRef)
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
+        ref={swipe.sheetRef}
         className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
         style={{ maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}
       >
-        <div ref={swipe.headerRef}>
-          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
+        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
 
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-            <span className="font-semibold text-gray-900 dark:text-white">Historique</span>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
-          </div>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <span className="font-semibold text-gray-900 dark:text-white">Historique</span>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
         </div>
 
         {loading ? (
@@ -102,7 +102,7 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
             <p className="text-sm text-gray-400">Aucun historique pour l'instant.</p>
           </div>
         ) : (
-          <div className="overflow-y-auto flex-1" style={{ maxHeight: '60vh' }}>
+          <div ref={contentRef} className="overflow-y-auto flex-1" style={{ maxHeight: '60vh' }}>
             {groups.map(group => (
               <div key={group.day}>
                 <p className="px-5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
