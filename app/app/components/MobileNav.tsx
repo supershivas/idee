@@ -77,8 +77,17 @@ export function useSwipeDownToDismiss(
         dirRef.current = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'horizontal' : 'vertical'
         if (dirRef.current === 'vertical' && armedRef.current) setDragging(true)
       }
-      if (dirRef.current === 'vertical' && armedRef.current && dy > 0) {
+      // preventDefault dès le tout premier touchmove du geste (pas seulement
+      // une fois la direction verrouillée à 24px) : sur iOS Safari, si le
+      // tout premier touchmove n'appelle pas preventDefault, le navigateur
+      // prend la main sur le scroll/rebond natif pour tout le reste du
+      // geste, et les preventDefault suivants sont alors ignorés — d'où
+      // l'effet de rebond blanc qui « remonte » systématiquement au
+      // relâchement, quels que soient la distance ou la vitesse du swipe.
+      if (armedRef.current && dy > 0 && dirRef.current !== 'horizontal') {
         e.preventDefault()
+      }
+      if (dirRef.current === 'vertical' && armedRef.current && dy > 0) {
         const next = Math.min(dy, 220)
         dragYRef.current = next
         setDragY(next)
@@ -123,7 +132,11 @@ export function useSwipeDownToDismiss(
 
   return {
     sheetRef,
-    style: { transform: `translateY(${dragY}px)`, transition: dragging ? 'none' : 'transform 200ms ease' },
+    // overscrollBehaviorY: 'contain' en filet de sécurité CSS — empêche le
+    // rebond natif de remonter la chaîne de scroll même dans les cas où
+    // preventDefault arriverait trop tard (ex. Safari, cf. commentaire dans
+    // onTouchMove).
+    style: { transform: `translateY(${dragY}px)`, transition: dragging ? 'none' : 'transform 200ms ease', overscrollBehaviorY: 'contain' as const },
   }
 }
 
