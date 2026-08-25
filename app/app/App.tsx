@@ -1207,8 +1207,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {/* ── Mobile : vue journal ── */}
       {isMobile && showJournal && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden" style={swipeCloseJournal.style}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0"
-            onTouchStart={swipeCloseJournal.onTouchStart} onTouchMove={swipeCloseJournal.onTouchMove} onTouchEnd={swipeCloseJournal.onTouchEnd}>
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0" ref={swipeCloseJournal.headerRef}>
             <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
           <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
@@ -1218,8 +1217,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {/* ── Mobile : vue tags (accès direct ou depuis un tag de note) ── */}
       {isMobile && showTags && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden" style={swipeCloseTags.style}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0"
-            onTouchStart={swipeCloseTags.onTouchStart} onTouchMove={swipeCloseTags.onTouchMove} onTouchEnd={swipeCloseTags.onTouchEnd}>
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0" ref={swipeCloseTags.headerRef}>
             <button onClick={() => setShowTags(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
           <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} initialTag={tagsInitialTag} />
@@ -1236,8 +1234,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {/* ── Mobile : vue récente ── */}
       {isMobile && showRecent && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden" style={swipeCloseRecent.style}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0"
-            onTouchStart={swipeCloseRecent.onTouchStart} onTouchMove={swipeCloseRecent.onTouchMove} onTouchEnd={swipeCloseRecent.onTouchEnd}>
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0" ref={swipeCloseRecent.headerRef}>
             <button onClick={() => setShowRecent(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
           <RecentView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowRecent(false); if (p.type === 'journal') setShowJournal(true) }} />

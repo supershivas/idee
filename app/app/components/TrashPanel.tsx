@@ -36,7 +36,7 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col w-full md:w-[480px]"
         style={{ background: 'var(--card-bg)', maxHeight: '80vh', ...swipe.style }}>
-        <div onTouchStart={swipe.onTouchStart} onTouchMove={swipe.onTouchMove} onTouchEnd={swipe.onTouchEnd}>
+        <div ref={swipe.headerRef}>
           <div className="md:hidden w-10 h-1 rounded-full mx-auto mt-3 flex-shrink-0" style={{ background: 'var(--border)' }} />
           <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
             <div>

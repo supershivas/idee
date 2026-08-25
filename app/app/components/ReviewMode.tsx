@@ -53,8 +53,7 @@ export default function ReviewMode({ pages, onNavigate, onClose }: {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-12" style={swipe.style}>
       <div className="w-full max-w-xl">
-        <div className="flex items-center justify-between mb-6"
-          onTouchStart={swipe.onTouchStart} onTouchMove={swipe.onTouchMove} onTouchEnd={swipe.onTouchEnd}>
+        <div className="flex items-center justify-between mb-6" ref={swipe.headerRef}>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Mode révision</span>
             {pool.length > 0 && (

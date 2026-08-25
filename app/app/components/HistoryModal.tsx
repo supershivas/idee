@@ -85,7 +85,7 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
         style={{ maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}
       >
-        <div onTouchStart={swipe.onTouchStart} onTouchMove={swipe.onTouchMove} onTouchEnd={swipe.onTouchEnd}>
+        <div ref={swipe.headerRef}>
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
 
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
