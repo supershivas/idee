@@ -177,7 +177,7 @@ function MobileSearchOverlay({ pages, onSelect, onClose }: {
       <div className="flex items-center gap-3 px-4 flex-shrink-0"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
         <div className="flex-1 flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: 'var(--selected-bg)' }}>
-          <span style={{ color: 'var(--text-muted)' }}>🔍</span>
+          <i className="ti ti-search" style={{ fontSize: '15px', color: 'var(--text-muted)' }} />
           <input
             ref={inputRef}
             value={query}
@@ -831,7 +831,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-colors"
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
           >
-            <span>{tab === 'journal' ? '✏️' : '+'}</span>
+            <i className={`ti ${tab === 'journal' ? 'ti-pencil' : 'ti-plus'}`} style={{ fontSize: '15px' }} />
             <span>{tab === 'journal' ? 'Nouvelle entrée' : drillStack.length > 0 ? 'Nouvelle sous-page' : 'Nouvelle page'}</span>
           </button>
           <button
@@ -839,7 +839,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
             style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}
           >
-            <span>🔍</span>
+            <i className="ti ti-search" style={{ fontSize: '15px' }} />
             <span>Rechercher</span>
           </button>
         </div>
@@ -921,7 +921,7 @@ function MobilePageActionSheet({ page, onClose, onAddSubpage, onMoveTo, onDuplic
       <button onClick={() => { onClick(); onClose() }}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-left active:opacity-60"
         style={{ color: danger ? '#ef4444' : 'var(--text-primary)' }}>
-        <span className="text-lg flex-shrink-0">{icon}</span>
+        <i className={`ti ti-${icon} flex-shrink-0`} style={{ fontSize: '17px', width: '20px', textAlign: 'center' }} />
         <span>{label}</span>
       </button>
     )
@@ -929,19 +929,19 @@ function MobilePageActionSheet({ page, onClose, onAddSubpage, onMoveTo, onDuplic
   return (
     <div className="fixed inset-0 z-[400] flex items-end" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
       <div className="w-full rounded-t-2xl overflow-hidden" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1" />
+        <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1" style={{ background: 'var(--border)' }} />
         <div className="px-4 py-3 flex items-center gap-2 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>
           <span className="flex-shrink-0">{page.icon || '📄'}</span>
           <span className="truncate">{page.title || 'Sans titre'}</span>
         </div>
         <div className="py-1">
-          <Item icon="➕" label="Ajouter une sous-page" onClick={onAddSubpage} />
-          <Item icon="📂" label="Déplacer vers…" onClick={onMoveTo} />
-          <Item icon="📄" label="Dupliquer" onClick={onDuplicate} />
+          <Item icon="file-plus" label="Ajouter une sous-page" onClick={onAddSubpage} />
+          <Item icon="folder-symlink" label="Déplacer vers…" onClick={onMoveTo} />
+          <Item icon="copy" label="Dupliquer" onClick={onDuplicate} />
         </div>
         <div style={{ height: '1px', background: 'var(--border)' }} />
         <div className="py-1">
-          <Item icon="🗑" label="Mettre à la corbeille" onClick={onDelete} danger />
+          <Item icon="trash" label="Mettre à la corbeille" onClick={onDelete} danger />
         </div>
         <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
       </div>

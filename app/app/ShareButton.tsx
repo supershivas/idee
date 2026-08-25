@@ -4,14 +4,6 @@ import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from './App'
 
-const IconLink = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 6.5a3 3 0 0 0 4.5.4l1.5-1.5a3 3 0 0 0-4.2-4.3L5.5 2.4" />
-    <path d="M8 6.5a3 3 0 0 0-4.5-.4L2 7.6a3 3 0 0 0 4.2 4.3l1.3-1.3" />
-  </svg>
-)
-
 function generateToken() {
   return crypto.randomUUID().replace(/-/g, '')
 }
@@ -66,7 +58,7 @@ export default function ShareButton({ page, onUpdate }: {
         style={{ color: 'var(--text-secondary)', background: 'transparent' }}
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
-        <span style={{ opacity: 0.55 }}><IconLink /></span>
+        <i className="ti ti-link" style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0, opacity: 0.55 }} />
         <span className="flex-1">Partager</span>
         {isShared && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
@@ -127,7 +119,7 @@ export default function ShareButton({ page, onUpdate }: {
                   style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}>
-                  <IconLink />
+                  <i className="ti ti-link" style={{ fontSize: '13px' }} />
                   Voir l'aperçu
                 </a>
               </div>
