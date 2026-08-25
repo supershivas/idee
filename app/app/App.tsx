@@ -101,11 +101,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       setSelected(null)
     }
   }
-  // Swipe vers le bas depuis l'en-tête pour fermer les vues mobiles
-  // « poussées » (Journal, Tags, Récents — Mode révision gère la sienne).
+  // Swipe vers le bas depuis l'en-tête pour fermer la vue Journal mobile
+  // (seule vue « poussée » restante — Tags/Récents/Mode révision/Corbeille/
+  // Paramètres/Historique gèrent désormais leur propre modale).
   const swipeCloseJournal = useSwipeDownToDismiss(() => setShowJournal(false))
-  const swipeCloseTags = useSwipeDownToDismiss(() => setShowTags(false))
-  const swipeCloseRecent = useSwipeDownToDismiss(() => setShowRecent(false))
   const pointerYRef = useRef(0)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverOverIdRef = useRef<string | null>(null)
@@ -878,9 +877,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const journalSubpages = selected ? journalEntries.filter(p => p.parent_id === selected.id) : []
   const journalSubpagesRight = selectedRight ? journalEntries.filter(p => p.parent_id === selectedRight.id) : []
   const showingJournalDesktop = !isMobile && showJournal && !selected
-  const showingTagsDesktop = !isMobile && showTags && !selected
-  const showingRecentDesktop = !isMobile && showRecent && !selected
-  const showingReviewDesktop = !isMobile && showReview && !selected
 
   function closeSplit() {
     setSplitMode(false)
@@ -1182,7 +1178,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       </div>
 
       {/* ── Mobile : vue liste ── */}
-      {isMobile && !selected && !showJournal && !showTags && !showReview && !showRecent && (
+      {isMobile && !selected && !showJournal && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
@@ -1207,43 +1203,25 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {/* ── Mobile : vue journal ── */}
       {isMobile && showJournal && !selected && (
         <div className="flex-1 flex flex-col overflow-hidden" style={swipeCloseJournal.style}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0"
-            onTouchStart={swipeCloseJournal.onTouchStart} onTouchMove={swipeCloseJournal.onTouchMove} onTouchEnd={swipeCloseJournal.onTouchEnd}>
+          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0" ref={swipeCloseJournal.headerRef}>
             <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
           <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
         </div>
       )}
 
-      {/* ── Mobile : vue tags (accès direct ou depuis un tag de note) ── */}
-      {isMobile && showTags && !selected && (
-        <div className="flex-1 flex flex-col overflow-hidden" style={swipeCloseTags.style}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0"
-            onTouchStart={swipeCloseTags.onTouchStart} onTouchMove={swipeCloseTags.onTouchMove} onTouchEnd={swipeCloseTags.onTouchEnd}>
-            <button onClick={() => setShowTags(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
-          </div>
-          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} initialTag={tagsInitialTag} />
-        </div>
+      {/* ── Mode révision, Tags, Vue récente, Corbeille, Paramètres, Historique :
+          même présentation partout (modale bottom sheet mobile / dialogue
+          centré desktop), indépendante de la note ouverte. ── */}
+      {showReview && (
+        <ReviewMode pages={[...activePages, ...journalEntries]} onNavigate={p => { selectPage(p); setShowReview(false) }} onClose={() => setShowReview(false)} />
       )}
-
-      {/* ── Mobile : mode révision ── */}
-      {isMobile && showReview && !selected && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <ReviewMode pages={[...activePages, ...journalEntries]} onNavigate={p => { selectPage(p); setShowReview(false) }} onClose={() => setShowReview(false)} />
-        </div>
+      {showTags && (
+        <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} initialTag={tagsInitialTag} onClose={() => setShowTags(false)} />
       )}
-
-      {/* ── Mobile : vue récente ── */}
-      {isMobile && showRecent && !selected && (
-        <div className="flex-1 flex flex-col overflow-hidden" style={swipeCloseRecent.style}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0"
-            onTouchStart={swipeCloseRecent.onTouchStart} onTouchMove={swipeCloseRecent.onTouchMove} onTouchEnd={swipeCloseRecent.onTouchEnd}>
-            <button onClick={() => setShowRecent(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
-          </div>
-          <RecentView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowRecent(false); if (p.type === 'journal') setShowJournal(true) }} />
-        </div>
+      {showRecent && (
+        <RecentView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowRecent(false); if (p.type === 'journal') setShowJournal(true) }} onClose={() => setShowRecent(false)} />
       )}
-
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} onImport={importPages} pages={pages} userId={userId} userEmail={userEmail} />}
       {showHistory && <HistoryModal pages={pages} onClose={() => setShowHistory(false)} onNavigate={p => { selectPage(p); setShowHistory(false); setShowJournal(p.type === 'journal') }} />}
@@ -1251,27 +1229,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {showingJournalDesktop && (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} />
-        </div>
-      )}
-
-      {/* ── Desktop : vue tags ── */}
-      {showingTagsDesktop && (
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <TagsView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowTags(false); if (p.type === 'journal') setShowJournal(true) }} initialTag={tagsInitialTag} />
-        </div>
-      )}
-
-      {/* ── Desktop : vue récente ── */}
-      {showingRecentDesktop && (
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <RecentView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowRecent(false); if (p.type === 'journal') setShowJournal(true) }} />
-        </div>
-      )}
-
-      {/* ── Desktop : mode révision ── */}
-      {showingReviewDesktop && (
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <ReviewMode pages={[...activePages, ...journalEntries]} onNavigate={p => { selectPage(p); setShowReview(false) }} onClose={() => setShowReview(false)} />
         </div>
       )}
 
@@ -1298,7 +1255,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {/* ── Contenu principal ── */}
-      <div className={`${(isMobile && !selected) || showingJournalDesktop || showingTagsDesktop || showingRecentDesktop || showingReviewDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}
+      <div className={`${(isMobile && !selected) || showingJournalDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}
         onTouchStart={onSwipeTouchStart} onTouchEnd={onSwipeTouchEnd}>
         {/* Panneau gauche */}
         <div ref={mainScrollRef} className="flex-1 overflow-y-auto min-w-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)' }}>

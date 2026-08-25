@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { Page } from '../types'
+import { useSwipeDownToDismiss } from './MobileNav'
 
 const TAG_PALETTE: Array<{ bg: string; text: string; border: string }> = [
   { bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' },
@@ -104,7 +105,11 @@ export function TagsInput({ tags, onChange, allTags, compact, onTagClick }: {
 }
 
 // ─── TagsView ─────────────────────────────────────────────────────────────────
-export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSelect: (p: Page) => void; initialTag?: string }) {
+// Même présentation que Paramètres/Corbeille/Historique : modale bottom
+// sheet sur mobile, dialogue centré sur desktop, avec swipe vers le bas
+// pour fermer.
+export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page[]; onSelect: (p: Page) => void; initialTag?: string; onClose: () => void }) {
+  const swipe = useSwipeDownToDismiss(onClose)
   const [search, setSearch] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>(initialTag ? [initialTag] : [])
   const searchRef = useRef<HTMLInputElement>(null)
@@ -132,17 +137,29 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
   const maxCount = allTags.length > 0 ? Math.max(...allTags.map(t => tagCounts[t])) : 1
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
-      <div className="page-card my-2 md:my-4 overflow-hidden">
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+      <div className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[640px] md:mx-4 overflow-hidden flex flex-col"
+        style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
+        onClick={e => e.stopPropagation()}>
 
-        {/* Header + search */}
-        <div className="px-6 pt-6 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="page-title text-2xl">Tags</h1>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {allTags.length} tag{allTags.length !== 1 ? 's' : ''}
-            </span>
+        {/* Handle mobile + titre : zone de saisie du swipe pour fermer */}
+        <div ref={swipe.headerRef} className="flex-shrink-0">
+          <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
+          <div className="flex items-center justify-between px-6 pt-4 md:pt-6 pb-2">
+            <h1 className="text-xl md:text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Tags</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {allTags.length} tag{allTags.length !== 1 ? 's' : ''}
+              </span>
+              <button onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+                style={{ color: 'var(--text-muted)' }}>✕</button>
+            </div>
           </div>
+        </div>
+
+        {/* Search */}
+        <div className="px-6 pb-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14"
               viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"
@@ -160,6 +177,8 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
             )}
           </div>
         </div>
+
+        <div className="flex-1 overflow-y-auto">
 
         {/* Active filters */}
         {selectedTags.length > 0 && (
@@ -250,6 +269,7 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
           </button>
         ))}
 
+        </div>
       </div>
     </div>
   )

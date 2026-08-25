@@ -91,7 +91,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
         onClick={e => e.stopPropagation()}
       >
         {/* Handle mobile + en-tête : zone de saisie du swipe pour fermer */}
-        <div onTouchStart={swipe.onTouchStart} onTouchMove={swipe.onTouchMove} onTouchEnd={swipe.onTouchEnd}>
+        <div ref={swipe.headerRef}>
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
 
           {/* Header */}

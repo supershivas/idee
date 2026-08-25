@@ -24,6 +24,9 @@ function tiptapToPlainText(content: string): string {
   }
 }
 
+// Même présentation que Paramètres/Corbeille/Historique : modale bottom
+// sheet sur mobile, dialogue centré sur desktop, avec swipe vers le bas
+// pour fermer.
 export default function ReviewMode({ pages, onNavigate, onClose }: {
   pages: Page[]
   onNavigate: (p: Page) => void
@@ -51,20 +54,27 @@ export default function ReviewMode({ pages, onNavigate, onClose }: {
   const swipe = useSwipeDownToDismiss(onClose)
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12" style={swipe.style}>
-      <div className="w-full max-w-xl">
-        <div className="flex items-center justify-between mb-6"
-          onTouchStart={swipe.onTouchStart} onTouchMove={swipe.onTouchMove} onTouchEnd={swipe.onTouchEnd}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Mode révision</span>
-            {pool.length > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
-                {remaining} / {pool.length}
-              </span>
-            )}
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+      <div className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[560px] md:mx-4 overflow-hidden flex flex-col"
+        style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
+        onClick={e => e.stopPropagation()}>
+        <div ref={swipe.headerRef} className="flex-shrink-0">
+          <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
+          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Mode révision</span>
+              {pool.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
+                  {remaining} / {pool.length}
+                </span>
+              )}
+            </div>
+            <button onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+              style={{ color: 'var(--text-muted)' }}>✕</button>
           </div>
-          <button onClick={onClose} className="text-sm transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>✕ Fermer</button>
         </div>
+        <div className="flex-1 overflow-y-auto px-6 py-8">
 
         {!current ? (
           <div className="text-center py-16">
@@ -113,6 +123,7 @@ export default function ReviewMode({ pages, onNavigate, onClose }: {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   )
