@@ -72,7 +72,7 @@ export function JournalList({ entries, selectedId, onSelect, onAdd, scrollRef }:
   }, [hasMore])
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 px-3 md:px-6">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 px-3 md:px-6" style={{ overscrollBehaviorY: 'contain' }}>
       <div className="page-card my-2 md:my-4" style={{ overflow: "visible" }}>
         {/* Header — empilé sur mobile, horizontal sur desktop */}
         <div className="px-4 md:px-6 pt-5 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
