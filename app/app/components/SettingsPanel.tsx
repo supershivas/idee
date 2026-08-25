@@ -88,35 +88,40 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
     <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
         ref={swipe.sheetRef}
-        className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
-        style={{ maxHeight: '90vh', ...swipe.style }}
+        className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
+        style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
+        <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-          <span className="font-semibold text-gray-900 dark:text-white">Paramètres</span>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Paramètres</span>
+          <button onClick={onClose}
+            className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
+            style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
 
         {/* Contenu */}
         <div ref={contentRef} className="px-5 py-4 space-y-5 overflow-y-auto flex-1">
             {/* Apparence */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Apparence</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Apparence</p>
               <div className="flex gap-2">
                 {THEMES.map(t => (
                   <button
                     key={t.value}
                     onClick={() => setTheme(t.value)}
-                    className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all text-sm
-                      ${theme === t.value
-                        ? 'border-gray-900 dark:border-white bg-gray-50 dark:bg-gray-800'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}
+                    className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all text-sm"
+                    style={{
+                      borderColor: theme === t.value ? 'var(--text-primary)' : 'var(--border)',
+                      background: theme === t.value ? 'var(--selected-bg)' : 'transparent',
+                    }}
+                    onMouseEnter={e => { if (theme !== t.value) e.currentTarget.style.borderColor = 'var(--text-faint)' }}
+                    onMouseLeave={e => { if (theme !== t.value) e.currentTarget.style.borderColor = 'var(--border)' }}
                   >
                     <span className="text-lg">{t.icon}</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">{t.label}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -124,24 +129,24 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
 
             {/* Compte */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Compte</p>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Compte</p>
+              <div className="rounded-xl px-4 py-3 space-y-1.5" style={{ background: 'var(--selected-bg)' }}>
                 {userEmail && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Email</span>
-                    <span className="text-xs text-gray-700 dark:text-gray-300 font-mono">{userEmail}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Email</span>
+                    <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{userEmail}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">ID</span>
-                  <span className="text-xs text-gray-400 font-mono truncate max-w-40">{userId.slice(0, 8)}…</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>ID</span>
+                  <span className="text-xs font-mono truncate max-w-40" style={{ color: 'var(--text-faint)' }}>{userId.slice(0, 8)}…</span>
                 </div>
               </div>
             </div>
 
             {/* Stats */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Contenu</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Contenu</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: 'Pages',    value: totalPages,    icon: '📄' },
@@ -149,11 +154,11 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                   { label: 'Favoris',  value: favoriteCount, icon: '★' },
                   { label: 'Corbeille',value: trashedCount,  icon: '🗑' },
                 ].map(s => (
-                  <div key={s.label} className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                  <div key={s.label} className="rounded-xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'var(--selected-bg)' }}>
                     <span className="text-base">{s.icon}</span>
                     <div>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-white">{s.value}</p>
-                      <p className="text-[10px] text-gray-400">{s.label}</p>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{s.value}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
                     </div>
                   </div>
                 ))}
@@ -162,29 +167,35 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
 
             {/* Données */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Données</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Données</p>
               <div className="space-y-2">
                 <button
                   onClick={exportJSON}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left"
+                  style={{ background: 'var(--selected-bg)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
                 >
                   <span className="text-lg">⬇️</span>
                   <div>
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">Exporter mes données</p>
-                    <p className="text-xs text-gray-400">JSON · pages + journal (corbeille exclue)</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Exporter mes données</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>JSON · pages + journal (corbeille exclue)</p>
                   </div>
                 </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={importing}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left disabled:opacity-50"
+                  style={{ background: 'var(--selected-bg)' }}
+                  onMouseEnter={e => { if (!importing) e.currentTarget.style.background = 'var(--hover-bg)' }}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
                 >
                   <span className="text-lg">{importing ? '⏳' : '⬆️'}</span>
                   <div>
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                       {importing ? 'Import en cours…' : 'Importer des données'}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {importStatus
                         ? importStatus.err === -1
                           ? '❌ Fichier invalide'
@@ -199,7 +210,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
 
             {/* Applications */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Applications</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Applications</p>
               <div className="flex gap-2">
                 {[
                   { name: 'Source', url: 'https://source-sigma-kohl.vercel.app/app', favicon: 'https://source-sigma-kohl.vercel.app/favicon.ico' },
@@ -211,11 +222,14 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                     href={app.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 flex flex-col items-center gap-1.5 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="flex-1 flex flex-col items-center gap-1.5 rounded-xl px-3 py-2.5 transition-colors"
+                    style={{ background: 'var(--selected-bg)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
                     title={app.name}
                   >
                     <img src={app.favicon} alt="" width={20} height={20} className="rounded-sm" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    <span className="text-[10px] text-gray-400">{app.name}</span>
+                    <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{app.name}</span>
                   </a>
                 ))}
               </div>
@@ -224,13 +238,16 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
             {/* Déconnexion */}
             <button
               onClick={onLogout}
-              className="w-full py-3 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 text-sm font-medium transition-colors"
+              className="w-full py-3 rounded-xl border text-sm font-medium transition-colors"
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               Se déconnecter
             </button>
 
             {/* Informations de version */}
-            <p className="text-center text-[11px] text-gray-400 dark:text-gray-500">
+            <p className="text-center text-[11px]" style={{ color: 'var(--text-faint)' }}>
               Version {process.env.NEXT_PUBLIC_APP_VERSION}
               {process.env.NEXT_PUBLIC_APP_UPDATED_AT && (
                 <> · Mis à jour le {formatUpdatedAt(process.env.NEXT_PUBLIC_APP_UPDATED_AT)}</>

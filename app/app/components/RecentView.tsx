@@ -76,7 +76,7 @@ export default function RecentView({ pages, onSelect, onClose }: {
         <div className="flex items-center justify-between px-4 pt-4 md:pt-6 pb-2 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Vue récente</h2>
           <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
             style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
         <div ref={contentRef} className="flex-1 overflow-y-auto py-2">
