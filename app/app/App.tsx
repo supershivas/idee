@@ -175,6 +175,18 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     setSelectedRight(prev => prev?.id === pageId ? { ...prev, content } : prev)
   }, [recordLocalContent])
 
+  // Tirer pour actualiser (mobile) : re-synchronise les métadonnées depuis le
+  // serveur — utile après une reprise de connexion ou un événement Realtime
+  // manqué. Le contenu déjà hydraté localement est préservé.
+  const refreshPages = useCallback(async () => {
+    const { data, error } = await createClient().from('pages').select(PAGE_META_COLUMNS)
+    if (error || !data) return
+    setPages(prev => {
+      const byId = new Map(prev.map(p => [p.id, p]))
+      return (data as Page[]).map(row => ({ ...byId.get(row.id), ...row } as Page))
+    })
+  }, [])
+
   // Offline / online detection
   useEffect(() => {
     function onOffline() { toast('Connexion perdue — les modifications ne sont pas sauvegardées.', 'error') }
@@ -1148,6 +1160,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onMoveTo={id => setMoveToPageId(id)}
             onDuplicate={id => duplicatePage(id)}
             onDeleteRequest={id => setConfirmDeleteId(id)}
+            onRefresh={refreshPages}
           />
         </div>
       )}
