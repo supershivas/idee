@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Page } from '../types'
 import { useSwipeDownToDismiss } from './MobileNav'
 
@@ -29,27 +29,26 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
     return Math.max(0, 30 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000))
   }
 
-  const swipe = useSwipeDownToDismiss(onClose)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const swipe = useSwipeDownToDismiss(onClose, contentRef)
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col w-full md:w-[480px]"
+      <div ref={swipe.sheetRef} className="relative rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col w-full md:w-[480px]"
         style={{ background: 'var(--card-bg)', maxHeight: '80vh', ...swipe.style }}>
-        <div ref={swipe.headerRef}>
-          <div className="md:hidden w-10 h-1 rounded-full mx-auto mt-3 flex-shrink-0" style={{ background: 'var(--border)' }} />
-          <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div>
-              <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Corbeille</h2>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Suppression définitive après 30 jours</p>
-            </div>
-            <button onClick={onClose}
-              className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-              style={{ color: 'var(--text-muted)' }}>✕</button>
+        <div className="md:hidden w-10 h-1 rounded-full mx-auto mt-3 flex-shrink-0" style={{ background: 'var(--border)' }} />
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Corbeille</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Suppression définitive après 30 jours</p>
           </div>
+          <button onClick={onClose}
+            className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
+            style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div ref={contentRef} className="flex-1 overflow-y-auto">
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16" style={{ color: 'var(--text-muted)' }}>
               <span className="text-4xl mb-3">🗑️</span>

@@ -6,19 +6,24 @@ import { SaveIndicator } from './SaveIndicator'
 const MOBILE_JOURNAL_PAGE = 30
 
 // Swipe vers le bas pour fermer un écran mobile « du dessus » (modale bottom
-// sheet ou vue poussée avec en-tête « ← Pages »). Attacher `headerRef` à la
-// zone d'en-tête — jamais au contenu défilant, pour ne jamais interférer
-// avec son propre scroll — et `style` au conteneur qui doit visuellement
-// suivre le doigt (le panneau/la vue elle-même, pas l'arrière-plan/backdrop).
+// sheet, vue poussée, ou note/entrée de journal ouverte). `sheetRef` va sur
+// tout le panneau (pas juste l'en-tête — sinon le geste ne « prend » que si
+// on vise précisément cette petite zone) ; `contentRef` pointe vers la zone
+// qui défile (peut être le même nœud que sheetRef s'il n'y a pas de zone
+// d'en-tête séparée, ex. une note). Le geste n'est armé que si le défilement
+// est déjà tout en haut (scrollTop <= 0) — comme le tirer-pour-actualiser —
+// pour ne jamais entrer en conflit avec le scroll normal du contenu.
+// `style` va sur le conteneur qui doit visuellement suivre le doigt (le
+// panneau/la vue elle-même, pas l'arrière-plan/backdrop).
 //
 // Écouteur natif non passif (plutôt que onTouchMove React, passif par
 // défaut) : sans preventDefault sur le touchmove, iOS Safari fait rebondir
-// la page entière derrière le panneau pendant le drag — l'arrière-plan
-// bougeait avec le geste au lieu de rester fixe.
-export function useSwipeDownToDismiss(onClose: () => void) {
-  const headerRef = useRef<HTMLDivElement | null>(null)
+// la page entière derrière le panneau pendant le drag.
+export function useSwipeDownToDismiss(onClose: () => void, contentRef?: React.RefObject<HTMLElement | null>) {
+  const sheetRef = useRef<HTMLDivElement | null>(null)
   const startRef = useRef<{ x: number; y: number } | null>(null)
   const dirRef = useRef<'horizontal' | 'vertical' | null>(null)
+  const armedRef = useRef(false)
   const dragYRef = useRef(0)
   const [dragY, setDragY] = useState(0)
   const [dragging, setDragging] = useState(false)
@@ -27,13 +32,16 @@ export function useSwipeDownToDismiss(onClose: () => void) {
   const THRESHOLD = 80
 
   useEffect(() => {
-    const el = headerRef.current
+    const el = sheetRef.current
     if (!el) return
 
     function onTouchStart(e: TouchEvent) {
       const t = e.touches[0]
       startRef.current = { x: t.clientX, y: t.clientY }
       dirRef.current = null
+      const content = contentRef?.current
+      const insideContent = !!content && content.contains(e.target as Node)
+      armedRef.current = !insideContent || content!.scrollTop <= 0
     }
     function onTouchMove(e: TouchEvent) {
       if (!startRef.current) return
@@ -42,9 +50,9 @@ export function useSwipeDownToDismiss(onClose: () => void) {
       const dy = t.clientY - startRef.current.y
       if (dirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
         dirRef.current = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'vertical' : 'horizontal'
-        if (dirRef.current === 'vertical') setDragging(true)
+        if (dirRef.current === 'vertical' && armedRef.current) setDragging(true)
       }
-      if (dirRef.current === 'vertical' && dy > 0) {
+      if (dirRef.current === 'vertical' && armedRef.current && dy > 0) {
         e.preventDefault()
         const next = Math.min(dy, 220)
         dragYRef.current = next
@@ -52,9 +60,10 @@ export function useSwipeDownToDismiss(onClose: () => void) {
       }
     }
     function onTouchEnd() {
-      const shouldClose = dirRef.current === 'vertical' && dragYRef.current >= THRESHOLD
+      const shouldClose = dirRef.current === 'vertical' && armedRef.current && dragYRef.current >= THRESHOLD
       startRef.current = null
       dirRef.current = null
+      armedRef.current = false
       dragYRef.current = 0
       setDragging(false)
       setDragY(0)
@@ -69,10 +78,10 @@ export function useSwipeDownToDismiss(onClose: () => void) {
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [])
+  }, [contentRef])
 
   return {
-    headerRef,
+    sheetRef,
     style: { transform: `translateY(${dragY}px)`, transition: dragging ? 'none' : 'transform 200ms ease' },
   }
 }

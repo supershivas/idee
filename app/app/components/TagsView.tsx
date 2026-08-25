@@ -109,7 +109,8 @@ export function TagsInput({ tags, onChange, allTags, compact, onTagClick }: {
 // sheet sur mobile, dialogue centré sur desktop, avec swipe vers le bas
 // pour fermer.
 export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page[]; onSelect: (p: Page) => void; initialTag?: string; onClose: () => void }) {
-  const swipe = useSwipeDownToDismiss(onClose)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const swipe = useSwipeDownToDismiss(onClose, contentRef)
   const [search, setSearch] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>(initialTag ? [initialTag] : [])
   const searchRef = useRef<HTMLInputElement>(null)
@@ -138,23 +139,20 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
-      <div className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[640px] md:mx-4 overflow-hidden flex flex-col"
+      <div ref={swipe.sheetRef} className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[640px] md:mx-4 overflow-hidden flex flex-col"
         style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}>
 
-        {/* Handle mobile + titre : zone de saisie du swipe pour fermer */}
-        <div ref={swipe.headerRef} className="flex-shrink-0">
-          <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
-          <div className="flex items-center justify-between px-6 pt-4 md:pt-6 pb-2">
-            <h1 className="text-xl md:text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Tags</h1>
-            <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {allTags.length} tag{allTags.length !== 1 ? 's' : ''}
-              </span>
-              <button onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-                style={{ color: 'var(--text-muted)' }}>✕</button>
-            </div>
+        <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1 md:hidden" style={{ background: 'var(--border)' }} />
+        <div className="flex items-center justify-between px-6 pt-4 md:pt-6 pb-2 flex-shrink-0">
+          <h1 className="text-xl md:text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Tags</h1>
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {allTags.length} tag{allTags.length !== 1 ? 's' : ''}
+            </span>
+            <button onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+              style={{ color: 'var(--text-muted)' }}>✕</button>
           </div>
         </div>
 
@@ -178,7 +176,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div ref={contentRef} className="flex-1 overflow-y-auto">
 
         {/* Active filters */}
         {selectedTags.length > 0 && (
