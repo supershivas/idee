@@ -34,11 +34,18 @@ export function useSwipeDownToDismiss(
   const dirRef = useRef<'horizontal' | 'vertical' | null>(null)
   const armedRef = useRef(false)
   const dragYRef = useRef(0)
+  // Deux derniers points (y, t) du drag, pour estimer la vitesse instantanée
+  // au relâchement — un flick rapide et court doit fermer, pas seulement un
+  // long drag lent (comme le geste de fermeture natif iOS).
+  const prevPointRef = useRef<{ y: number; t: number } | null>(null)
+  const lastPointRef = useRef<{ y: number; t: number } | null>(null)
   const [dragY, setDragY] = useState(0)
   const [dragging, setDragging] = useState(false)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
-  const THRESHOLD = 80
+  const THRESHOLD = 56
+  const FLICK_MIN_DISTANCE = 32
+  const FLICK_VELOCITY = 0.15 // px/ms
 
   useEffect(() => {
     const el = sheetRef.current
@@ -48,6 +55,8 @@ export function useSwipeDownToDismiss(
       const t = e.touches[0]
       startRef.current = { x: t.clientX, y: t.clientY }
       dirRef.current = null
+      prevPointRef.current = null
+      lastPointRef.current = { y: t.clientY, t: e.timeStamp }
       const content = contentRef?.current
       const insideContent = !!content && content.contains(e.target as Node)
       const scrollEl = scrollRef?.current ?? content
@@ -73,14 +82,30 @@ export function useSwipeDownToDismiss(
         const next = Math.min(dy, 220)
         dragYRef.current = next
         setDragY(next)
+        prevPointRef.current = lastPointRef.current
+        lastPointRef.current = { y: t.clientY, t: e.timeStamp }
       }
     }
     function onTouchEnd() {
-      const shouldClose = dirRef.current === 'vertical' && armedRef.current && dragYRef.current >= THRESHOLD
+      // Ferme soit sur la distance totale (long drag), soit sur un flick
+      // court mais rapide (vitesse instantanée des deux derniers points) —
+      // un vrai coup de pouce vers le bas est souvent court et rapide plutôt
+      // qu'un long drag jusqu'au seuil de distance, comme le geste natif
+      // iOS de fermeture d'une modale.
+      let flicked = false
+      if (prevPointRef.current && lastPointRef.current) {
+        const dt = lastPointRef.current.t - prevPointRef.current.t
+        const dyv = lastPointRef.current.y - prevPointRef.current.y
+        if (dt > 0 && dyv / dt >= FLICK_VELOCITY) flicked = true
+      }
+      const shouldClose = dirRef.current === 'vertical' && armedRef.current &&
+        (dragYRef.current >= THRESHOLD || (dragYRef.current >= FLICK_MIN_DISTANCE && flicked))
       startRef.current = null
       dirRef.current = null
       armedRef.current = false
       dragYRef.current = 0
+      prevPointRef.current = null
+      lastPointRef.current = null
       setDragging(false)
       setDragY(0)
       if (shouldClose) onCloseRef.current()
