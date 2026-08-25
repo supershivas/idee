@@ -97,6 +97,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     const dx = e.changedTouches[0].clientX - swipeTouchStartX.current
     const dy = Math.abs(e.changedTouches[0].clientY - swipeTouchStartY.current)
     if (swipeTouchStartX.current < 40 && dx > 72 && dy < 80) {
+      if (selected.type === 'journal') setShowJournal(true)
       setSelected(null)
     }
   }
