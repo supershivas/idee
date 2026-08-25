@@ -361,6 +361,13 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
 }) {
   const [showSearch, setShowSearch] = useState(false)
   const [tab, setTab] = useState<'pages' | 'journal'>('pages')
+  // Direction de l'effet de transition du contenu au changement d'onglet.
+  const [tabAnim, setTabAnim] = useState<'from-right' | 'from-left'>('from-right')
+  function switchTab(next: 'pages' | 'journal') {
+    if (next === tab) return
+    setTabAnim(next === 'journal' ? 'from-right' : 'from-left')
+    setTab(next)
+  }
   const [journalLimit, setJournalLimit] = useState(MOBILE_JOURNAL_PAGE)
   const journalSentinelRef = useRef<HTMLDivElement>(null)
   // drill-down stack : chaque entrée = { id, title, icon } de la page parente
@@ -390,11 +397,10 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   // pas mélanger des ids des deux listes.
   useEffect(() => { exitSelectMode() }, [tab])
 
-  // Swipe horizontal Pages ↔ Journal (uniquement au premier niveau, hors
-  // drill-down dans un dossier, pour ne pas interférer avec cette navigation).
+  // Tirer pour actualiser (contenu de la liste) : n'est armé que si le
+  // geste démarre scrollTop === 0.
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const swipeDirRef = useRef<'horizontal' | 'vertical' | null>(null)
-  // Tirer pour actualiser : n'est armé que si le geste démarre scrollTop === 0.
   const scrollRef = useRef<HTMLDivElement>(null)
   const pullActiveRef = useRef(false)
   const [pullDistance, setPullDistance] = useState(0)
@@ -420,9 +426,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
       setPullDistance(0)
     }
   }
-  function onContentTouchEnd(e: React.TouchEvent) {
-    const start = touchStartRef.current
-    const dir = swipeDirRef.current
+  function onContentTouchEnd() {
     const wasPulling = pullActiveRef.current
     touchStartRef.current = null
     swipeDirRef.current = null
@@ -434,11 +438,41 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
     } else {
       setPullDistance(0)
     }
+  }
+
+  // Swipe horizontal Pages ↔ Journal, ancré sur l'en-tête (icône + titre +
+  // onglets) plutôt que sur le contenu : les lignes gèrent déjà leur propre
+  // swipe (suppression/favori) et interceptent le geste avant qu'il
+  // n'atteigne le conteneur, ce qui rendait le swipe de bascule peu fiable
+  // dès que le doigt démarrait sur une ligne. Uniquement au premier niveau,
+  // hors drill-down dans un dossier, pour ne pas interférer avec cette
+  // navigation.
+  const headerTouchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const headerDirRef = useRef<'horizontal' | 'vertical' | null>(null)
+  function onHeaderTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    headerTouchStartRef.current = { x: t.clientX, y: t.clientY }
+    headerDirRef.current = null
+  }
+  function onHeaderTouchMove(e: React.TouchEvent) {
+    if (!headerTouchStartRef.current) return
+    const t = e.touches[0]
+    const dx = t.clientX - headerTouchStartRef.current.x
+    const dy = t.clientY - headerTouchStartRef.current.y
+    if (headerDirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      headerDirRef.current = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'horizontal' : 'vertical'
+    }
+  }
+  function onHeaderTouchEnd(e: React.TouchEvent) {
+    const start = headerTouchStartRef.current
+    const dir = headerDirRef.current
+    headerTouchStartRef.current = null
+    headerDirRef.current = null
     if (!start || dir !== 'horizontal' || drillStack.length > 0) return
     const dx = e.changedTouches[0].clientX - start.x
-    if (Math.abs(dx) < 60) return
-    if (dx < 0 && tab === 'pages') setTab('journal')
-    else if (dx > 0 && tab === 'journal') setTab('pages')
+    if (Math.abs(dx) < 50) return
+    if (dx < 0 && tab === 'pages') switchTab('journal')
+    else if (dx > 0 && tab === 'journal') switchTab('pages')
   }
 
   const nonJournalPages = pages.filter(function(p) { return p.type !== 'journal' && !p.deleted_at })
@@ -471,6 +505,10 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--app-bg)' }}>
+      <style>{`
+        @keyframes _tabInRight { from { opacity: 0; transform: translateX(18px) } to { opacity: 1; transform: translateX(0) } }
+        @keyframes _tabInLeft { from { opacity: 0; transform: translateX(-18px) } to { opacity: 1; transform: translateX(0) } }
+      `}</style>
       {showSearch && (
         <MobileSearchOverlay
           pages={pages}
@@ -524,16 +562,17 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         </div>
       </div>
 
-      <div className="flex px-3 gap-1 pb-2 flex-shrink-0">
+      <div className="flex px-3 gap-1 pb-2 flex-shrink-0"
+        onTouchStart={onHeaderTouchStart} onTouchMove={onHeaderTouchMove} onTouchEnd={onHeaderTouchEnd}>
         <button
-          onClick={() => { setTab('pages'); setDrillStack([]) }}
+          onClick={() => { switchTab('pages'); setDrillStack([]) }}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-colors"
           style={{ background: tab === 'pages' ? 'var(--selected-bg)' : 'transparent', color: tab === 'pages' ? 'var(--text-primary)' : 'var(--text-muted)' }}
         >
           <span>📄</span><span>Pages</span>
         </button>
         <button
-          onClick={() => setTab('journal')}
+          onClick={() => switchTab('journal')}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-colors"
           style={{ background: tab === 'journal' ? 'var(--selected-bg)' : 'transparent', color: tab === 'journal' ? 'var(--text-primary)' : 'var(--text-muted)' }}
         >
@@ -557,6 +596,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             {isRefreshing ? 'Actualisation…' : pullDistance >= PULL_THRESHOLD ? 'Relâcher pour actualiser' : 'Tirer pour actualiser'}
           </div>
         )}
+        <div key={tab} style={{ animation: `${tabAnim === 'from-right' ? '_tabInRight' : '_tabInLeft'} 220ms cubic-bezier(0.22,1,0.36,1) both` }}>
         {tab === 'pages' ? (
           <>
             {favorites.length > 0 && (
@@ -663,6 +703,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             {journalHasMore && <div ref={journalSentinelRef} className="h-8" />}
           </>
         )}
+        </div>
       </div>
 
       {/* Bottom nav — deux actions, remplacée par la barre de sélection multiple */}
