@@ -163,13 +163,13 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
 
         {/* Active filters */}
         {selectedTags.length > 0 && (
-          <div className="px-6 py-3 flex flex-wrap gap-2 items-center" style={{ borderBottom: '1px solid var(--border)' }}>
-            <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Filtres :</span>
+          <div className="px-3 py-2 md:px-6 md:py-3 flex flex-wrap gap-1.5 md:gap-2 items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+            <span className="text-[11px] md:text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Filtres :</span>
             {selectedTags.map(tag => {
               const c = tagColor(tag)
               return (
                 <button key={tag} onClick={() => toggleTag(tag)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full text-[11px] md:text-xs font-medium transition-all"
                   style={{ background: c.text, color: '#fff', border: `1px solid ${c.text}` }}>
                   #{tag} <span className="opacity-70">×</span>
                 </button>
@@ -194,7 +194,7 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
 
         {/* Tag cloud */}
         {allTags.length > 0 && (
-          <div className="px-6 py-5 flex flex-wrap gap-2" style={{ borderBottom: selectedTags.length > 0 ? '1px solid var(--border)' : 'none' }}>
+          <div className="px-3 py-3 md:px-6 md:py-5 flex flex-wrap gap-1.5 md:gap-2" style={{ borderBottom: selectedTags.length > 0 ? '1px solid var(--border)' : 'none' }}>
             {visibleTags.map(tag => {
               const c = tagColor(tag)
               const count = tagCounts[tag]
@@ -203,7 +203,7 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
               const weight = maxCount > 1 ? 0.6 + 0.4 * (count - 1) / (maxCount - 1) : 1
               return (
                 <button key={tag} onClick={() => toggleTag(tag)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all"
+                  className="inline-flex items-center gap-1 md:gap-1.5 px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs md:text-sm font-medium transition-all"
                   style={{
                     background: isSelected ? c.text : c.bg,
                     color: isSelected ? '#fff' : c.text,
@@ -213,7 +213,7 @@ export function TagsView({ pages, onSelect, initialTag }: { pages: Page[]; onSel
                     transform: isSelected ? 'scale(1.05)' : 'scale(1)',
                   }}>
                   #{tag}
-                  <span className="text-xs opacity-60">{count}</span>
+                  <span className="text-[10px] md:text-xs opacity-60">{count}</span>
                 </button>
               )
             })}
