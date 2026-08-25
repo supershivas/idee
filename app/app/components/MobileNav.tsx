@@ -185,6 +185,90 @@ function SearchResultRow({ page, snippet, query, onSelect }: {
   )
 }
 
+// Ligne « swipeable » : swipe gauche = action destructive (rouge, ex.
+// corbeille), swipe droite = action secondaire (accent, ex. favori). Le
+// contenu réel de la ligne reste inchangé (children) ; ce wrapper ajoute
+// juste le drag horizontal + les pastilles de fond révélées dessous.
+function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', rightIcon = '★' }: {
+  children: React.ReactNode
+  onSwipeLeft?: () => void
+  onSwipeRight?: () => void
+  leftIcon?: string
+  rightIcon?: string
+}) {
+  const [dragX, setDragX] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const startRef = useRef<{ x: number; y: number } | null>(null)
+  const dirRef = useRef<'horizontal' | 'vertical' | null>(null)
+  const THRESHOLD = 72
+  const MAX = 96
+
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    startRef.current = { x: t.clientX, y: t.clientY }
+    dirRef.current = null
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (!startRef.current) return
+    const t = e.touches[0]
+    const dx = t.clientX - startRef.current.x
+    const dy = t.clientY - startRef.current.y
+    if (dirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      dirRef.current = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'horizontal' : 'vertical'
+      if (dirRef.current === 'horizontal') setDragging(true)
+    }
+    if (dirRef.current === 'horizontal') {
+      // Empêche le geste de remonter jusqu'au conteneur (qui gère le swipe
+      // Pages ↔ Journal) une fois qu'on a engagé un drag horizontal ici.
+      e.stopPropagation()
+      let next = dx
+      if (next < 0 && !onSwipeLeft) next = 0
+      if (next > 0 && !onSwipeRight) next = 0
+      setDragX(Math.max(-MAX, Math.min(MAX, next)))
+    }
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (dirRef.current === 'horizontal') {
+      e.stopPropagation()
+      if (dragX <= -THRESHOLD && onSwipeLeft) onSwipeLeft()
+      else if (dragX >= THRESHOLD && onSwipeRight) onSwipeRight()
+    }
+    startRef.current = null
+    dirRef.current = null
+    setDragging(false)
+    setDragX(0)
+  }
+
+  if (!onSwipeLeft && !onSwipeRight) return <>{children}</>
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      {onSwipeLeft && (
+        <div className="absolute inset-y-0 right-0 flex items-center justify-end pr-4 rounded-xl"
+          style={{ width: MAX + 24, background: '#ef4444', opacity: Math.min(1, Math.max(0, -dragX) / THRESHOLD) }}>
+          <span className="text-white text-base">{leftIcon}</span>
+        </div>
+      )}
+      {onSwipeRight && (
+        <div className="absolute inset-y-0 left-0 flex items-center pl-4 rounded-xl"
+          style={{ width: MAX + 24, background: 'var(--accent)', opacity: Math.min(1, Math.max(0, dragX) / THRESHOLD) }}>
+          <span className="text-white text-base">{rightIcon}</span>
+        </div>
+      )}
+      <div
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        style={{
+          transform: `translateX(${dragX}px)`,
+          transition: dragging ? 'none' : 'transform 200ms ease',
+          background: 'var(--app-bg)',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
   entry: Page, selectedId: string | null,
   onSelect: (p: Page) => void, onToggleFavorite: (id: string) => void,
@@ -386,7 +470,11 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
               <>
                 <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Favoris</p>
                 {favorites.map(function(page) {
-                  return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
+                  return (
+                    <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={() => onToggleFavorite(page.id)}>
+                      <PageRow page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
+                    </SwipeableRow>
+                  )
                 })}
                 <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border-light)' }} />
               </>
@@ -395,7 +483,11 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
               <>
                 <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Récents</p>
                 {recentPages.map(function(page) {
-                  return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
+                  return (
+                    <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={() => onToggleFavorite(page.id)}>
+                      <PageRow page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
+                    </SwipeableRow>
+                  )
                 })}
                 <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border-light)' }} />
               </>
@@ -429,11 +521,15 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             )}
             {sortedPages.map(function(page) {
               const hasChildren = nonJournalPages.some(function(p) { return p.parent_id === page.id })
-              return <PageRow key={page.id} page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite}
-                hasChildren={hasChildren}
-                onDrillDown={function(p) { setDrillStack(function(s) { return [...s, { id: p.id, title: p.title || 'Sans titre', icon: p.icon || '📄' }] }) }}
-                onShowActions={setActionSheetPage}
-              />
+              return (
+                <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={hasChildren ? undefined : () => onToggleFavorite(page.id)}>
+                  <PageRow page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite}
+                    hasChildren={hasChildren}
+                    onDrillDown={function(p) { setDrillStack(function(s) { return [...s, { id: p.id, title: p.title || 'Sans titre', icon: p.icon || '📄' }] }) }}
+                    onShowActions={setActionSheetPage}
+                  />
+                </SwipeableRow>
+              )
             })}
           </>
         ) : (
@@ -447,7 +543,11 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
               </p>
             )}
             {visibleJournal.map(function(entry) {
-              return <JournalRow key={entry.id} entry={entry} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+              return (
+                <SwipeableRow key={entry.id} onSwipeLeft={() => onDeleteRequest(entry.id)}>
+                  <JournalRow entry={entry} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+                </SwipeableRow>
+              )
             })}
             {journalHasMore && <div ref={journalSentinelRef} className="h-8" />}
           </>
