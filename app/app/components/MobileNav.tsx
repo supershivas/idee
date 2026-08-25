@@ -189,24 +189,42 @@ function SearchResultRow({ page, snippet, query, onSelect }: {
 // corbeille), swipe droite = action secondaire (accent, ex. favori). Le
 // contenu réel de la ligne reste inchangé (children) ; ce wrapper ajoute
 // juste le drag horizontal + les pastilles de fond révélées dessous.
-function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', rightIcon = '★' }: {
+function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', rightIcon = '★', onLongPress, selectMode }: {
   children: React.ReactNode
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
   leftIcon?: string
   rightIcon?: string
+  onLongPress?: () => void
+  selectMode?: boolean
 }) {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const startRef = useRef<{ x: number; y: number } | null>(null)
   const dirRef = useRef<'horizontal' | 'vertical' | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressFiredRef = useRef(false)
   const THRESHOLD = 72
   const MAX = 96
+  const LONG_PRESS_MS = 500
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null }
+  }
 
   function onTouchStart(e: React.TouchEvent) {
     const t = e.touches[0]
     startRef.current = { x: t.clientX, y: t.clientY }
     dirRef.current = null
+    longPressFiredRef.current = false
+    if (onLongPress && !selectMode) {
+      longPressTimerRef.current = setTimeout(() => {
+        longPressFiredRef.current = true
+        longPressTimerRef.current = null
+        onLongPress()
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
+      }, LONG_PRESS_MS)
+    }
   }
   function onTouchMove(e: React.TouchEvent) {
     if (!startRef.current) return
@@ -216,6 +234,7 @@ function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', 
     if (dirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
       dirRef.current = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'horizontal' : 'vertical'
       if (dirRef.current === 'horizontal') setDragging(true)
+      clearLongPressTimer()
     }
     if (dirRef.current === 'horizontal') {
       // Empêche le geste de remonter jusqu'au conteneur (qui gère le swipe
@@ -228,10 +247,17 @@ function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', 
     }
   }
   function onTouchEnd(e: React.TouchEvent) {
+    clearLongPressTimer()
     if (dirRef.current === 'horizontal') {
       e.stopPropagation()
       if (dragX <= -THRESHOLD && onSwipeLeft) onSwipeLeft()
       else if (dragX >= THRESHOLD && onSwipeRight) onSwipeRight()
+    }
+    if (longPressFiredRef.current) {
+      // Avale le clic fantôme qui suivrait l'appui long, pour ne pas
+      // déclencher la sélection/navigation normale en plus.
+      e.preventDefault()
+      longPressFiredRef.current = false
     }
     startRef.current = null
     dirRef.current = null
@@ -239,7 +265,8 @@ function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', 
     setDragX(0)
   }
 
-  if (!onSwipeLeft && !onSwipeRight) return <>{children}</>
+  if (selectMode) return <>{children}</>
+  if (!onSwipeLeft && !onSwipeRight && !onLongPress) return <>{children}</>
 
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -269,15 +296,26 @@ function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', 
   )
 }
 
-function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
+function SelectCheckbox({ checked }: { checked?: boolean }) {
+  return (
+    <span className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+      style={{ borderColor: checked ? 'var(--accent)' : 'var(--text-faint)', background: checked ? 'var(--accent)' : 'transparent' }}>
+      {checked && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1 }}>✓</span>}
+    </span>
+  )
+}
+
+function JournalRow({ entry, selectedId, onSelect, onToggleFavorite, selectMode, checked }: {
   entry: Page, selectedId: string | null,
   onSelect: (p: Page) => void, onToggleFavorite: (id: string) => void,
+  selectMode?: boolean, checked?: boolean,
 }) {
   return (
     <div
       onClick={() => onSelect(entry)}
       className={`flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors mobile-row-hover ${selectedId === entry.id ? 'mobile-row-selected' : ''}`}
     >
+      {selectMode && <SelectCheckbox checked={checked} />}
       <span className="text-xl flex-shrink-0">{entry.icon || '📝'}</span>
       <div className="flex-1 min-w-0">
         <span className="block text-sm truncate" style={{ color: 'var(--text-primary)' }}>{entry.title || 'Sans titre'}</span>
@@ -300,7 +338,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onShowReview, onShowRecent, onMoveTo, onDuplicate, onDeleteRequest, onRefresh }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onShowReview, onShowRecent, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -319,6 +357,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   onDuplicate: (id: string) => void
   onDeleteRequest: (id: string) => void
   onRefresh?: () => void | Promise<void>
+  onDeleteMany?: (ids: string[]) => void
 }) {
   const [showSearch, setShowSearch] = useState(false)
   const [tab, setTab] = useState<'pages' | 'journal'>('pages')
@@ -327,6 +366,29 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   // drill-down stack : chaque entrée = { id, title, icon } de la page parente
   const [drillStack, setDrillStack] = useState<{ id: string; title: string; icon: string }[]>([])
   const [actionSheetPage, setActionSheetPage] = useState<Page | null>(null)
+
+  // Sélection multiple (appui long sur une ligne pour l'activer).
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  function enterSelectMode(id: string) {
+    setSelectMode(true)
+    setSelectedIds(new Set([id]))
+  }
+  function toggleSelected(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  function exitSelectMode() {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+  // Changer d'onglet (Pages/Journal) quitte la sélection en cours, pour ne
+  // pas mélanger des ids des deux listes.
+  useEffect(() => { exitSelectMode() }, [tab])
 
   // Swipe horizontal Pages ↔ Journal (uniquement au premier niveau, hors
   // drill-down dans un dossier, pour ne pas interférer avec cette navigation).
@@ -342,7 +404,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
     const t = e.touches[0]
     touchStartRef.current = { x: t.clientX, y: t.clientY }
     swipeDirRef.current = null
-    pullActiveRef.current = !isRefreshing && (scrollRef.current?.scrollTop ?? 0) <= 0
+    pullActiveRef.current = !isRefreshing && !selectMode && (scrollRef.current?.scrollTop ?? 0) <= 0
   }
   function onContentTouchMove(e: React.TouchEvent) {
     if (!touchStartRef.current) return
@@ -502,8 +564,13 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
                 <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Favoris</p>
                 {favorites.map(function(page) {
                   return (
-                    <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={() => onToggleFavorite(page.id)}>
-                      <PageRow page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
+                    <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={() => onToggleFavorite(page.id)}
+                      onLongPress={onDeleteMany ? () => enterSelectMode(page.id) : undefined} selectMode={selectMode}>
+                      <PageRow page={page} selectedId={selectedId}
+                        onSelect={selectMode ? () => toggleSelected(page.id) : onSelect}
+                        onToggleFavorite={onToggleFavorite}
+                        onShowActions={selectMode ? undefined : setActionSheetPage}
+                        selectMode={selectMode} checked={selectedIds.has(page.id)} />
                     </SwipeableRow>
                   )
                 })}
@@ -515,8 +582,13 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
                 <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Récents</p>
                 {recentPages.map(function(page) {
                   return (
-                    <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={() => onToggleFavorite(page.id)}>
-                      <PageRow page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onShowActions={setActionSheetPage} />
+                    <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={() => onToggleFavorite(page.id)}
+                      onLongPress={onDeleteMany ? () => enterSelectMode(page.id) : undefined} selectMode={selectMode}>
+                      <PageRow page={page} selectedId={selectedId}
+                        onSelect={selectMode ? () => toggleSelected(page.id) : onSelect}
+                        onToggleFavorite={onToggleFavorite}
+                        onShowActions={selectMode ? undefined : setActionSheetPage}
+                        selectMode={selectMode} checked={selectedIds.has(page.id)} />
                     </SwipeableRow>
                   )
                 })}
@@ -553,11 +625,15 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             {sortedPages.map(function(page) {
               const hasChildren = nonJournalPages.some(function(p) { return p.parent_id === page.id })
               return (
-                <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={hasChildren ? undefined : () => onToggleFavorite(page.id)}>
-                  <PageRow page={page} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite}
+                <SwipeableRow key={page.id} onSwipeLeft={() => onDeleteRequest(page.id)} onSwipeRight={hasChildren ? undefined : () => onToggleFavorite(page.id)}
+                  onLongPress={onDeleteMany ? () => enterSelectMode(page.id) : undefined} selectMode={selectMode}>
+                  <PageRow page={page} selectedId={selectedId}
+                    onSelect={selectMode ? () => toggleSelected(page.id) : onSelect}
+                    onToggleFavorite={onToggleFavorite}
                     hasChildren={hasChildren}
-                    onDrillDown={function(p) { setDrillStack(function(s) { return [...s, { id: p.id, title: p.title || 'Sans titre', icon: p.icon || '📄' }] }) }}
-                    onShowActions={setActionSheetPage}
+                    onDrillDown={selectMode ? undefined : function(p) { setDrillStack(function(s) { return [...s, { id: p.id, title: p.title || 'Sans titre', icon: p.icon || '📄' }] }) }}
+                    onShowActions={selectMode ? undefined : setActionSheetPage}
+                    selectMode={selectMode} checked={selectedIds.has(page.id)}
                   />
                 </SwipeableRow>
               )
@@ -575,8 +651,12 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
             )}
             {visibleJournal.map(function(entry) {
               return (
-                <SwipeableRow key={entry.id} onSwipeLeft={() => onDeleteRequest(entry.id)}>
-                  <JournalRow entry={entry} selectedId={selectedId} onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+                <SwipeableRow key={entry.id} onSwipeLeft={() => onDeleteRequest(entry.id)}
+                  onLongPress={onDeleteMany ? () => enterSelectMode(entry.id) : undefined} selectMode={selectMode}>
+                  <JournalRow entry={entry} selectedId={selectedId}
+                    onSelect={selectMode ? () => toggleSelected(entry.id) : onSelect}
+                    onToggleFavorite={onToggleFavorite}
+                    selectMode={selectMode} checked={selectedIds.has(entry.id)} />
                 </SwipeableRow>
               )
             })}
@@ -585,32 +665,63 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         )}
       </div>
 
-      {/* Bottom nav — deux actions */}
-      <div
-        className="flex-shrink-0 flex items-stretch gap-2 px-3 pt-2"
-        style={{
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-          borderTop: '1px solid var(--border)',
-          background: 'var(--app-bg)',
-        }}
-      >
-        <button
-          onClick={() => tab === 'journal' ? onAddJournalEntry() : onAdd(currentParentId)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-colors"
-          style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+      {/* Bottom nav — deux actions, remplacée par la barre de sélection multiple */}
+      {selectMode ? (
+        <div
+          className="flex-shrink-0 flex items-stretch gap-2 px-3 pt-2"
+          style={{
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            borderTop: '1px solid var(--border)',
+            background: 'var(--app-bg)',
+          }}
         >
-          <span>{tab === 'journal' ? '✏️' : '+'}</span>
-          <span>{tab === 'journal' ? 'Nouvelle entrée' : drillStack.length > 0 ? 'Nouvelle sous-page' : 'Nouvelle page'}</span>
-        </button>
-        <button
-          onClick={() => setShowSearch(true)}
-          className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
-          style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}
+          <button
+            onClick={exitSelectMode}
+            className="flex items-center justify-center px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
+            style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}
+          >
+            Annuler
+          </button>
+          <span className="flex-1 flex items-center justify-center text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+            {selectedIds.size} sélectionnée{selectedIds.size > 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={() => { if (onDeleteMany && selectedIds.size > 0) onDeleteMany([...selectedIds]); exitSelectMode() }}
+            disabled={selectedIds.size === 0}
+            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
+            style={{ background: selectedIds.size > 0 ? '#ef4444' : 'var(--selected-bg)', color: selectedIds.size > 0 ? '#fff' : 'var(--text-faint)' }}
+          >
+            <span>🗑</span>
+            <span>Supprimer</span>
+          </button>
+        </div>
+      ) : (
+        <div
+          className="flex-shrink-0 flex items-stretch gap-2 px-3 pt-2"
+          style={{
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            borderTop: '1px solid var(--border)',
+            background: 'var(--app-bg)',
+          }}
         >
-          <span>🔍</span>
-          <span>Rechercher</span>
-        </button>
-      </div>
+          <button
+            onClick={() => tab === 'journal' ? onAddJournalEntry() : onAdd(currentParentId)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-colors"
+            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+          >
+            <span>{tab === 'journal' ? '✏️' : '+'}</span>
+            <span>{tab === 'journal' ? 'Nouvelle entrée' : drillStack.length > 0 ? 'Nouvelle sous-page' : 'Nouvelle page'}</span>
+          </button>
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
+            style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}
+          >
+            <span>🔍</span>
+            <span>Rechercher</span>
+          </button>
+        </div>
+      )}
 
       {actionSheetPage && (
         <MobilePageActionSheet
@@ -626,22 +737,24 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   )
 }
 
-function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, hasChildren, onShowActions }: {
+function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, hasChildren, onShowActions, selectMode, checked }: {
   page: Page, selectedId: string | null,
   onSelect: (p: Page) => void,
   onToggleFavorite: (id: string) => void,
   hasChildren?: boolean,
   onDrillDown?: (p: Page) => void,
   onShowActions?: (p: Page) => void,
+  selectMode?: boolean, checked?: boolean,
 }) {
   return (
     <div
       onClick={() => hasChildren && onDrillDown ? onDrillDown(page) : onSelect(page)}
       className={`flex items-center gap-2 px-3 py-3 rounded-xl cursor-pointer transition-colors mobile-row-hover ${selectedId === page.id ? 'mobile-row-selected' : ''}`}
     >
+      {selectMode && <SelectCheckbox checked={checked} />}
       <span className="text-xl flex-shrink-0">{page.icon || '📄'}</span>
       <span className="flex-1 min-w-0 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{page.title || 'Sans titre'}</span>
-      {!hasChildren && (
+      {!selectMode && !hasChildren && (
         <button
           onClick={e => { e.stopPropagation(); onToggleFavorite(page.id) }}
           className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
@@ -650,7 +763,7 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
           {page.favorite ? '★' : '☆'}
         </button>
       )}
-      {onShowActions && (
+      {!selectMode && onShowActions && (
         <button
           onClick={e => { e.stopPropagation(); onShowActions(page) }}
           className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-base transition-colors"
@@ -658,7 +771,7 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
           title="Plus d'actions"
         >⋯</button>
       )}
-      {hasChildren && (
+      {!selectMode && hasChildren && (
         <>
           <button
             onClick={e => { e.stopPropagation(); onSelect(page) }}

@@ -653,6 +653,39 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     await persist(createClient().from('pages').update({ deleted_at: deletedAt }).in('id', ids))
   }
 
+  // Suppression groupée (sélection multiple mobile) : même logique que
+  // deletePage mais pour plusieurs pages racines à la fois, avec un seul
+  // toast/annuler pour tout le lot.
+  async function deletePages(ids: string[]) {
+    if (ids.length === 0) return
+    const deletedAt = new Date().toISOString()
+    const allIds = new Set<string>()
+    ids.forEach(id => {
+      allIds.add(id)
+      getDescendantIds(pages, id).forEach(did => {
+        if (!pages.find(p => p.id === did)?.deleted_at) allIds.add(did)
+      })
+    })
+    const idArr = [...allIds]
+    idArr.forEach(i => deletedTombstoneRef.current.add(i))
+    setPages(prev => prev.map(p => allIds.has(p.id) ? { ...p, deleted_at: deletedAt } : p))
+    if (selected && allIds.has(selected.id)) {
+      if (selected.type === 'journal') {
+        setSelected(null)
+        setShowJournal(true)
+      } else {
+        setSelected(activePages.find(p => !allIds.has(p.id) && p.type !== 'journal') || null)
+      }
+    }
+    if (selectedRight && allIds.has(selectedRight.id)) setSelectedRight(null)
+    const count = ids.length
+    toast(`${count} page${count > 1 ? 's' : ''} déplacée${count > 1 ? 's' : ''} dans la corbeille.`, 'info', {
+      label: 'Annuler',
+      onAction: () => ids.forEach(id => restorePage(id)),
+    })
+    await persist(createClient().from('pages').update({ deleted_at: deletedAt }).in('id', idArr))
+  }
+
   async function restorePage(id: string) {
     const page = pages.find(p => p.id === id)
     if (!page) return
@@ -1161,6 +1194,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             onDuplicate={id => duplicatePage(id)}
             onDeleteRequest={id => setConfirmDeleteId(id)}
             onRefresh={refreshPages}
+            onDeleteMany={deletePages}
           />
         </div>
       )}
