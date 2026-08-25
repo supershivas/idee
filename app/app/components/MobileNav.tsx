@@ -300,7 +300,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite }: {
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onShowReview, onShowRecent, onMoveTo, onDuplicate, onDeleteRequest }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onShowReview, onShowRecent, onMoveTo, onDuplicate, onDeleteRequest, onRefresh }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -318,6 +318,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   onMoveTo: (id: string) => void
   onDuplicate: (id: string) => void
   onDeleteRequest: (id: string) => void
+  onRefresh?: () => void | Promise<void>
 }) {
   const [showSearch, setShowSearch] = useState(false)
   const [tab, setTab] = useState<'pages' | 'journal'>('pages')
@@ -331,10 +332,17 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   // drill-down dans un dossier, pour ne pas interférer avec cette navigation).
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const swipeDirRef = useRef<'horizontal' | 'vertical' | null>(null)
+  // Tirer pour actualiser : n'est armé que si le geste démarre scrollTop === 0.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const pullActiveRef = useRef(false)
+  const [pullDistance, setPullDistance] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const PULL_THRESHOLD = 56
   function onContentTouchStart(e: React.TouchEvent) {
     const t = e.touches[0]
     touchStartRef.current = { x: t.clientX, y: t.clientY }
     swipeDirRef.current = null
+    pullActiveRef.current = !isRefreshing && (scrollRef.current?.scrollTop ?? 0) <= 0
   }
   function onContentTouchMove(e: React.TouchEvent) {
     if (!touchStartRef.current) return
@@ -344,12 +352,26 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
     if (swipeDirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
       swipeDirRef.current = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'horizontal' : 'vertical'
     }
+    if (pullActiveRef.current && swipeDirRef.current === 'vertical' && dy > 0 && drillStack.length === 0) {
+      setPullDistance(Math.min(dy * 0.5, 72))
+    } else if (pullDistance !== 0) {
+      setPullDistance(0)
+    }
   }
   function onContentTouchEnd(e: React.TouchEvent) {
     const start = touchStartRef.current
     const dir = swipeDirRef.current
+    const wasPulling = pullActiveRef.current
     touchStartRef.current = null
     swipeDirRef.current = null
+    pullActiveRef.current = false
+    if (wasPulling && pullDistance >= PULL_THRESHOLD && onRefresh) {
+      setIsRefreshing(true)
+      setPullDistance(PULL_THRESHOLD)
+      Promise.resolve(onRefresh()).finally(() => { setIsRefreshing(false); setPullDistance(0) })
+    } else {
+      setPullDistance(0)
+    }
     if (!start || dir !== 'horizontal' || drillStack.length > 0) return
     const dx = e.changedTouches[0].clientX - start.x
     if (Math.abs(dx) < 60) return
@@ -462,8 +484,17 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-2"
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 pb-2" style={{ overscrollBehaviorY: 'contain' }}
         onTouchStart={onContentTouchStart} onTouchMove={onContentTouchMove} onTouchEnd={onContentTouchEnd}>
+        {(pullDistance > 0 || isRefreshing) && (
+          <div className="flex items-center justify-center overflow-hidden transition-[height] duration-150"
+            style={{ height: isRefreshing ? PULL_THRESHOLD : pullDistance, color: 'var(--text-muted)', fontSize: 12 }}>
+            <span style={{ transform: !isRefreshing && pullDistance >= PULL_THRESHOLD ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', display: 'inline-block', marginRight: 6 }}>
+              {isRefreshing ? '↻' : '↓'}
+            </span>
+            {isRefreshing ? 'Actualisation…' : pullDistance >= PULL_THRESHOLD ? 'Relâcher pour actualiser' : 'Tirer pour actualiser'}
+          </div>
+        )}
         {tab === 'pages' ? (
           <>
             {favorites.length > 0 && (
