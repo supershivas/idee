@@ -5,6 +5,49 @@ import { SaveIndicator } from './SaveIndicator'
 
 const MOBILE_JOURNAL_PAGE = 30
 
+// Swipe vers le bas pour fermer un écran mobile « du dessus » (modale bottom
+// sheet ou vue poussée avec en-tête « ← Pages »). À attacher (onTouchStart/
+// Move/End) sur la zone d'en-tête — jamais sur le contenu défilant, pour ne
+// jamais interférer avec son propre scroll — et `style` sur le conteneur
+// qui doit visuellement suivre le doigt.
+export function useSwipeDownToDismiss(onClose: () => void) {
+  const startRef = useRef<{ x: number; y: number } | null>(null)
+  const dirRef = useRef<'horizontal' | 'vertical' | null>(null)
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const THRESHOLD = 80
+
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    startRef.current = { x: t.clientX, y: t.clientY }
+    dirRef.current = null
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (!startRef.current) return
+    const t = e.touches[0]
+    const dx = t.clientX - startRef.current.x
+    const dy = t.clientY - startRef.current.y
+    if (dirRef.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      dirRef.current = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'vertical' : 'horizontal'
+      if (dirRef.current === 'vertical') setDragging(true)
+    }
+    if (dirRef.current === 'vertical' && dy > 0) setDragY(Math.min(dy, 220))
+  }
+  function onTouchEnd() {
+    const shouldClose = dirRef.current === 'vertical' && dragY >= THRESHOLD
+    startRef.current = null
+    dirRef.current = null
+    setDragging(false)
+    setDragY(0)
+    if (shouldClose) onClose()
+  }
+
+  return {
+    onTouchStart, onTouchMove, onTouchEnd,
+    style: { transform: `translateY(${dragY}px)`, transition: dragging ? 'none' : 'transform 200ms ease' },
+  }
+}
+
 function tiptapToText(content: string): string {
   if (!content) return ''
   var doc: any = null
