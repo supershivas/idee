@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Page } from '../types'
+import { useSwipeDownToDismiss } from './MobileNav'
 
 export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }: {
   trashedPages: Page[]
@@ -28,20 +29,24 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
     return Math.max(0, 30 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000))
   }
 
+  const swipe = useSwipeDownToDismiss(onClose)
+
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col w-full md:w-[480px]"
-        style={{ background: 'var(--card-bg)', maxHeight: '80vh' }}>
-        <div className="md:hidden w-10 h-1 rounded-full mx-auto mt-3 flex-shrink-0" style={{ background: 'var(--border)' }} />
-        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div>
-            <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Corbeille</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Suppression définitive après 30 jours</p>
+        style={{ background: 'var(--card-bg)', maxHeight: '80vh', ...swipe.style }}>
+        <div onTouchStart={swipe.onTouchStart} onTouchMove={swipe.onTouchMove} onTouchEnd={swipe.onTouchEnd}>
+          <div className="md:hidden w-10 h-1 rounded-full mx-auto mt-3 flex-shrink-0" style={{ background: 'var(--border)' }} />
+          <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div>
+              <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Corbeille</h2>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Suppression définitive après 30 jours</p>
+            </div>
+            <button onClick={onClose}
+              className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
+              style={{ color: 'var(--text-muted)' }}>✕</button>
           </div>
-          <button onClick={onClose}
-            className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
 
         <div className="flex-1 overflow-y-auto">

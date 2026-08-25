@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from '../types'
+import { useSwipeDownToDismiss } from './MobileNav'
 
 type HistoryEntry = {
   page_id: string
@@ -75,18 +76,22 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
     load()
   }, [])
 
+  const swipe = useSwipeDownToDismiss(onClose)
+
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
         className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
-        style={{ maxHeight: '90vh' }}
+        style={{ maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
+        <div onTouchStart={swipe.onTouchStart} onTouchMove={swipe.onTouchMove} onTouchEnd={swipe.onTouchEnd}>
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 md:hidden" />
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-          <span className="font-semibold text-gray-900 dark:text-white">Historique</span>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <span className="font-semibold text-gray-900 dark:text-white">Historique</span>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">✕</button>
+          </div>
         </div>
 
         {loading ? (
