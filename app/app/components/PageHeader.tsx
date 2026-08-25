@@ -270,12 +270,13 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
   )
 }
 
-export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onToggleFullWidth, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onTagClick }: {
+export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, onSelectPage, onTitleChange, onIconChange, onTagsChange, onToggleFavorite, onDelete, onConvertToJournal, onToggleFullWidth, onMoveTo, onCreatedAtChange, onRestore, onShareUpdate, onSummaryUpdate, onTagClick }: {
   page: Page; pages: Page[]; userId: string; saveState: SaveState; isMobile: boolean
   onBack: () => void; onSelectPage: (p: Page) => void; onTitleChange: (v: string) => void
   onIconChange: (emoji: string) => void; onTagsChange: (tags: string[]) => void
   onToggleFavorite: (id: string) => void; onDelete: () => void; onConvertToJournal: () => void
   onToggleFullWidth?: () => void
+  onMoveTo?: () => void
   onCreatedAtChange?: (iso: string) => void; onRestore: (title: string, content: string) => void
   onShareUpdate: (updates: Partial<Page>) => void; onSummaryUpdate?: (summary: string | null) => void
   onTagClick?: (tag: string) => void
@@ -335,6 +336,7 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
             onDelete={onDelete}
             onConvertToJournal={isJournal ? undefined : onConvertToJournal}
             onToggleFullWidth={!isMobile && !isJournal ? onToggleFullWidth : undefined}
+            onMoveTo={isJournal ? undefined : onMoveTo}
             fullWidth={page.full_width}
           >
             <HistoryButton page={page} onRestore={onRestore} />
@@ -374,6 +376,7 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
         <ActionsMenu
           onDelete={onDelete}
           onConvertToJournal={isJournal ? undefined : onConvertToJournal}
+          onMoveTo={isJournal ? undefined : onMoveTo}
         >
           <HistoryButton page={page} onRestore={onRestore} />
           <ExportButton page={page} />
