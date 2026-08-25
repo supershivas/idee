@@ -113,13 +113,16 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const mainScrollRef = useRef<HTMLDivElement>(null)
   const mainScrollRefRight = useRef<HTMLDivElement>(null)
   // Swipe vers le bas pour fermer une note/entrée de journal ouverte —
-  // vient s'ajouter au swipe-retour horizontal existant. Le geste est
-  // rattaché au panneau entier (mainScrollRef) mais n'est « armé sans
-  // condition » que si le toucher démarre en dehors du corps de la note
-  // (noteBodyRef, sous-pages + éditeur) : sur l'en-tête (titre, breadcrumb,
-  // en-tête compact qui apparaît une fois qu'on a scrollé), swipe down
-  // ferme toujours ; dans le corps du texte, seulement depuis le haut du
-  // scroll, pour ne pas voler le geste de scroll-vers-le-haut.
+  // vient s'ajouter au swipe-retour horizontal existant. Le transform/geste
+  // (sheetRef) vit sur une enveloppe non scrollable distincte du panneau qui
+  // scrolle réellement (mainScrollRef, passé ici comme scrollRef pour lire
+  // le vrai scrollTop) — même séparation que les modales Paramètres/Tags.
+  // Le geste n'est « armé sans condition » que si le toucher démarre en
+  // dehors du corps de la note (noteBodyRef, sous-pages + éditeur) : sur
+  // l'en-tête (titre, breadcrumb, en-tête compact qui apparaît une fois
+  // qu'on a scrollé), swipe down ferme toujours ; dans le corps du texte,
+  // seulement depuis le haut du scroll, pour ne pas voler le geste de
+  // scroll-vers-le-haut.
   const noteBodyRef = useRef<HTMLDivElement>(null)
   const swipeCloseNote = useSwipeDownToDismiss(() => {
     if (!isMobile || !selected) return
@@ -1273,10 +1276,20 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       <div className={`${(isMobile && !selected) || showingJournalDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}
         onTouchStart={onSwipeTouchStart} onTouchEnd={onSwipeTouchEnd}>
         {/* Panneau gauche */}
+        {/* Enveloppe non scrollable pour le geste swipe-down : le transform
+            et l'écouteur tactile vivent ici, jamais sur l'élément qui
+            scrolle lui-même (mainScrollRef, juste en dessous) — même
+            séparation que les modales Paramètres/Tags (sheetRef ≠ zone
+            scrollable), qui elles fonctionnent de façon fiable. Appliquer
+            notre transform JS directement sur le nœud que Safari fait aussi
+            rebondir nativement (overflow-y-auto) est fragile sur iOS ; les
+            deux responsabilités doivent être portées par deux nœuds
+            distincts. */}
+        <div ref={swipeCloseNote.sheetRef} className="flex-1 flex flex-col min-w-0 overflow-hidden" style={swipeCloseNote.style}>
         <div
-          ref={node => { mainScrollRef.current = node; swipeCloseNote.sheetRef.current = node }}
+          ref={mainScrollRef}
           className="flex-1 overflow-y-auto min-w-0"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)', ...swipeCloseNote.style }}
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)' }}
         >
           {splitMode && (
             <div className="sticky top-0 z-30 flex items-center justify-end gap-1 px-2 py-1" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
@@ -1424,6 +1437,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               </div>
             </div>
           )}
+        </div>
         </div>
 
         {/* Séparateur + panneau droit (vue partagée) */}
