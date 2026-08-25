@@ -2,14 +2,6 @@
 import { useState } from 'react'
 import { Page } from './App'
 
-const IconDownload = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6.5 1.5v7M4 6.5l2.5 2.5L9 6.5" />
-    <path d="M2 11h9" />
-  </svg>
-)
-
 function htmlToMarkdown(html: string): string {
   return html
     .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
@@ -393,7 +385,7 @@ export default function ExportButton({ page }: { page: Page }) {
         style={{ color: 'var(--text-secondary)', background: 'transparent' }}
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
-        <span style={{ opacity: 0.55 }}><IconDownload /></span>
+        <i className="ti ti-download" style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0, opacity: 0.55 }} />
         <span className="flex-1">Exporter</span>
         <span style={{ opacity: 0.35, fontSize: '9px' }}>{open ? '▲' : '▼'}</span>
       </button>

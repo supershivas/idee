@@ -4,14 +4,6 @@ import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from './App'
 
-const IconClock = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="6.5" cy="6.5" r="5" />
-    <path d="M6.5 3.5v3l2 1.5" />
-  </svg>
-)
-
 type Snapshot = { id: string; title: string; content: string; created_at: string }
 
 export default function HistoryButton({ page, onRestore }: { page: Page, onRestore: (title: string, content: string) => void }) {
@@ -54,7 +46,7 @@ export default function HistoryButton({ page, onRestore }: { page: Page, onResto
         style={{ color: 'var(--text-secondary)', background: 'transparent' }}
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
-        <span style={{ opacity: 0.55 }}><IconClock /></span>
+        <i className="ti ti-history" style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0, opacity: 0.55 }} />
         <span>Historique</span>
       </button>
 

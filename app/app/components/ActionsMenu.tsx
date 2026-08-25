@@ -2,51 +2,8 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { Page } from '../types'
 
-const IconDots = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-    <circle cx="2.5" cy="7" r="1.3" />
-    <circle cx="7"   cy="7" r="1.3" />
-    <circle cx="11.5" cy="7" r="1.3" />
-  </svg>
-)
-
-const IconNotebook = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1.5" y="1" width="10" height="11" rx="1.5" />
-    <path d="M4.5 1v11" />
-    <path d="M7 4h2.5" />
-    <path d="M7 6.5h1.5" />
-  </svg>
-)
-
-const IconWidth = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 6.5h11" />
-    <path d="M3 4.5l-2 2 2 2" />
-    <path d="M10 4.5l2 2-2 2" />
-  </svg>
-)
-
-const IconTrash = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1.5 3.5h10" />
-    <path d="M4.5 3.5V2.5A.5.5 0 0 1 5 2h3a.5.5 0 0 1 .5.5v1" />
-    <path d="M3 3.5l.7 7.5h5.6L10 3.5" />
-  </svg>
-)
-
-const IconFolder = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-    stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1.5 3.5a1 1 0 0 1 1-1h2.3l1 1.2h4.7a1 1 0 0 1 1 1v5.3a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6.5Z" />
-  </svg>
-)
-
 function MenuButton({ icon, label, onClick, danger }: {
-  icon: ReactNode
+  icon: string
   label: string
   onClick: () => void
   danger?: boolean
@@ -67,7 +24,7 @@ function MenuButton({ icon, label, onClick, danger }: {
         e.currentTarget.style.color = base
       }}
     >
-      <span style={{ opacity: 0.55 }}>{icon}</span>
+      <i className={`ti ti-${icon}`} style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0, opacity: 0.55 }} />
       <span>{label}</span>
     </button>
   )
@@ -116,7 +73,7 @@ export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, o
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
         onMouseLeave={e => { if (!open) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' } }}
       >
-        <IconDots />
+        <i className="ti ti-dots" style={{ fontSize: '15px' }} />
       </button>
 
       {open && (
@@ -142,27 +99,27 @@ export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, o
           <div className="p-1">
             {onToggleFullWidth && (
               <MenuButton
-                icon={<IconWidth />}
+                icon="arrows-horizontal"
                 label={fullWidth ? 'Largeur normale' : 'Pleine largeur'}
                 onClick={() => { onToggleFullWidth(); setOpen(false) }}
               />
             )}
             {onConvertToJournal && (
               <MenuButton
-                icon={<IconNotebook />}
+                icon="notebook"
                 label="Convertir en Journal"
                 onClick={() => { onConvertToJournal(); setOpen(false) }}
               />
             )}
             {onMoveTo && (
               <MenuButton
-                icon={<IconFolder />}
+                icon="folder-symlink"
                 label="Déplacer vers…"
                 onClick={() => { onMoveTo(); setOpen(false) }}
               />
             )}
             <MenuButton
-              icon={<IconTrash />}
+              icon="trash"
               label="Mettre à la corbeille"
               onClick={() => { onDelete(); setOpen(false) }}
               danger

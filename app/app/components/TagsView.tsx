@@ -159,11 +159,8 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
         {/* Search */}
         <div className="px-6 pb-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14"
-              viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"
-              style={{ color: 'var(--text-muted)' }}>
-              <circle cx="6" cy="6" r="4" /><path d="M10 10l2.5 2.5" />
-            </svg>
+            <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ fontSize: '14px', color: 'var(--text-muted)' }} />
             <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher un tag…"
               className="w-full text-sm rounded-xl pl-9 pr-8 py-2.5 outline-none"
