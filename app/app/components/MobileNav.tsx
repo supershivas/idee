@@ -9,18 +9,26 @@ const MOBILE_JOURNAL_PAGE = 30
 // Swipe vers le bas pour fermer un écran mobile « du dessus » (modale bottom
 // sheet, vue poussée, ou note/entrée de journal ouverte). `sheetRef` va sur
 // tout le panneau (pas juste l'en-tête — sinon le geste ne « prend » que si
-// on vise précisément cette petite zone) ; `contentRef` pointe vers la zone
-// qui défile (peut être le même nœud que sheetRef s'il n'y a pas de zone
-// d'en-tête séparée, ex. une note). Le geste n'est armé que si le défilement
-// est déjà tout en haut (scrollTop <= 0) — comme le tirer-pour-actualiser —
-// pour ne jamais entrer en conflit avec le scroll normal du contenu.
+// on vise précisément cette petite zone). `contentRef` délimite la zone de
+// contenu « défilable » : un toucher qui démarre EN DEHORS (en-tête, titre,
+// barre du haut) arme le geste sans condition ; un toucher qui démarre
+// DEDANS n'arme le geste que si on est déjà tout en haut (scrollTop <= 0,
+// comme le tirer-pour-actualiser) pour ne jamais entrer en conflit avec le
+// scroll normal. `scrollRef` précise où lire ce scrollTop quand ce n'est pas
+// `contentRef` lui-même qui défile (ex. note : `contentRef` délimite juste
+// le corps sous l'en-tête, mais c'est le panneau parent qui défile) —
+// par défaut égal à `contentRef`.
 // `style` va sur le conteneur qui doit visuellement suivre le doigt (le
 // panneau/la vue elle-même, pas l'arrière-plan/backdrop).
 //
 // Écouteur natif non passif (plutôt que onTouchMove React, passif par
 // défaut) : sans preventDefault sur le touchmove, iOS Safari fait rebondir
 // la page entière derrière le panneau pendant le drag.
-export function useSwipeDownToDismiss(onClose: () => void, contentRef?: React.RefObject<HTMLElement | null>) {
+export function useSwipeDownToDismiss(
+  onClose: () => void,
+  contentRef?: React.RefObject<HTMLElement | null>,
+  scrollRef?: React.RefObject<HTMLElement | null>
+) {
   const sheetRef = useRef<HTMLDivElement | null>(null)
   const startRef = useRef<{ x: number; y: number } | null>(null)
   const dirRef = useRef<'horizontal' | 'vertical' | null>(null)
@@ -42,7 +50,8 @@ export function useSwipeDownToDismiss(onClose: () => void, contentRef?: React.Re
       dirRef.current = null
       const content = contentRef?.current
       const insideContent = !!content && content.contains(e.target as Node)
-      armedRef.current = !insideContent || content!.scrollTop <= 0
+      const scrollEl = scrollRef?.current ?? content
+      armedRef.current = !insideContent || (scrollEl?.scrollTop ?? 0) <= 0
     }
     function onTouchMove(e: TouchEvent) {
       if (!startRef.current) return
@@ -79,7 +88,7 @@ export function useSwipeDownToDismiss(onClose: () => void, contentRef?: React.Re
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [contentRef])
+  }, [contentRef, scrollRef])
 
   return {
     sheetRef,
