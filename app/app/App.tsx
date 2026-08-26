@@ -57,6 +57,14 @@ function ContentLoading({ isMobile }: { isMobile: boolean }) {
   )
 }
 
+// ── Test : note en drawer sur mobile ────────────────────────────────────────
+// Quand ce drapeau est actif, ouvrir une note sur mobile ne remplace plus la
+// liste : la note glisse par-dessus dans une feuille arrondie ancrée en bas
+// (la liste reste visible derrière, assombrie). Le geste de fermeture par
+// swipe down existant devient le geste natif du drawer ; le backdrop ferme
+// aussi. Mettre à `false` pour revenir à la vue plein écran.
+const NOTE_DRAWER_MOBILE = true
+
 export default function App({ initialPages, userId, userEmail, initialPageId }: { initialPages: Page[], userId: string, userEmail?: string, initialPageId?: string }) {
   const [pages, setPages] = useState<Page[]>(initialPages)
   const [showTrash, setShowTrash] = useState(false)
@@ -895,6 +903,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const journalSubpages = selected ? journalEntries.filter(p => p.parent_id === selected.id) : []
   const journalSubpagesRight = selectedRight ? journalEntries.filter(p => p.parent_id === selectedRight.id) : []
   const showingJournalDesktop = !isMobile && showJournal && !selected
+  // Note présentée en drawer par-dessus la liste (mobile uniquement)
+  const noteDrawer = NOTE_DRAWER_MOBILE && isMobile && !!selected
+  function closeNote() {
+    if (selected?.type === 'journal') { setSelected(null); setShowJournal(true) }
+    else setSelected(null)
+  }
 
   function closeSplit() {
     setSplitMode(false)
@@ -1196,7 +1210,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       </div>
 
       {/* ── Mobile : vue liste ── */}
-      {isMobile && !selected && !showJournal && (
+      {isMobile && (NOTE_DRAWER_MOBILE || !selected) && !showJournal && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
@@ -1273,7 +1287,28 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {/* ── Contenu principal ── */}
-      <div className={`${(isMobile && !selected) || showingJournalDesktop ? 'hidden' : ''} flex-1 flex overflow-hidden min-w-0`}
+      {/* Backdrop du drawer : assombrit la liste restée visible derrière et
+          ferme la note au tap, comme une modale bottom sheet. */}
+      {noteDrawer && (
+        <div
+          className="note-drawer-backdrop fixed inset-0 z-40"
+          style={{ background: 'rgba(0,0,0,0.35)' }}
+          onClick={closeNote}
+        />
+      )}
+      <div className={`${(isMobile && !selected) || showingJournalDesktop ? 'hidden' : ''} ${noteDrawer ? 'note-drawer' : ''} flex-1 flex overflow-hidden min-w-0`}
+        style={noteDrawer ? {
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          zIndex: 41,
+          background: 'var(--card-bg)',
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          boxShadow: '0 -10px 32px rgba(0,0,0,0.28)',
+        } : undefined}
         onTouchStart={onSwipeTouchStart} onTouchEnd={onSwipeTouchEnd}>
         {/* Panneau gauche */}
         {/* Enveloppe non scrollable pour le geste swipe-down : le transform
@@ -1286,6 +1321,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             deux responsabilités doivent être portées par deux nœuds
             distincts. */}
         <div ref={swipeCloseNote.sheetRef} className="flex-1 flex flex-col min-w-0 overflow-hidden" style={swipeCloseNote.style}>
+        {/* Poignée du drawer : zone de préhension évidente pour le swipe down
+            (hors de noteBodyRef, donc le geste y est armé sans condition). */}
+        {noteDrawer && (
+          <div className="flex items-center justify-center flex-shrink-0" style={{ height: 20 }}>
+            <div className="note-drawer-grabber" />
+          </div>
+        )}
         <div
           ref={mainScrollRef}
           className="flex-1 overflow-y-auto min-w-0"
@@ -1307,7 +1349,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 <>
                   <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
                   <div className="sticky top-0 z-20 flex items-center gap-1 px-2"
-                    style={{ height: isMobile ? 'calc(44px + env(safe-area-inset-top, 0px))' : '44px', paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : undefined, background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
+                    style={{ height: isMobile && !noteDrawer ? 'calc(44px + env(safe-area-inset-top, 0px))' : '44px', paddingTop: isMobile && !noteDrawer ? 'env(safe-area-inset-top, 0px)' : undefined, background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', animation: '_shi 180ms ease both' }}>
                     {selected.type === 'journal' ? (
                       <>
                         <button
@@ -1366,6 +1408,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   }}
                   backLabel={selected.type === 'journal' ? 'Journal' : 'Pages'}
                   saveState={saveState}
+                  safeTop={!noteDrawer}
                 />
                 <PageHeader
                   page={selected}

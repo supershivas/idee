@@ -959,14 +959,17 @@ function MobilePageActionSheet({ page, onClose, onAddSubpage, onMoveTo, onDuplic
   )
 }
 
-export function MobileTopBar({ onBack, backLabel = 'Pages', saveState }: {
+export function MobileTopBar({ onBack, backLabel = 'Pages', saveState, safeTop = true }: {
   onBack: () => void
   backLabel?: string
   saveState: SaveState
+  // `false` quand la note est présentée en drawer : le haut du panneau n'est
+  // plus le haut de l'écran, la marge d'encoche est déjà prise par le drawer.
+  safeTop?: boolean
 }) {
   return (
     <div className="md:hidden flex items-center gap-2 px-3 pb-1 flex-shrink-0"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)' }}>
+      style={{ paddingTop: safeTop ? 'calc(env(safe-area-inset-top, 0px) + 10px)' : '4px' }}>
       <button
         onClick={onBack}
         className="flex items-center gap-1 py-2 px-2 rounded-xl active:opacity-60 transition-opacity"
