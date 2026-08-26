@@ -125,12 +125,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   // (sheetRef) vit sur une enveloppe non scrollable distincte du panneau qui
   // scrolle réellement (mainScrollRef, passé ici comme scrollRef pour lire
   // le vrai scrollTop) — même séparation que les modales Paramètres/Tags.
-  // Le geste n'est « armé sans condition » que si le toucher démarre en
-  // dehors du corps de la note (noteBodyRef, sous-pages + éditeur) : sur
-  // l'en-tête (titre, breadcrumb, en-tête compact qui apparaît une fois
-  // qu'on a scrollé), swipe down ferme toujours ; dans le corps du texte,
-  // seulement depuis le haut du scroll, pour ne pas voler le geste de
-  // scroll-vers-le-haut.
+  // `noteBodyRef` couvre tout le contenu défilable — en-tête de la note
+  // (titre, tags, couverture) et en-tête compact collé en haut compris, pas
+  // seulement le corps du texte. Le geste n'y est donc armé que depuis le
+  // haut du scroll. Armer sans condition tout ce qui n'est pas le corps du
+  // texte volait le scroll là où le pouce se pose justement : sur une note à
+  // grand en-tête, celui-ci occupe l'essentiel de l'écran, et tirer vers le
+  // bas fermait la note (ou bloquait le défilement via preventDefault) au
+  // lieu de la faire défiler. Seule la poignée du drawer, qui ne défile pas,
+  // reste armée sans condition.
   const noteBodyRef = useRef<HTMLDivElement>(null)
   const swipeCloseNote = useSwipeDownToDismiss(() => {
     if (!isMobile || !selected) return
@@ -138,6 +141,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     else setSelected(null)
   }, noteBodyRef, mainScrollRef)
   const [scrolledPast, setScrolledPast] = useState(false)
+  // Le drawer monte en plein écran dès qu'on commence à lire (scroll de la
+  // note), et redescend au cran bas quand on revient tout en haut — la
+  // fermeture ne reste donc possible que depuis l'état bas, comme une
+  // feuille iOS à deux positions.
+  const [drawerExpanded, setDrawerExpanded] = useState(false)
   // Sortie animée du drawer mobile : la note reste montée le temps que la
   // feuille redescende.
   const [drawerClosing, setDrawerClosing] = useState(false)
@@ -453,7 +461,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     const container = mainScrollRef.current
     if (!container) return
     setScrolledPast(container.scrollTop > 80)
-    function onScroll() { setScrolledPast(container.scrollTop > 80) }
+    function onScroll() {
+      setScrolledPast(container.scrollTop > 80)
+      // Hystérésis : on monte dès 8px de scroll, on ne redescend qu'une fois
+      // revenu tout en haut (un rebond négatif compte comme « en haut »).
+      setDrawerExpanded(prev => container.scrollTop > 8 ? true : container.scrollTop <= 0 ? false : prev)
+    }
     container.addEventListener('scroll', onScroll, { passive: true })
     return () => container.removeEventListener('scroll', onScroll)
   }, [selected?.id, isMobile])
@@ -461,6 +474,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   // Reset scroll & sticky on page change
   useEffect(() => {
     setScrolledPast(false)
+    setDrawerExpanded(false)
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0
   }, [selected?.id])
 
@@ -1328,15 +1342,18 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           left: 0,
           right: 0,
           bottom: 0,
-          // Laisse une bande de la liste visible derrière : sans elle, le
-          // drawer est indiscernable d'une vue plein écran et il ne reste
-          // presque rien à taper pour fermer.
-          top: 'calc(env(safe-area-inset-top, 0px) + 44px)',
+          // Cran bas : laisse une bande de la liste visible derrière (sans
+          // elle, le drawer est indiscernable d'une vue plein écran et il ne
+          // reste presque rien à taper pour fermer). Dès qu'on scrolle, la
+          // note monte tout en haut de l'écran et les coins s'arrondissent
+          // moins, pour lire sans perdre ces 44px.
+          top: drawerExpanded ? 0 : 'calc(env(safe-area-inset-top, 0px) + 44px)',
           zIndex: 41,
           background: 'var(--card-bg)',
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
+          borderTopLeftRadius: drawerExpanded ? 0 : 16,
+          borderTopRightRadius: drawerExpanded ? 0 : 16,
           boxShadow: '0 -10px 32px rgba(0,0,0,0.28)',
+          transition: 'top 260ms cubic-bezier(0.32, 0.72, 0, 1), border-radius 200ms ease',
         } : undefined}
         onTouchStart={onSwipeTouchStart} onTouchEnd={onSwipeTouchEnd}>
         {/* Panneau gauche */}
@@ -1353,7 +1370,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         {/* Poignée du drawer : zone de préhension évidente pour le swipe down
             (hors de noteBodyRef, donc le geste y est armé sans condition). */}
         {noteDrawer && (
-          <div className="flex items-center justify-center flex-shrink-0" style={{ height: 20 }}>
+          <div className="flex items-center justify-center flex-shrink-0"
+            style={{ height: 20, paddingTop: drawerExpanded ? 'env(safe-area-inset-top, 0px)' : 0 }}>
             <div className="note-drawer-grabber" />
           </div>
         )}
@@ -1373,7 +1391,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             </div>
           )}
           {selected ? (
-            <>
+            <div ref={noteBodyRef}>
               {scrolledPast && (
                 <>
                   <style>{`@keyframes _shi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -1467,7 +1485,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   }}
                   onTagClick={tag => { setTagsInitialTag(tag); setShowTags(true); setShowJournal(false); setShowRecent(false); setShowReview(false); setSelected(null) }}
                 />
-                <div ref={noteBodyRef}>
+                <div>
                   {selected.type !== 'journal' && (
                     <SubpagesList
                       page={selected}
@@ -1496,7 +1514,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   )}
                 </div>
               </div>
-            </>
+            </div>
           ) : (
             <div className="hidden md:flex flex-1 items-center justify-center h-full">
               <div className="text-center">
