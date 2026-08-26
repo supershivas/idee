@@ -309,6 +309,21 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const [tocOpen, setTocOpen] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const keyboardOffset = useKeyboardOffset()
+  // La barre de style mobile n'a de sens que pendant l'édition : elle flotte
+  // alors juste au-dessus du clavier. Le retard au blur évite qu'un appui sur
+  // un bouton (qui sort brièvement du champ) la fasse disparaître sous le
+  // doigt.
+  const [editing, setEditing] = useState(false)
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (blurTimerRef.current) clearTimeout(blurTimerRef.current) }, [])
+  function onEditorFocus() {
+    if (blurTimerRef.current) { clearTimeout(blurTimerRef.current); blurTimerRef.current = null }
+    setEditing(true)
+  }
+  function onEditorBlur() {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current)
+    blurTimerRef.current = setTimeout(() => { blurTimerRef.current = null; setEditing(false) }, 200)
+  }
 
   const subpageExtension = useMemo(
     () => createSubpageExtension(pages, onNavigate),
@@ -422,6 +437,8 @@ Image.extend({
     content: page.content || '',
     onCreate: ({ editor: ed }) => { updateStats(ed) },
     onUpdate: ({ editor: ed }) => { onUpdate(ed.getHTML()); updateStats(ed) },
+    onFocus: () => onEditorFocus(),
+    onBlur: () => onEditorBlur(),
   })
 
   // Initialise les stats dès que l'éditeur est prêt (plus fiable qu'onCreate seul)
@@ -699,11 +716,30 @@ Image.extend({
           )}
         </div>
       )}
-<EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
+<div style={isMobile && editing ? { paddingBottom: 56 } : undefined}>
+        <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
+      </div>
 
-      {isMobile && (
+      {/* Barre de style mobile : fixée juste au-dessus du clavier pendant
+          l'édition, et masquée le reste du temps. Elle était `sticky` dans le
+          flux du document, donc collée au bas de la page : hors écran tant
+          qu'on n'avait pas fait défiler la note jusqu'au bout — inatteignable
+          au moment précis où l'on écrit. `onMouseDown` neutralisé pour que
+          l'appui ne sorte pas du champ (sinon le clavier se referme et la
+          barre s'en va sous le doigt). */}
+      {isMobile && editing && (
         <div className="editor-toolbar flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto"
-          style={{ minHeight: '48px', position: 'sticky', bottom: keyboardOffset, zIndex: 10, transition: 'bottom 0.2s ease' }}>
+          onMouseDown={e => e.preventDefault()}
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: keyboardOffset,
+            zIndex: 45,
+            minHeight: '48px',
+            paddingBottom: keyboardOffset > 0 ? 0 : 'env(safe-area-inset-bottom, 0px)',
+            transition: 'bottom 0.2s ease',
+          }}>
           {toolbarMobile}
         </div>
       )}
