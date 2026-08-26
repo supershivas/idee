@@ -569,3 +569,43 @@ input, textarea {
 
 /* ─── Mobile / PWA UX — depuis supershivas/design-system/mobile.css ─────────*/
 @import './mobile.css';
+
+/* ─── Note en drawer (mobile, test) ──────────────────────────────────────────
+   La note ouverte glisse par-dessus la liste au lieu de la remplacer :
+   feuille arrondie ancrée en bas, backdrop sur la liste restée visible. */
+@keyframes note-drawer-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes note-drawer-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* `backwards` et non `both` : avec `both`, l'état final (transform nul) reste
+   appliqué après l'animation, et un transform — même nul — ferait du drawer le
+   bloc conteneur de ses descendants `position: fixed` (modales, menus), qui se
+   retrouveraient décalés et rognés. Sans fill de fin, le transform disparaît
+   dès l'animation terminée. */
+.note-drawer {
+  animation: note-drawer-up 260ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+.note-drawer-backdrop {
+  animation: note-drawer-fade 260ms ease both;
+}
+@keyframes note-drawer-down {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+.note-drawer-out {
+  animation: note-drawer-down 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.note-drawer-backdrop-out {
+  animation: note-drawer-fade 200ms ease both reverse;
+}
+.note-drawer-grabber {
+  width: 36px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--text-faint);
+  opacity: 0.5;
+}
