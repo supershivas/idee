@@ -1336,6 +1336,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             // S'éclaircit à mesure que la feuille descend, comme une modale iOS.
             background: `rgba(0,0,0,${(0.35 * Math.max(0, 1 - swipeCloseNote.dragY / 260)).toFixed(3)})`,
             pointerEvents: drawerClosing ? 'none' : 'auto',
+            // La bande sombre au-dessus de la feuille ne doit rien faire
+            // défiler ni faire rebondir la page derrière.
+            touchAction: 'none',
           }}
           onClick={() => closeNoteAnimated()}
         />

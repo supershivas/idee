@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { Page } from '../types'
-import { useSwipeDownToDismiss } from './MobileNav'
+import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 
 const TAG_PALETTE: Array<{ bg: string; text: string; border: string }> = [
   { bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' },
@@ -111,6 +111,7 @@ export function TagsInput({ tags, onChange, allTags, compact, onTagClick }: {
 export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page[]; onSelect: (p: Page) => void; initialTag?: string; onClose: () => void }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const swipe = useSwipeDownToDismiss(onClose, contentRef)
+  const backdropRef = useBackgroundScrollLock()
   const [search, setSearch] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>(initialTag ? [initialTag] : [])
   const searchRef = useRef<HTMLInputElement>(null)
@@ -138,7 +139,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
   const maxCount = allTags.length > 0 ? Math.max(...allTags.map(t => tagCounts[t])) : 1
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+    <div ref={backdropRef} className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div ref={swipe.sheetRef} className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[640px] md:mx-4 overflow-hidden flex flex-col"
         style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}>
@@ -173,7 +174,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
           </div>
         </div>
 
-        <div ref={contentRef} className="flex-1 overflow-y-auto">
+        <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain">
 
         {/* Active filters */}
         {selectedTags.length > 0 && (

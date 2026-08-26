@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { Page } from '../types'
-import { useSwipeDownToDismiss } from './MobileNav'
+import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -83,9 +83,10 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
 
   const contentRef = useRef<HTMLDivElement>(null)
   const swipe = useSwipeDownToDismiss(onClose, contentRef)
+  const backdropRef = useBackgroundScrollLock()
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+    <div ref={backdropRef} className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
         ref={swipe.sheetRef}
         className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
@@ -103,7 +104,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
         </div>
 
         {/* Contenu */}
-        <div ref={contentRef} className="px-5 py-4 space-y-5 overflow-y-auto flex-1">
+        <div ref={contentRef} className="px-5 py-4 space-y-5 overflow-y-auto overscroll-contain flex-1">
             {/* Apparence */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Apparence</p>

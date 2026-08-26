@@ -1,7 +1,7 @@
 'use client'
 import { useRef, useState } from 'react'
 import { Page } from '../types'
-import { useSwipeDownToDismiss } from './MobileNav'
+import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 
 export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }: {
   trashedPages: Page[]
@@ -31,9 +31,10 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
 
   const contentRef = useRef<HTMLDivElement>(null)
   const swipe = useSwipeDownToDismiss(onClose, contentRef)
+  const backdropRef = useBackgroundScrollLock()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+    <div ref={backdropRef} className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div ref={swipe.sheetRef} className="relative rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col w-full md:w-[480px]"
         style={{ background: 'var(--card-bg)', maxHeight: '80vh', ...swipe.style }}>
@@ -48,7 +49,7 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
             style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
 
-        <div ref={contentRef} className="flex-1 overflow-y-auto">
+        <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain">
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16" style={{ color: 'var(--text-muted)' }}>
               <span className="text-4xl mb-3">🗑️</span>

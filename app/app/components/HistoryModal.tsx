@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from '../types'
-import { useSwipeDownToDismiss } from './MobileNav'
+import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 
 type HistoryEntry = {
   page_id: string
@@ -78,9 +78,10 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
 
   const contentRef = useRef<HTMLDivElement>(null)
   const swipe = useSwipeDownToDismiss(onClose, contentRef)
+  const backdropRef = useBackgroundScrollLock()
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+    <div ref={backdropRef} className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
         ref={swipe.sheetRef}
         className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[480px] md:mx-4 overflow-hidden flex flex-col"
@@ -104,7 +105,7 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Aucun historique pour l'instant.</p>
           </div>
         ) : (
-          <div ref={contentRef} className="overflow-y-auto flex-1" style={{ maxHeight: '60vh' }}>
+          <div ref={contentRef} className="overflow-y-auto overscroll-contain flex-1" style={{ maxHeight: '60vh' }}>
             {groups.map(group => (
               <div key={group.day}>
                 <p className="px-5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
