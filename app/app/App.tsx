@@ -1332,7 +1332,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       {noteDrawer && (
         <div
           className={drawerClosing ? 'note-drawer-backdrop-out fixed inset-0 z-40' : 'note-drawer-backdrop fixed inset-0 z-40'}
-          style={{ background: 'rgba(0,0,0,0.35)', pointerEvents: drawerClosing ? 'none' : 'auto' }}
+          style={{
+            // S'éclaircit à mesure que la feuille descend, comme une modale iOS.
+            background: `rgba(0,0,0,${(0.35 * Math.max(0, 1 - swipeCloseNote.dragY / 260)).toFixed(3)})`,
+            pointerEvents: drawerClosing ? 'none' : 'auto',
+          }}
           onClick={() => closeNoteAnimated()}
         />
       )}
@@ -1353,7 +1357,16 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           borderTopLeftRadius: drawerExpanded ? 0 : 16,
           borderTopRightRadius: drawerExpanded ? 0 : 16,
           boxShadow: '0 -10px 32px rgba(0,0,0,0.28)',
-          transition: 'top 260ms cubic-bezier(0.32, 0.72, 0, 1), border-radius 200ms ease',
+          // C'est tout le conteneur qui suit le doigt : le transform du geste
+          // vivait sur le panneau intérieur, hérité de la vue plein écran où
+          // les deux se confondaient. En drawer, ce conteneur est la feuille
+          // visible (fond, coins arrondis, ombre) et il est `overflow: hidden` :
+          // ne déplacer que l'intérieur faisait glisser le contenu dans une
+          // boîte immobile — la feuille semblait figée sous le doigt.
+          transform: swipeCloseNote.dragY > 0 ? `translateY(${swipeCloseNote.dragY}px)` : undefined,
+          transition: swipeCloseNote.dragging
+            ? 'none'
+            : 'top 260ms cubic-bezier(0.32, 0.72, 0, 1), border-radius 200ms ease, transform 200ms ease',
         } : undefined}
         onTouchStart={onSwipeTouchStart} onTouchEnd={onSwipeTouchEnd}>
         {/* Panneau gauche */}
@@ -1366,7 +1379,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             rebondir nativement (overflow-y-auto) est fragile sur iOS ; les
             deux responsabilités doivent être portées par deux nœuds
             distincts. */}
-        <div ref={swipeCloseNote.sheetRef} className="flex-1 flex flex-col min-w-0 overflow-hidden" style={swipeCloseNote.style}>
+        <div ref={swipeCloseNote.sheetRef} className="flex-1 flex flex-col min-w-0 overflow-hidden"
+          style={noteDrawer ? { overscrollBehaviorY: 'contain' } : swipeCloseNote.style}>
         {/* Poignée du drawer : zone de préhension évidente pour le swipe down
             (hors de noteBodyRef, donc le geste y est armé sans condition). */}
         {noteDrawer && (
