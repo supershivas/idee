@@ -141,6 +141,11 @@ export function useSwipeDownToDismiss(
 
   return {
     sheetRef,
+    // Exposés pour les appelants qui déplacent un autre nœud que la feuille
+    // (le drawer de note déplace tout son conteneur) ou qui suivent le geste
+    // autrement (fondu du backdrop proportionnel à la distance).
+    dragY,
+    dragging,
     // `transform: none` au repos (pas `translateY(0px)`) : un transform, même
     // nul, fait du panneau le bloc conteneur de TOUS ses descendants
     // `position: fixed` (modales lien/tableau/emoji/partage/historique, menus
