@@ -138,6 +138,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     else setSelected(null)
   }, noteBodyRef, mainScrollRef)
   const [scrolledPast, setScrolledPast] = useState(false)
+  // Sortie animée du drawer mobile : la note reste montée le temps que la
+  // feuille redescende.
+  const [drawerClosing, setDrawerClosing] = useState(false)
+  const drawerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (drawerCloseTimerRef.current) clearTimeout(drawerCloseTimerRef.current) }, [])
   const isMobile = useIsMobile()
   const toggleFavorite = useToggleFavorite(pages, setPages)
   const { saveState, queueSave } = usePageSaver(userId, pages)
@@ -905,9 +910,29 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const showingJournalDesktop = !isMobile && showJournal && !selected
   // Note présentée en drawer par-dessus la liste (mobile uniquement)
   const noteDrawer = NOTE_DRAWER_MOBILE && isMobile && !!selected
-  function closeNote() {
+  function doCloseNote() {
     if (selected?.type === 'journal') { setSelected(null); setShowJournal(true) }
     else setSelected(null)
+  }
+  // Fermeture au tap (backdrop, « ← Pages ») : on joue d'abord la sortie du
+  // drawer, puis on démonte. La fermeture au swipe, elle, reste immédiate —
+  // le doigt a déjà descendu la feuille, rejouer une animation depuis le haut
+  // la ferait remonter d'un cran avant de partir.
+  // Écran qui reste derrière le drawer (liste ou journal) : il recule
+  // légèrement en carte arrondie — profondeur du geste, et vraie zone de
+  // backdrop à taper pour fermer.
+  const behindDrawerTransition = 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)'
+  const behindDrawerStyle: React.CSSProperties = noteDrawer && !drawerClosing
+    ? { transform: 'scale(0.94)', transformOrigin: 'top center', borderRadius: 14, overflow: 'hidden', transition: behindDrawerTransition }
+    : { transition: behindDrawerTransition }
+  function closeNoteAnimated() {
+    if (!noteDrawer) { doCloseNote(); return }
+    setDrawerClosing(true)
+    drawerCloseTimerRef.current = setTimeout(() => {
+      drawerCloseTimerRef.current = null
+      setDrawerClosing(false)
+      doCloseNote()
+    }, 200)
   }
 
   function closeSplit() {
@@ -1211,7 +1236,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
 
       {/* ── Mobile : vue liste ── */}
       {isMobile && (NOTE_DRAWER_MOBILE || !selected) && !showJournal && (
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden" style={behindDrawerStyle}>
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
             onSelect={p => { selectPage(p); setShowJournal(false) }}
@@ -1233,8 +1258,9 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       )}
 
       {/* ── Mobile : vue journal ── */}
-      {isMobile && showJournal && !selected && (
-        <div ref={swipeCloseJournal.sheetRef} className="flex-1 flex flex-col overflow-hidden" style={swipeCloseJournal.style}>
+      {isMobile && showJournal && (NOTE_DRAWER_MOBILE || !selected) && (
+        <div ref={swipeCloseJournal.sheetRef} className="flex-1 flex flex-col overflow-hidden"
+          style={{ ...swipeCloseJournal.style, ...behindDrawerStyle }}>
           <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
             <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
           </div>
@@ -1291,18 +1317,21 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           ferme la note au tap, comme une modale bottom sheet. */}
       {noteDrawer && (
         <div
-          className="note-drawer-backdrop fixed inset-0 z-40"
-          style={{ background: 'rgba(0,0,0,0.35)' }}
-          onClick={closeNote}
+          className={drawerClosing ? 'note-drawer-backdrop-out fixed inset-0 z-40' : 'note-drawer-backdrop fixed inset-0 z-40'}
+          style={{ background: 'rgba(0,0,0,0.35)', pointerEvents: drawerClosing ? 'none' : 'auto' }}
+          onClick={() => closeNoteAnimated()}
         />
       )}
-      <div className={`${(isMobile && !selected) || showingJournalDesktop ? 'hidden' : ''} ${noteDrawer ? 'note-drawer' : ''} flex-1 flex overflow-hidden min-w-0`}
+      <div className={`${(isMobile && !selected) || showingJournalDesktop ? 'hidden' : ''} ${noteDrawer ? (drawerClosing ? 'note-drawer-out' : 'note-drawer') : ''} flex-1 flex overflow-hidden min-w-0`}
         style={noteDrawer ? {
           position: 'fixed',
           left: 0,
           right: 0,
           bottom: 0,
-          top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          // Laisse une bande de la liste visible derrière : sans elle, le
+          // drawer est indiscernable d'une vue plein écran et il ne reste
+          // presque rien à taper pour fermer.
+          top: 'calc(env(safe-area-inset-top, 0px) + 44px)',
           zIndex: 41,
           background: 'var(--card-bg)',
           borderTopLeftRadius: 16,
@@ -1402,10 +1431,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 onAnimationEnd={() => setJustCreatedId(null)}
               >
                 <MobileTopBar
-                  onBack={() => {
-                    if (selected.type === 'journal') { setSelected(null); setShowJournal(true) }
-                    else setSelected(null)
-                  }}
+                  onBack={() => closeNoteAnimated()}
                   backLabel={selected.type === 'journal' ? 'Journal' : 'Pages'}
                   saveState={saveState}
                   safeTop={!noteDrawer}

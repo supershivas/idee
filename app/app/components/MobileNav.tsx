@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Page, SaveState } from '../types'
 import { SaveIndicator } from './SaveIndicator'
 import { tiptapToText, getSnippet, matchesQuery, Highlighted } from '../search'
@@ -29,7 +29,16 @@ export function useSwipeDownToDismiss(
   contentRef?: React.RefObject<HTMLElement | null>,
   scrollRef?: React.RefObject<HTMLElement | null>
 ) {
-  const sheetRef = useRef<HTMLDivElement | null>(null)
+  // Ref-callback (et non useRef) : l'élément est stocké dans un state, ce qui
+  // ré-exécute l'effet d'attachement dès qu'il apparaît ou change. Avec une
+  // ref classique, un panneau déjà présent dans l'arbre mais pas encore
+  // attaché au DOM au moment où l'effet tourne (remontage StrictMode,
+  // rendu client après hydratation) laissait `sheetRef.current` à null :
+  // l'effet sortait sans rien écouter et, ses dépendances ne changeant
+  // jamais, ne réessayait plus — le geste restait mort pour toute la session.
+  // C'était le cas de la note ouverte, dont le panneau est monté avec l'app.
+  const [sheetEl, setSheetEl] = useState<HTMLDivElement | null>(null)
+  const sheetRef = useCallback((node: HTMLDivElement | null) => { setSheetEl(node) }, [])
   const startRef = useRef<{ x: number; y: number } | null>(null)
   const dirRef = useRef<'horizontal' | 'vertical' | null>(null)
   const armedRef = useRef(false)
@@ -48,7 +57,7 @@ export function useSwipeDownToDismiss(
   const FLICK_VELOCITY = 0.15 // px/ms
 
   useEffect(() => {
-    const el = sheetRef.current
+    const el = sheetEl
     if (!el) return
 
     function onTouchStart(e: TouchEvent) {
@@ -128,15 +137,29 @@ export function useSwipeDownToDismiss(
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [contentRef, scrollRef])
+  }, [sheetEl, contentRef, scrollRef])
 
   return {
     sheetRef,
+    // `transform: none` au repos (pas `translateY(0px)`) : un transform, même
+    // nul, fait du panneau le bloc conteneur de TOUS ses descendants
+    // `position: fixed` (modales lien/tableau/emoji/partage/historique, menus
+    // du drag handle, contrôles de tableau) — leurs coordonnées calculées à
+    // partir du viewport se retrouvent alors décalées, et un `inset-0` est
+    // rogné aux dimensions du panneau au lieu de couvrir l'écran. Invisible
+    // tant que le panneau occupait tout l'écran (décalage nul), mais cassant
+    // dès qu'il est présenté en drawer (décalé vers le bas). Pendant le drag
+    // le décalage revient, le temps du geste : aucune de ces surfaces n'est
+    // ouverte à ce moment-là.
     // overscrollBehaviorY: 'contain' en filet de sécurité CSS — empêche le
     // rebond natif de remonter la chaîne de scroll même dans les cas où
     // preventDefault arriverait trop tard (ex. Safari, cf. commentaire dans
     // onTouchMove).
-    style: { transform: `translateY(${dragY}px)`, transition: dragging ? 'none' : 'transform 200ms ease', overscrollBehaviorY: 'contain' as const },
+    style: {
+      transform: dragY === 0 && !dragging ? 'none' : `translateY(${dragY}px)`,
+      transition: dragging ? 'none' : 'transform 200ms ease',
+      overscrollBehaviorY: 'contain' as const,
+    },
   }
 }
 
