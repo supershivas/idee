@@ -1,7 +1,7 @@
 'use client'
 import { useRef } from 'react'
 import { Page } from '../types'
-import { useSwipeDownToDismiss } from './MobileNav'
+import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 
 function getDueDate(page: Page): string | null {
   const tag = (page.tags || []).find(t => t.startsWith('due:'))
@@ -30,6 +30,7 @@ export default function RecentView({ pages, onSelect, onClose }: {
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const swipe = useSwipeDownToDismiss(onClose, contentRef)
+  const backdropRef = useBackgroundScrollLock()
   const now = Date.now()
   const recent = [...pages]
     .filter(p => !p.deleted_at)
@@ -68,7 +69,7 @@ export default function RecentView({ pages, onSelect, onClose }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+    <div ref={backdropRef} className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div ref={swipe.sheetRef} className="rounded-t-2xl md:rounded-2xl shadow-xl w-full md:w-[560px] md:mx-4 overflow-hidden flex flex-col"
         style={{ background: 'var(--card-bg)', maxHeight: '90vh', ...swipe.style }}
         onClick={e => e.stopPropagation()}>
@@ -79,7 +80,7 @@ export default function RecentView({ pages, onSelect, onClose }: {
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
             style={{ color: 'var(--text-muted)' }}>✕</button>
         </div>
-        <div ref={contentRef} className="flex-1 overflow-y-auto py-2">
+        <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain py-2">
       {overdue.length > 0 && (
         <div className="mb-4">
           <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#ef4444' }}>En retard</p>

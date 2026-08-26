@@ -50,9 +50,16 @@ export function useSwipeDownToDismiss(
   const lastPointRef = useRef<{ y: number; t: number } | null>(null)
   const [dragY, setDragY] = useState(0)
   const [dragging, setDragging] = useState(false)
+  // Sortie animée : au relâchement, la feuille finit sa course vers le bas
+  // depuis le point où le doigt l'a laissée, au lieu de disparaître d'un coup.
+  const [closing, setClosing] = useState(false)
+  const closingRef = useRef(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current) }, [])
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   const THRESHOLD = 56
+  const CLOSE_ANIM_MS = 220
   const FLICK_MIN_DISTANCE = 32
   const FLICK_VELOCITY = 0.15 // px/ms
 
@@ -61,6 +68,7 @@ export function useSwipeDownToDismiss(
     if (!el) return
 
     function onTouchStart(e: TouchEvent) {
+      if (closingRef.current) return
       const t = e.touches[0]
       startRef.current = { x: t.clientX, y: t.clientY }
       dirRef.current = null
@@ -125,8 +133,20 @@ export function useSwipeDownToDismiss(
       prevPointRef.current = null
       lastPointRef.current = null
       setDragging(false)
-      setDragY(0)
-      if (shouldClose) onCloseRef.current()
+      if (!shouldClose) { setDragY(0); return }
+      // La feuille poursuit jusqu'en bas de sa propre hauteur (donc hors de
+      // l'écran, qu'elle soit ancrée en bas comme une modale ou décalée du
+      // haut comme le drawer), puis on démonte.
+      closingRef.current = true
+      setClosing(true)
+      setDragY((el as HTMLElement).getBoundingClientRect().height || window.innerHeight)
+      closeTimerRef.current = setTimeout(() => {
+        closeTimerRef.current = null
+        closingRef.current = false
+        setClosing(false)
+        setDragY(0)
+        onCloseRef.current()
+      }, CLOSE_ANIM_MS)
     }
 
     el.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -146,6 +166,7 @@ export function useSwipeDownToDismiss(
     // autrement (fondu du backdrop proportionnel à la distance).
     dragY,
     dragging,
+    closing,
     // `transform: none` au repos (pas `translateY(0px)`) : un transform, même
     // nul, fait du panneau le bloc conteneur de TOUS ses descendants
     // `position: fixed` (modales lien/tableau/emoji/partage/historique, menus
@@ -162,10 +183,57 @@ export function useSwipeDownToDismiss(
     // onTouchMove).
     style: {
       transform: dragY === 0 && !dragging ? 'none' : `translateY(${dragY}px)`,
-      transition: dragging ? 'none' : 'transform 200ms ease',
+      transition: dragging
+        ? 'none'
+        : closing
+          ? `transform ${CLOSE_ANIM_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`
+          : 'transform 200ms ease',
       overscrollBehaviorY: 'contain' as const,
     },
   }
+}
+
+// Isole l'arrière-plan pendant qu'une modale est ouverte : le document ne
+// défile plus, et un glissement sur la zone sombre (hors de la feuille) ne
+// fait plus bouger ce qu'il y a derrière — sans preventDefault non passif,
+// le navigateur applique le geste au premier conteneur défilable qu'il
+// trouve, c'est-à-dire à la vue restée sous la modale.
+// Ref-callback, comme `sheetRef` : une ref classique peut encore être nulle
+// quand l'effet tourne, et l'écouteur ne serait jamais posé.
+export function useBackgroundScrollLock() {
+  const [backdropEl, setBackdropEl] = useState<HTMLDivElement | null>(null)
+  const backdropRef = useCallback((node: HTMLDivElement | null) => { setBackdropEl(node) }, [])
+
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previous }
+  }, [])
+
+  useEffect(() => {
+    const el = backdropEl
+    if (!el) return
+    // On annule le défilement natif pour tout geste qui ne part pas d'une
+    // zone réellement défilable de la modale : le fond sombre, mais aussi
+    // l'en-tête, la poignée, les boutons. Sans ça, iOS applique le geste à ce
+    // qu'il trouve derrière (ou fait rebondir la page entière). Un
+    // preventDefault n'arrête pas la propagation : le geste de fermeture,
+    // lui, continue de recevoir ses événements.
+    function onTouchMove(e: TouchEvent) {
+      let node = e.target as HTMLElement | null
+      while (node && node !== el) {
+        const style = getComputedStyle(node)
+        const scrolls = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight
+        if (scrolls) return
+        node = node.parentElement
+      }
+      e.preventDefault()
+    }
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onTouchMove)
+  }, [backdropEl])
+
+  return backdropRef
 }
 
 function MobileSearchOverlay({ pages, onSelect, onClose }: {
