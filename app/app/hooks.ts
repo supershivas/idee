@@ -139,43 +139,26 @@ export function useIsMobile() {
   return isMobile
 }
 
-// Hauteur réservée à la barre d'accessoires que iOS pose au-dessus du clavier
-// (chevrons précédent/suivant + « OK »). Depuis iOS 26 c'est une pastille
-// flottante : elle recouvre le contenu sans être déduite de la hauteur
-// rapportée par `visualViewport`, donc une barre calée sur ce seul offset
-// passe dessous. iOS n'expose sa hauteur nulle part — 60px = ~40px de haut
-// mesurés sur iPhone plus les ~17px qui la séparent du clavier. C'est la
-// seule valeur à ajuster si Apple la redimensionne.
-const IOS_KEYBOARD_ACCESSORY_PX = 60
-
-function isIOSLike() {
-  if (typeof navigator === 'undefined') return false
-  return /iP(hone|ad|od)/.test(navigator.userAgent) ||
-    // iPadOS se présente comme un Mac, mais avec du tactile
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
-
 // Où poser une barre flottante pour qu'elle reste visible juste au-dessus du
-// clavier — et au-dessus de la barre d'accessoires iOS.
+// clavier.
 //
 // On s'ancre sur le bas de la zone réellement visible (`offsetTop + height`
-// du visualViewport) plutôt que sur une hauteur de clavier déduite. Les deux
-// comportements d'iOS sont alors couverts sans distinction :
-//   - onglet Safari : le clavier recouvre la page, `height` diminue ;
-//   - PWA installée : le clavier REDIMENSIONNE la page, `height` reste égal
-//     à `innerHeight` et la hauteur de clavier calculée vaut 0 — c'est le cas
-//     qui laissait la barre collée au ras du clavier, sous la pastille iOS.
-// `offsetTop` couvre en prime le décalage qu'iOS applique à la page pour
+// du visualViewport), ce qui couvre sans distinction les deux comportements
+// d'iOS — clavier qui recouvre la page (onglet Safari, `height` diminue) et
+// clavier qui la REDIMENSIONNE (PWA installée, `height` reste égal à
+// `innerHeight`) — ainsi que le décalage qu'iOS applique à la page pour
 // amener le curseur au-dessus du clavier.
 //
+// Aucune marge n'est réservée pour la barre d'accessoires iOS (chevrons +
+// « OK ») : mesuré sur iPhone, le bas rapporté par `visualViewport` est déjà
+// situé au-dessus d'elle. Lui ajouter une marge la comptait deux fois et
+// envoyait la barre flotter au milieu de l'écran.
+//
 // `bottom` est mesuré depuis le haut du viewport de mise en page (donc
-// utilisable tel quel avec `position: fixed; top:`), `hidden` est ce qui est
-// masqué en dessous (0 quand la page a été redimensionnée), et `accessory`
-// la place à réserver pour la barre iOS.
+// utilisable tel quel avec `position: fixed; top:`) et `hidden` est ce qui
+// est masqué en dessous (0 quand la page a été redimensionnée).
 export function useKeyboardBarAnchor() {
   const [rect, setRect] = useState<{ bottom: number; hidden: number } | null>(null)
-  const [iOS, setIOS] = useState(false)
-  useEffect(() => { setIOS(isIOSLike()) }, [])
 
   useEffect(() => {
     const vv = window.visualViewport
@@ -198,10 +181,6 @@ export function useKeyboardBarAnchor() {
   return {
     bottom: rect?.bottom ?? null,
     hidden: rect?.hidden ?? 0,
-    // Appliquée dès que la barre est affichée : sur iOS elle ne l'est que
-    // pendant l'édition, donc clavier ouvert et barre d'accessoires présente.
-    // On ne peut pas la déduire d'une mesure — iOS ne l'expose pas.
-    accessory: iOS ? IOS_KEYBOARD_ACCESSORY_PX : 0,
   }
 }
 
