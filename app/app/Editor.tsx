@@ -539,7 +539,10 @@ Image.extend({
     }
   }
 
-  const Sep = () => <div className="w-px self-stretch flex-shrink-0 mx-0.5" style={{ background: 'var(--sidebar-border)' }} />
+  // Trait court et centré plutôt que pleine hauteur : dans la pastille
+  // mobile, un séparateur pleine hauteur la découpe en segments et fait
+  // lourd.
+  const Sep = () => <div className="w-px self-center flex-shrink-0 mx-1" style={{ height: 18, background: 'var(--sidebar-border)', opacity: 0.7 }} />
 
   const toolbarMobile = (
     <>
@@ -550,6 +553,8 @@ Image.extend({
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} label="`·`" title="Code" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
@@ -561,6 +566,33 @@ Image.extend({
       <ToolBtn
         onClick={() => editor?.isActive('table') ? setShowTableSheet(true) : editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
         active={editor?.isActive('table')} label="⊞" title="Tableau" />
+      <Sep />
+      {/* Couleurs de pill : n'existaient que dans la barre de sélection, donc
+          inatteignables sur mobile depuis qu'elle y est désactivée. */}
+      {PILL_COLORS.map(c => {
+        const isActive = editor?.isActive('pill', { color: c.id })
+        return (
+          <button
+            key={c.id}
+            title={`Surligner ${c.id}`}
+            onClick={() => {
+              if (isActive) editor?.chain().focus().unsetMark('pill').run()
+              else editor?.chain().focus().setMark('pill', { color: c.id }).run()
+            }}
+            className="flex items-center justify-center flex-shrink-0"
+            style={{ minWidth: 30, minHeight: 40 }}
+          >
+            <span style={{
+              width: 15, height: 15, borderRadius: '50%', background: c.swatch, display: 'block',
+              border: isActive ? '2px solid var(--sidebar-fg)' : '1.5px solid rgba(255,255,255,0.25)',
+              transform: isActive ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s',
+            }} />
+          </button>
+        )
+      })}
+      {editor?.isActive('pill') && (
+        <ToolBtn onClick={() => editor?.chain().focus().unsetMark('pill').run()} label="×" title="Retirer le surlignage" />
+      )}
     </>
   )
 
@@ -599,6 +631,12 @@ Image.extend({
           editor={editor}
           pluginKey="formatMenu"
           shouldShow={({ editor, state }) => {
+            // Sur mobile, une barre flottant près de la sélection est perdue
+            // d'avance : iOS pose son menu Couper/Copier/Coller exactement au
+            // même endroit, et la largeur d'un téléphone ne suffit pas — les
+            // couleurs sortaient de l'écran. Tout passe par la barre ancrée
+            // au-dessus du clavier, qui a désormais les mêmes actions.
+            if (isMobile) return false
             const { selection } = state
             const { empty } = selection
             // Sélection de texte (y compris dans une cellule) → mise en forme.
@@ -721,7 +759,7 @@ Image.extend({
 {/* Assez de marge sous le texte pour que sa dernière ligne puisse toujours
           remonter au-dessus du clavier, de la barre d'accessoires iOS et de
           notre barre de style — sinon la fin d'une note reste inatteignable. */}
-      <div style={isMobile && editing ? { paddingBottom: kbAnchor.hidden + 56 } : undefined}>
+      <div style={isMobile && editing ? { paddingBottom: kbAnchor.hidden + 64 } : undefined}>
         <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
       </div>
 
@@ -733,21 +771,21 @@ Image.extend({
           l'appui ne sorte pas du champ (sinon le clavier se referme et la
           barre s'en va sous le doigt). */}
       {isMobile && editing && (
-        <div className="editor-toolbar flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto"
+        <div className="editor-toolbar editor-toolbar-pill flex items-center gap-0.5 px-1.5 flex-nowrap overflow-x-auto"
           onMouseDown={e => e.preventDefault()}
           style={{
             position: 'fixed',
-            left: 0,
-            right: 0,
+            left: 8,
+            right: 8,
             // Ancrée par son bas sur le bas de la zone visible (d'où le
             // translate) : `top` seul suffit alors, quelle que soit la
-            // hauteur réelle de la barre.
+            // hauteur réelle de la barre. Les 8px du translate la décollent
+            // de la barre d'accessoires iOS posée juste en dessous.
             ...(kbAnchor.bottom != null
-              ? { top: kbAnchor.bottom, transform: 'translateY(-100%)' }
-              : { bottom: 0 }),
+              ? { top: kbAnchor.bottom, transform: 'translateY(calc(-100% - 8px))' }
+              : { bottom: 8 }),
             zIndex: 45,
-            minHeight: '48px',
-            paddingBottom: kbAnchor.hidden > 0 ? 0 : 'env(safe-area-inset-bottom, 0px)',
+            minHeight: '40px',
             transition: 'top 0.2s ease',
           }}>
           {toolbarMobile}
