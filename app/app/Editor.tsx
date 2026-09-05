@@ -721,7 +721,7 @@ Image.extend({
 {/* Assez de marge sous le texte pour que sa dernière ligne puisse toujours
           remonter au-dessus du clavier, de la barre d'accessoires iOS et de
           notre barre de style — sinon la fin d'une note reste inatteignable. */}
-      <div style={isMobile && editing ? { paddingBottom: kbAnchor.hidden + kbAnchor.accessory + 56 } : undefined}>
+      <div style={isMobile && editing ? { paddingBottom: kbAnchor.hidden + 56 } : undefined}>
         <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
       </div>
 
@@ -743,11 +743,11 @@ Image.extend({
             // translate) : `top` seul suffit alors, quelle que soit la
             // hauteur réelle de la barre.
             ...(kbAnchor.bottom != null
-              ? { top: kbAnchor.bottom - kbAnchor.accessory, transform: 'translateY(-100%)' }
+              ? { top: kbAnchor.bottom, transform: 'translateY(-100%)' }
               : { bottom: 0 }),
             zIndex: 45,
             minHeight: '48px',
-            paddingBottom: kbAnchor.hidden > 0 || kbAnchor.accessory > 0 ? 0 : 'env(safe-area-inset-bottom, 0px)',
+            paddingBottom: kbAnchor.hidden > 0 ? 0 : 'env(safe-area-inset-bottom, 0px)',
             transition: 'top 0.2s ease',
           }}>
           {toolbarMobile}
