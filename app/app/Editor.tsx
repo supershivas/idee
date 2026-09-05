@@ -64,10 +64,12 @@ import { createClient } from '@/lib/supabase/client'
 
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
   return (
+    // Dimensions en CSS (`.toolbar-btn`) et non en style inline : la pastille
+    // mobile a besoin de les resserrer pour sa rangée d'options, ce qu'un
+    // style inline rendrait impossible sans `!important`.
     <button onClick={onClick} title={title}
       className={`toolbar-btn flex items-center justify-center rounded text-sm font-medium transition-colors flex-shrink-0
-        ${active ? 'is-active' : ''}`}
-      style={{ minWidth: '36px', minHeight: '40px', padding: '0 8px' }}>
+        ${active ? 'is-active' : ''}`}>
       {label}
     </button>
   )
@@ -316,8 +318,12 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   // un bouton (qui sort brièvement du champ) la fasse disparaître sous le
   // doigt.
   const [editing, setEditing] = useState(false)
+  // Pastille mobile : 7 actions courantes visibles, le reste derrière « … ».
+  const [moreTools, setMoreTools] = useState(false)
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (blurTimerRef.current) clearTimeout(blurTimerRef.current) }, [])
+  // On repart replié à chaque nouvelle session d'édition.
+  useEffect(() => { if (!editing) setMoreTools(false) }, [editing])
   function onEditorFocus() {
     if (blurTimerRef.current) { clearTimeout(blurTimerRef.current); blurTimerRef.current = null }
     setEditing(true)
@@ -542,33 +548,41 @@ Image.extend({
   // Trait court et centré plutôt que pleine hauteur : dans la pastille
   // mobile, un séparateur pleine hauteur la découpe en segments et fait
   // lourd.
-  const Sep = () => <div className="w-px self-center flex-shrink-0 mx-1" style={{ height: 18, background: 'var(--sidebar-border)', opacity: 0.7 }} />
+  const Sep = () => <div className="toolbar-sep w-px self-center flex-shrink-0 mx-1" style={{ height: 18, background: 'var(--sidebar-border)', opacity: 0.7 }} />
 
-  const toolbarMobile = (
+  // Ordre d'usage : ce qu'on applique le plus souvent en écrivant une note
+  // reste visible, le reste attend derrière « … » — une pastille de 19
+  // actions obligeait à la faire défiler pour atteindre la moitié d'entre
+  // elles.
+  const toolbarMobilePrimary = (
     <>
       <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} label="`·`" title="Code" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
       <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
-      <Sep />
       <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien" />
-      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
+    </>
+  )
+
+  const toolbarMobileSecondary = (
+    <>
+      <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} label="`·`" title="Code" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
       <Sep />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
+      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
       <ToolBtn
         onClick={() => editor?.isActive('table') ? setShowTableSheet(true) : editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
         active={editor?.isActive('table')} label="⊞" title="Tableau" />
       <Sep />
-      {/* Couleurs de pill : n'existaient que dans la barre de sélection, donc
-          inatteignables sur mobile depuis qu'elle y est désactivée. */}
+      {/* Couleurs de surlignage : n'existaient que dans la barre de sélection,
+          donc inatteignables sur mobile depuis qu'elle y est désactivée. */}
       {PILL_COLORS.map(c => {
         const isActive = editor?.isActive('pill', { color: c.id })
         return (
@@ -579,12 +593,11 @@ Image.extend({
               if (isActive) editor?.chain().focus().unsetMark('pill').run()
               else editor?.chain().focus().setMark('pill', { color: c.id }).run()
             }}
-            className="flex items-center justify-center flex-shrink-0"
-            style={{ minWidth: 30, minHeight: 40 }}
+            className="toolbar-swatch flex items-center justify-center flex-shrink-0"
           >
             <span style={{
               width: 15, height: 15, borderRadius: '50%', background: c.swatch, display: 'block',
-              border: isActive ? '2px solid var(--sidebar-fg)' : '1.5px solid rgba(255,255,255,0.25)',
+              border: isActive ? '2px solid var(--text-primary)' : '1.5px solid var(--border)',
               transform: isActive ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s',
             }} />
           </button>
@@ -771,7 +784,7 @@ Image.extend({
           l'appui ne sorte pas du champ (sinon le clavier se referme et la
           barre s'en va sous le doigt). */}
       {isMobile && editing && (
-        <div className="editor-toolbar editor-toolbar-pill flex items-center gap-0.5 px-1.5 flex-nowrap overflow-x-auto"
+        <div className={`editor-toolbar editor-toolbar-pill flex items-center gap-0.5 px-1.5 ${moreTools ? 'is-expanded' : 'flex-nowrap overflow-x-auto'}`}
           onMouseDown={e => e.preventDefault()}
           style={{
             position: 'fixed',
@@ -788,7 +801,19 @@ Image.extend({
             minHeight: '40px',
             transition: 'top 0.2s ease',
           }}>
-          {toolbarMobile}
+          {toolbarMobilePrimary}
+          {/* Ressort : garde le bouton d'ouverture calé à droite du rang. */}
+          <div className="flex-1 min-w-0" />
+          <ToolBtn onClick={() => setMoreTools(v => !v)} active={moreTools}
+            label={moreTools ? '⌄' : '⋯'} title={moreTools ? 'Moins d\'options' : 'Plus d\'options'} />
+          {/* Les options s'ouvrent sur leur propre rangée (`w-full` force le
+              retour à la ligne) : la rangée habituelle ne bouge pas d'un
+              pixel quand on déplie. */}
+          {moreTools && (
+            <div className="toolbar-row-more w-full flex items-center gap-0.5 flex-nowrap overflow-x-auto">
+              {toolbarMobileSecondary}
+            </div>
+          )}
         </div>
       )}
 
