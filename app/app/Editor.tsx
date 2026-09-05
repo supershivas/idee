@@ -58,7 +58,7 @@ const TypographyShortcuts = Extension.create({
   },
 })
 import { Page } from './types'
-import { useKeyboardBarOffset } from './hooks'
+import { useKeyboardBarAnchor } from './hooks'
 import { toast } from './components/Toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -308,9 +308,9 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const [headings, setHeadings] = useState<{ level: number; text: string; idx: number }[]>([])
   const [tocOpen, setTocOpen] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  // Offset qui tient compte du clavier ET de la barre d'accessoires iOS
-  // posée au-dessus (sans quoi la barre de style disparaît derrière elle).
-  const keyboardOffset = useKeyboardBarOffset()
+  // Ancrage de la barre de style : bas de la zone visible, moins la place de
+  // la barre d'accessoires iOS posée au-dessus du clavier.
+  const kbAnchor = useKeyboardBarAnchor()
   // La barre de style mobile n'a de sens que pendant l'édition : elle flotte
   // alors juste au-dessus du clavier. Le retard au blur évite qu'un appui sur
   // un bouton (qui sort brièvement du champ) la fasse disparaître sous le
@@ -721,7 +721,7 @@ Image.extend({
 {/* Assez de marge sous le texte pour que sa dernière ligne puisse toujours
           remonter au-dessus du clavier, de la barre d'accessoires iOS et de
           notre barre de style — sinon la fin d'une note reste inatteignable. */}
-      <div style={isMobile && editing ? { paddingBottom: keyboardOffset + 56 } : undefined}>
+      <div style={isMobile && editing ? { paddingBottom: kbAnchor.hidden + kbAnchor.accessory + 56 } : undefined}>
         <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
       </div>
 
@@ -739,11 +739,16 @@ Image.extend({
             position: 'fixed',
             left: 0,
             right: 0,
-            bottom: keyboardOffset,
+            // Ancrée par son bas sur le bas de la zone visible (d'où le
+            // translate) : `top` seul suffit alors, quelle que soit la
+            // hauteur réelle de la barre.
+            ...(kbAnchor.bottom != null
+              ? { top: kbAnchor.bottom - kbAnchor.accessory, transform: 'translateY(-100%)' }
+              : { bottom: 0 }),
             zIndex: 45,
             minHeight: '48px',
-            paddingBottom: keyboardOffset > 0 ? 0 : 'env(safe-area-inset-bottom, 0px)',
-            transition: 'bottom 0.2s ease',
+            paddingBottom: kbAnchor.hidden > 0 || kbAnchor.accessory > 0 ? 0 : 'env(safe-area-inset-bottom, 0px)',
+            transition: 'top 0.2s ease',
           }}>
           {toolbarMobile}
         </div>

@@ -155,37 +155,54 @@ function isIOSLike() {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
-// Hauteur à laisser libre en bas de l'écran pour qu'un élément flottant
-// reste au-dessus du clavier ET de la barre d'accessoires iOS. Vaut 0 quand
-// aucun clavier n'est ouvert.
-export function useKeyboardBarOffset() {
-  const keyboard = useKeyboardOffset()
+// Où poser une barre flottante pour qu'elle reste visible juste au-dessus du
+// clavier — et au-dessus de la barre d'accessoires iOS.
+//
+// On s'ancre sur le bas de la zone réellement visible (`offsetTop + height`
+// du visualViewport) plutôt que sur une hauteur de clavier déduite. Les deux
+// comportements d'iOS sont alors couverts sans distinction :
+//   - onglet Safari : le clavier recouvre la page, `height` diminue ;
+//   - PWA installée : le clavier REDIMENSIONNE la page, `height` reste égal
+//     à `innerHeight` et la hauteur de clavier calculée vaut 0 — c'est le cas
+//     qui laissait la barre collée au ras du clavier, sous la pastille iOS.
+// `offsetTop` couvre en prime le décalage qu'iOS applique à la page pour
+// amener le curseur au-dessus du clavier.
+//
+// `bottom` est mesuré depuis le haut du viewport de mise en page (donc
+// utilisable tel quel avec `position: fixed; top:`), `hidden` est ce qui est
+// masqué en dessous (0 quand la page a été redimensionnée), et `accessory`
+// la place à réserver pour la barre iOS.
+export function useKeyboardBarAnchor() {
+  const [rect, setRect] = useState<{ bottom: number; hidden: number } | null>(null)
   const [iOS, setIOS] = useState(false)
   useEffect(() => { setIOS(isIOSLike()) }, [])
-  return keyboard > 0 ? keyboard + (iOS ? IOS_KEYBOARD_ACCESSORY_PX : 0) : 0
-}
-
-export function useKeyboardOffset() {
-  const [offset, setOffset] = useState(0)
 
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-
     function update() {
-      const keyboardHeight = window.innerHeight - vv!.height - vv!.offsetTop
-      setOffset(Math.max(0, keyboardHeight))
+      const bottom = vv!.offsetTop + vv!.height
+      setRect({ bottom, hidden: Math.max(0, window.innerHeight - bottom) })
     }
-
+    update()
     vv.addEventListener('resize', update)
     vv.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
     return () => {
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
     }
   }, [])
 
-  return offset
+  return {
+    bottom: rect?.bottom ?? null,
+    hidden: rect?.hidden ?? 0,
+    // Appliquée dès que la barre est affichée : sur iOS elle ne l'est que
+    // pendant l'édition, donc clavier ouvert et barre d'accessoires présente.
+    // On ne peut pas la déduire d'une mesure — iOS ne l'expose pas.
+    accessory: iOS ? IOS_KEYBOARD_ACCESSORY_PX : 0,
+  }
 }
 
 export function useToggleFavorite(
