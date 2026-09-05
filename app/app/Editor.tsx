@@ -58,7 +58,7 @@ const TypographyShortcuts = Extension.create({
   },
 })
 import { Page } from './types'
-import { useKeyboardOffset } from './hooks'
+import { useKeyboardBarOffset } from './hooks'
 import { toast } from './components/Toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -308,7 +308,9 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const [headings, setHeadings] = useState<{ level: number; text: string; idx: number }[]>([])
   const [tocOpen, setTocOpen] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const keyboardOffset = useKeyboardOffset()
+  // Offset qui tient compte du clavier ET de la barre d'accessoires iOS
+  // posée au-dessus (sans quoi la barre de style disparaît derrière elle).
+  const keyboardOffset = useKeyboardBarOffset()
   // La barre de style mobile n'a de sens que pendant l'édition : elle flotte
   // alors juste au-dessus du clavier. Le retard au blur évite qu'un appui sur
   // un bouton (qui sort brièvement du champ) la fasse disparaître sous le
@@ -716,7 +718,10 @@ Image.extend({
           )}
         </div>
       )}
-<div style={isMobile && editing ? { paddingBottom: 56 } : undefined}>
+{/* Assez de marge sous le texte pour que sa dernière ligne puisse toujours
+          remonter au-dessus du clavier, de la barre d'accessoires iOS et de
+          notre barre de style — sinon la fin d'une note reste inatteignable. */}
+      <div style={isMobile && editing ? { paddingBottom: keyboardOffset + 56 } : undefined}>
         <EditorZone editor={editor} page={page} pages={pages} onNavigate={onNavigate} isMobile={isMobile} />
       </div>
 
