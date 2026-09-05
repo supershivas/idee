@@ -32,6 +32,7 @@
   --hover-bg:        rgba(0,0,0,0.04);
   --selected-bg:     #e5e7eb;
   --selected-bg-60:  rgba(229,231,235,0.6);
+  --pill-toolbar-shadow: rgba(0,0,0,0.16);
 
   /* Sidebar — toujours sombre */
   --sidebar-bg:      #1C1C1E;
@@ -117,6 +118,7 @@ html.dark {
   --hover-bg:        rgba(255,255,255,0.05);
   --selected-bg:     rgba(255,255,255,0.1);
   --selected-bg-60:  rgba(255,255,255,0.06);
+  --pill-toolbar-shadow: rgba(0,0,0,0.45);
 
   /* Sidebar dark mode (idem, toujours sombre) */
   --sidebar-bg:      #161618;
@@ -475,14 +477,17 @@ html, body {
 
 /* Barre de style mobile : pastille flottante au-dessus du clavier, dans le
    même vocabulaire visuel que celle d'iOS posée juste en dessous — coins
-   arrondis, fond légèrement translucide et flouté, ombre portée douce. */
+   arrondis, fond légèrement translucide et flouté, ombre portée douce.
+   Contrairement à la sidebar (toujours sombre), elle suit le thème de l'app :
+   posée par-dessus le texte de la note, elle doit se lire comme une surface
+   de l'app, pas comme un bloc étranger. */
 .editor-toolbar-pill {
   border-radius: 14px;
   border-top: none;
-  background: color-mix(in srgb, var(--sidebar-bg) 92%, transparent);
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
   backdrop-filter: blur(16px) saturate(160%);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 20px var(--pill-toolbar-shadow), 0 0 0 0.5px var(--border);
 }
 /* Boutons plus compacts dans la pastille que dans la barre desktop, sans
    descendre sous la zone tactile confortable. */
@@ -490,6 +495,32 @@ html, body {
   min-width: 32px;
   min-height: 36px;
   padding: 0 6px;
+  color: var(--text-secondary);
+}
+.editor-toolbar-pill .toolbar-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+.editor-toolbar-pill .toolbar-btn.is-active { background: var(--selected-bg); color: var(--text-primary); }
+.toolbar-swatch {
+  min-width: 30px;
+  min-height: 36px;
+}
+
+/* Rangée des options : boutons resserrés et séparateurs masqués, pour que les
+   dix actions et les cinq couleurs tiennent dans la largeur d'un téléphone
+   sans avoir à défiler. */
+.editor-toolbar-pill .toolbar-row-more .toolbar-btn {
+  min-width: 30px;
+  padding: 0 3px;
+}
+.editor-toolbar-pill .toolbar-row-more .toolbar-swatch { min-width: 26px; }
+.editor-toolbar-pill .toolbar-row-more .toolbar-sep { display: none; }
+
+/* Deux rangées quand les actions secondaires sont dépliées. */
+.editor-toolbar-pill.is-expanded {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  row-gap: 2px;
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 
 /* ─── Toolbar boutons ────────────────────────────────────────────────────────*/
@@ -497,6 +528,9 @@ html, body {
   color: var(--sidebar-icon);
   border-radius: 4px;
   transition: background 0.1s, color 0.1s;
+  min-width: 36px;
+  min-height: 40px;
+  padding: 0 8px;
 }
 .toolbar-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-fg); }
 .toolbar-btn.is-active { background: var(--sidebar-selected); color: var(--sidebar-selected-fg); }
