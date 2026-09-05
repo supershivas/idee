@@ -139,6 +139,32 @@ export function useIsMobile() {
   return isMobile
 }
 
+// Hauteur réservée à la barre d'accessoires que iOS pose au-dessus du clavier
+// (chevrons précédent/suivant + « OK »). Depuis iOS 26 c'est une pastille
+// flottante : elle recouvre le contenu sans être déduite de la hauteur
+// rapportée par `visualViewport`, donc une barre calée sur ce seul offset
+// passe dessous. iOS n'expose sa hauteur nulle part — 60px = ~40px de haut
+// mesurés sur iPhone plus les ~17px qui la séparent du clavier. C'est la
+// seule valeur à ajuster si Apple la redimensionne.
+const IOS_KEYBOARD_ACCESSORY_PX = 60
+
+function isIOSLike() {
+  if (typeof navigator === 'undefined') return false
+  return /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    // iPadOS se présente comme un Mac, mais avec du tactile
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+// Hauteur à laisser libre en bas de l'écran pour qu'un élément flottant
+// reste au-dessus du clavier ET de la barre d'accessoires iOS. Vaut 0 quand
+// aucun clavier n'est ouvert.
+export function useKeyboardBarOffset() {
+  const keyboard = useKeyboardOffset()
+  const [iOS, setIOS] = useState(false)
+  useEffect(() => { setIOS(isIOSLike()) }, [])
+  return keyboard > 0 ? keyboard + (iOS ? IOS_KEYBOARD_ACCESSORY_PX : 0) : 0
+}
+
 export function useKeyboardOffset() {
   const [offset, setOffset] = useState(0)
 
