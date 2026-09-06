@@ -39,8 +39,10 @@ export function Toaster() {
     <>
       <style>{`@keyframes _toast_in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
       {/* Décalé au-dessus de l'indicateur d'accueil de l'iPhone, sans quoi le
-          dernier toast se retrouve à cheval dessus. */}
-      <div className="fixed right-4 z-[300] flex flex-col gap-2 pointer-events-none"
+          dernier toast se retrouve à cheval dessus. Centré sur mobile — collé
+          au bord droit d'un écran de téléphone, il avait l'air tombé là ;
+          l'ancrage en bas à droite reste la convention sur desktop. */}
+      <div className="fixed inset-x-4 z-[300] flex flex-col items-center gap-2 pointer-events-none md:inset-x-auto md:right-4 md:items-end"
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
         {items.map(item => {
           const c = colors[item.type]

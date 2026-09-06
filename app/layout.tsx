@@ -30,6 +30,15 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <head>
+        {/* Applique le thème avant le premier rendu. Le thème est posé par une
+            classe sur <html> depuis un effet React : au démarrage à froid, la
+            page était donc peinte en clair le temps que le JS s'exécute — un
+            éclair blanc à chaque ouverture en mode sombre. Ce script bloque le
+            rendu (il est dans le <head>), donc la classe est là avant la
+            première peinture. Il ne connaît aucune couleur : elles restent
+            dans globals.css, il ne fait que basculer la classe. */}
+        <script dangerouslySetInnerHTML={{ __html: "try{var t=localStorage.getItem('idee-theme')||'system';if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}" }} />
+
         {/* Favicon standard */}
         <link rel="icon" href="/favicon-32x32.png" />
 
