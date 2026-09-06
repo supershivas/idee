@@ -38,14 +38,20 @@ export function TagBadge({ tag, onRemove, onClick }: { tag: string; onRemove?: (
 }
 
 // ─── TagsInput ────────────────────────────────────────────────────────────────
-export function TagsInput({ tags, onChange, allTags, compact, onTagClick }: {
+export function TagsInput({ tags, onChange, allTags, compact, singleLine, onTagClick }: {
   tags: string[]
   onChange: (tags: string[]) => void
   allTags?: string[]
   compact?: boolean
+  // Présentation en une seule ligne : les pastilles défilent horizontalement
+  // plutôt que de passer à la ligne, et l'ajout se fait via une dernière
+  // pastille « + tag » qui ouvre le champ. Utilisé sous le titre d'une note,
+  // où la hauteur de l'en-tête compte.
+  singleLine?: boolean
   onTagClick?: (tag: string) => void
 }) {
   const [input, setInput] = useState('')
+  const [adding, setAdding] = useState(false)
   const [focused, setFocused] = useState(false)
   const [highlightIdx, setHighlightIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -73,19 +79,34 @@ export function TagsInput({ tags, onChange, allTags, compact, onTagClick }: {
   }
 
   return (
-    <div className={compact ? 'relative' : 'relative px-6 pb-3'}>
-      <div className="flex flex-wrap items-center gap-1.5 min-h-[28px]">
+    <div className={compact || singleLine ? 'relative' : 'relative px-6 pb-3'}>
+      <div className={`flex items-center gap-1.5 min-h-[28px] ${singleLine ? 'flex-nowrap overflow-x-auto hide-scrollbar' : 'flex-wrap'}`}>
         {tags.map(tag => (
-          <TagBadge key={tag} tag={tag} onRemove={() => onChange(tags.filter(t => t !== tag))} onClick={onTagClick ? () => onTagClick(tag) : undefined} />
+          <span key={tag} className={singleLine ? 'flex-shrink-0' : undefined}>
+            <TagBadge tag={tag} onRemove={() => onChange(tags.filter(t => t !== tag))} onClick={onTagClick ? () => onTagClick(tag) : undefined} />
+          </span>
         ))}
-        <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={() => { setTimeout(() => { if (input.trim()) addTag(input); setFocused(false) }, 150) }}
-          onFocus={() => setFocused(true)}
-          placeholder={tags.length === 0 ? '+ tag' : ''}
-          className="text-xs outline-none bg-transparent min-w-0"
-          style={{ color: 'var(--text-muted)', width: input ? `${input.length + 2}ch` : tags.length === 0 ? '5ch' : '3ch' }}
-        />
+        {singleLine && !adding ? (
+          <button type="button" onClick={() => { setAdding(true); setTimeout(() => inputRef.current?.focus(), 0) }}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 transition-colors"
+            style={{ color: 'var(--text-muted)', border: '1px dashed var(--border)', background: 'transparent' }}
+            title="Ajouter un tag">
+            + tag
+          </button>
+        ) : (
+          <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={() => { setTimeout(() => { if (input.trim()) addTag(input); setFocused(false); setAdding(false) }, 150) }}
+            onFocus={() => setFocused(true)}
+            // En mode une ligne, le champ garde le repère « + tag » : après
+            // avoir validé un tag on reste dans le champ pour en saisir un
+            // autre, et sans placeholder la ligne semblait avoir perdu son
+            // bouton d'ajout.
+            placeholder={singleLine || tags.length === 0 ? '+ tag' : ''}
+            className={`text-xs outline-none bg-transparent min-w-0 ${singleLine ? 'flex-shrink-0' : ''}`}
+            style={{ color: 'var(--text-muted)', width: input ? `${input.length + 2}ch` : '5ch' }}
+          />
+        )}
       </div>
       {suggestions.length > 0 && (
         <div className="absolute left-0 top-full z-50 rounded-lg shadow-lg overflow-hidden"

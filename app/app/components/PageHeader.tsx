@@ -1,12 +1,13 @@
 'use client'
 import React, { useState, useRef, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Page, SaveState, formatSubtitle } from '../types'
+import { Page, SaveState } from '../types'
 import EmojiPicker from '../EmojiPicker'
 import { TagsInput } from './TagsView'
 import { useRelativeTime } from './JournalView'
 import { ActionsMenu } from './ActionsMenu'
 import HistoryButton from '../HistoryButton'
+import SummaryModal, { SummaryMenuItem } from './SummaryButton'
 import ExportButton from '../ExportButton'
 import ShareButton from '../ShareButton'
 import { toast } from './Toast'
@@ -156,19 +157,10 @@ function BreadcrumbInline({ pages, selected, onSelect }: { pages: Page[], select
   )
 }
 
-function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-3 py-1.5">
-      <span className="text-xs w-24 flex-shrink-0 pt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <div className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{children}</div>
-    </div>
-  )
-}
-
-function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page; onCreatedAtChange?: (iso: string) => void; onSummaryUpdate?: (summary: string | null) => void }) {
-  const [loading, setLoading] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editValue, setEditValue] = useState(page.summary || '')
+// Dates de la note, en pied du menu « … » : consultées de loin en loin, elles
+// occupaient deux lignes permanentes de l'en-tête. La date de création reste
+// modifiable (le crayon ouvre le sélecteur natif).
+function MetaDates({ page, onCreatedAtChange }: { page: Page; onCreatedAtChange?: (iso: string) => void }) {
   const createdInputRef = useRef<HTMLInputElement>(null)
   const relativeModified = useRelativeTime(page.updated_at && page.updated_at !== page.created_at ? page.updated_at : null)
 
@@ -180,93 +172,24 @@ function MetaSection({ page, onCreatedAtChange, onSummaryUpdate }: { page: Page;
     onCreatedAtChange(existing.toISOString())
   }
 
-  async function generateSummary() {
-    const textContent = (page.content || '')
-      .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
-    if (!textContent) {
-      toast('La page est vide, rien à résumer.', 'error')
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: page.content, title: page.title }),
-      })
-      let data: any = {}
-      try { data = await res.json() } catch { data = {} }
-      if (!res.ok) {
-        toast(data.error || `Erreur serveur (${res.status})`, 'error')
-        return
-      }
-      if (data.summary) {
-        await createClient().from('pages').update({ summary: data.summary }).eq('id', page.id)
-        onSummaryUpdate?.(data.summary)
-        setEditValue(data.summary)
-        setEditing(false)
-        toast('Résumé généré ✓', 'success')
-      } else {
-        toast(data.error || 'Résumé vide reçu de Mistral', 'error')
-      }
-    } catch (err) {
-      toast(`Erreur réseau : ${err instanceof Error ? err.message : String(err)}`, 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function saveSummary() {
-    const trimmed = editValue.trim()
-    await createClient().from('pages').update({ summary: trimmed || null }).eq('id', page.id)
-    onSummaryUpdate?.(trimmed || null); setEditing(false)
-  }
-
-  async function deleteSummary() {
-    await createClient().from('pages').update({ summary: null }).eq('id', page.id)
-    onSummaryUpdate?.(null); setEditValue(''); setEditing(false)
-  }
+  // Format court : dans une largeur de menu, « 5 septembre 2026 à 06:48 »
+  // partait sur trois lignes.
+  const court = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
-    <div className="px-6 pb-3 pt-1" style={{ borderBottom: '1px solid var(--border)' }}>
-      <MetaRow label="Créé le">
-        <button onClick={() => createdInputRef.current?.showPicker ? createdInputRef.current.showPicker() : createdInputRef.current?.click()}
-          className="transition-opacity hover:opacity-70" title="Modifier la date">
-          {formatSubtitle(page.created_at)} ✎
-        </button>
-        <input ref={createdInputRef} type="date" value={page.created_at ? page.created_at.slice(0, 10) : ''} onChange={handleCreatedChange} className="sr-only" tabIndex={-1} />
-      </MetaRow>
-      <MetaRow label="Modifié le">{relativeModified || formatSubtitle(page.updated_at)}</MetaRow>
-      <MetaRow label="Résumé">
-        {editing ? (
-          <div className="flex flex-col gap-1.5 w-full">
-            <textarea value={editValue} onChange={e => setEditValue(e.target.value)} autoFocus rows={3}
-              className="w-full text-xs rounded-lg px-2 py-1.5 outline-none resize-none"
-              style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
-            <div className="flex items-center gap-2">
-              <button onClick={saveSummary} className="text-xs px-2 py-1 rounded-md transition-colors" style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>Enregistrer</button>
-              <button onClick={() => { setEditing(false); setEditValue(page.summary || '') }} className="text-xs transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>Annuler</button>
-            </div>
-          </div>
-        ) : page.summary ? (
-          <div className="flex flex-col gap-1">
-            <p className="leading-relaxed">{page.summary}</p>
-            <div className="flex items-center gap-3 mt-0.5">
-              <button onClick={generateSummary} disabled={loading} className="flex items-center gap-1 text-xs transition-opacity disabled:opacity-40 opacity-50 hover:opacity-100" style={{ color: 'var(--text-muted)' }}>
-                <span className={loading ? 'animate-spin inline-block' : ''}>↻</span>{loading ? 'Génération…' : 'Régénérer'}
-              </button>
-              <button onClick={() => { setEditValue(page.summary || ''); setEditing(true) }} className="text-xs transition-opacity opacity-50 hover:opacity-100" style={{ color: 'var(--text-muted)' }}>✎ Modifier</button>
-              <button onClick={deleteSummary} className="text-xs transition-opacity opacity-50 hover:opacity-100" style={{ color: 'var(--text-muted)' }}>× Supprimer</button>
-            </div>
-          </div>
-        ) : (
-          <button onClick={generateSummary} disabled={loading || !page.content} className="transition-colors disabled:opacity-40" style={{ color: 'var(--text-faint)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}>
-            {loading ? 'Génération…' : '+ Générer un résumé'}
-          </button>
-        )}
-      </MetaRow>
-    </div>
+    <p className="text-[11px] leading-snug" style={{ color: 'var(--text-faint)' }}>
+      Créé le{' '}
+      <button
+        onClick={() => createdInputRef.current?.showPicker ? createdInputRef.current.showPicker() : createdInputRef.current?.click()}
+        className="transition-opacity hover:opacity-70 underline decoration-dotted underline-offset-2"
+        title="Modifier la date de création">
+        {court(page.created_at)}
+      </button>
+      <input ref={createdInputRef} type="date" value={page.created_at ? page.created_at.slice(0, 10) : ''}
+        onChange={handleCreatedChange} className="sr-only" tabIndex={-1} />
+      {', modifié '}
+      {relativeModified || `le ${court(page.updated_at)}`}
+    </p>
   )
 }
 
@@ -294,6 +217,9 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
   const unreadCount = useUnreadCommentsCount(page.is_shared ? page.id : null)
   const totalCommentCount = useTotalCommentsCount(page.is_shared ? page.id : null)
   const allTags = Array.from(new Set(pages.flatMap(p => p.tags || [] as string[]))).sort() as string[]
+  // Modale du résumé : montée ici et non dans le menu « … », qu'elle referme
+  // en s'ouvrant — rendue dans le menu, elle disparaîtrait avec lui.
+  const [showSummary, setShowSummary] = useState(false)
 
   return (
     <div className="flex-shrink-0">
@@ -338,10 +264,16 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
             onToggleFullWidth={!isMobile && !isJournal ? onToggleFullWidth : undefined}
             onMoveTo={isJournal ? undefined : onMoveTo}
             fullWidth={page.full_width}
+            footer={<MetaDates page={page} onCreatedAtChange={onCreatedAtChange} />}
           >
-            <HistoryButton page={page} onRestore={onRestore} />
-            <ExportButton page={page} />
-            <ShareButton page={page as any} onUpdate={onShareUpdate} />
+            {({ close }) => (
+              <>
+                <SummaryMenuItem hasSummary={!!page.summary} onClick={() => { setShowSummary(true); close() }} />
+                <HistoryButton page={page} onRestore={onRestore} />
+                <ExportButton page={page} />
+                <ShareButton page={page as any} onUpdate={onShareUpdate} />
+              </>
+            )}
           </ActionsMenu>
           {showComments && <CommentsPanel pageId={page.id} onClose={() => setShowComments(false)} />}
         </div>
@@ -377,10 +309,16 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
           onDelete={onDelete}
           onConvertToJournal={isJournal ? undefined : onConvertToJournal}
           onMoveTo={isJournal ? undefined : onMoveTo}
+          footer={<MetaDates page={page} onCreatedAtChange={onCreatedAtChange} />}
         >
-          <HistoryButton page={page} onRestore={onRestore} />
-          <ExportButton page={page} />
-          <ShareButton page={page as any} onUpdate={onShareUpdate} />
+          {({ close }) => (
+            <>
+              <SummaryMenuItem hasSummary={!!page.summary} onClick={() => { setShowSummary(true); close() }} />
+              <HistoryButton page={page} onRestore={onRestore} />
+              <ExportButton page={page} />
+              <ShareButton page={page as any} onUpdate={onShareUpdate} />
+            </>
+          )}
         </ActionsMenu>
       </div>
 
@@ -416,10 +354,16 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
         </div>
       </div>
 
-      <div className="px-6 pt-1">
-        <MetaRow label="Tags"><TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} compact onTagClick={onTagClick} /></MetaRow>
+      {showSummary && (
+        <SummaryModal page={page} onSummaryUpdate={onSummaryUpdate} onClose={() => setShowSummary(false)} />
+      )}
+
+      {/* Tags seuls sous le titre : une ligne de pastilles qui défile, terminée
+          par « + tag ». Dates et résumé sont passés dans le menu « … » — ils
+          repoussaient le texte de la note vers le bas à chaque ouverture. */}
+      <div className="px-6 pt-1 pb-3">
+        <TagsInput tags={page.tags || []} onChange={onTagsChange} allTags={allTags} singleLine onTagClick={onTagClick} />
       </div>
-      <MetaSection page={page} onCreatedAtChange={onCreatedAtChange} onSummaryUpdate={onSummaryUpdate} />
     </div>
   )
 }
