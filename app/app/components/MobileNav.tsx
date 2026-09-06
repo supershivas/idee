@@ -247,7 +247,7 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
   const inputRef = useRef<HTMLInputElement>(null)
   const [tagsExpanded, setTagsExpanded] = useState(false)
   const tagWrapRef = useRef<HTMLDivElement>(null)
-  const [tagsClipped, setTagsClipped] = useState(false)
+  const [hiddenTagCount, setHiddenTagCount] = useState(0)
 
   useEffect(() => {
     // Double tentative : immédiat + délai pour iOS qui ignore le premier focus
@@ -271,15 +271,36 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
     return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t)
   }, [pages])
 
-  // Le bouton ne s'affiche que s'il y a réellement des tags hors champ : avec
-  // trois pastilles, un « + » qui ne déplie rien serait un faux bouton. On le
-  // mesure plutôt que de le deviner d'un nombre de tags, la largeur d'une
-  // pastille dépendant du mot.
+  // Combien de tags restent hors champ : le bouton ne s'affiche que s'il y en
+  // a vraiment (avec trois pastilles, un bouton qui ne déplie rien serait un
+  // faux bouton) et il annonce le nombre. On le mesure sur le rendu plutôt que
+  // de le déduire d'un nombre de tags, la largeur d'une pastille dépendant du
+  // mot. Nouvelle mesure une fois les polices chargées : les pastilles ne
+  // s'enroulent pas pareil en police de repli.
   useEffect(() => {
-    const el = tagWrapRef.current
-    if (!el) return
-    setTagsClipped(el.scrollHeight > el.clientHeight + 1)
+    function measure() {
+      const el = tagWrapRef.current
+      if (!el) return
+      const limit = el.getBoundingClientRect().top + el.clientHeight
+      setHiddenTagCount([...el.children].filter(c => c.getBoundingClientRect().top >= limit - 1).length)
+    }
+    measure()
+    const fonts = (document as any).fonts
+    if (fonts?.ready) fonts.ready.then(measure).catch(() => {})
   }, [allTags, tagsExpanded])
+
+  // Avant toute frappe, l'écran affichait une grosse loupe et une phrase
+  // expliquant qu'on peut taper pour chercher — de la place occupée pour dire
+  // ce que le champ, déjà focalisé, dit tout seul. Les dernières pages
+  // modifiées y sont plus utiles : la page qu'on cherche est souvent celle
+  // qu'on vient de quitter.
+  const recent = useMemo(
+    () => pages
+      .filter(p => !p.deleted_at)
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, 8),
+    [pages]
+  )
 
   const pageTexts = useMemo(
     () => pages.map(function(p) { return { page: p, text: tiptapToText(p.content) } }),
@@ -327,21 +348,16 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
 
       {/* Tags, juste sous le champ : chercher par tag est une recherche comme
           une autre — elle vivait dans un bouton séparé de l'en-tête. Trois
-          rangées au plus, dépliables sur place par le bouton de droite. */}
+          rangées au plus, dépliables sur place. */}
       {allTags.length > 0 && (
-        <div className="px-4 pt-3 pb-1 flex-shrink-0 flex items-start gap-1.5">
-          {/* Le bouton est hors de la zone rognée : à l'intérieur, il passait à
-              la rangée suivante dès que les pastilles remplissaient les rangées
-              visibles, et se retrouvait donc coupé — c'est-à-dire invisible
-              précisément quand il servait à quelque chose.
-
-              Les hauteurs valent un nombre entier de rangées (une pastille fait
-              24px, l'écart 6px) : une hauteur approchée tranchait une rangée en
-              deux et laissait une bande de pastilles coupées. Déplié, on montre
-              six rangées et le reste défile — la recherche resterait sinon
+        <div className="px-4 pt-3 pb-1 flex-shrink-0">
+          {/* Les hauteurs valent un nombre entier de rangées (une pastille fait
+              24px, l'écart 6px) : une hauteur approchée tranche une rangée en
+              deux et laisse une bande de pastilles coupées. Déplié, on montre
+              six rangées et le reste défile — la recherche serait sinon
               repoussée hors de l'écran par une centaine de tags. */}
           <div ref={tagWrapRef}
-            className={`flex-1 min-w-0 flex flex-wrap gap-1.5 ${tagsExpanded ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
+            className={`flex flex-wrap gap-1.5 ${tagsExpanded ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
             style={{ maxHeight: tagsExpanded ? 'calc(6 * 24px + 5 * 6px)' : 'calc(3 * 24px + 2 * 6px)' }}>
             {allTags.map(tag => (
               <button key={tag} onClick={() => onSelectTag(tag)} className="flex-shrink-0">
@@ -349,14 +365,16 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
               </button>
             ))}
           </div>
-          {(tagsClipped || tagsExpanded) && (
+          {/* En bout de liste et sur toute la largeur, pas coincé à droite de
+              la zone : c'est la suite des pastilles, pas un réglage à côté.
+              Hors de la zone rognée, sinon il serait coupé comme le reste. */}
+          {(hiddenTagCount > 0 || tagsExpanded) && (
             <button onClick={() => setTagsExpanded(v => !v)}
-              title={tagsExpanded ? 'Réduire les tags' : 'Voir tous les tags'}
-              aria-label={tagsExpanded ? 'Réduire les tags' : 'Voir tous les tags'}
               aria-expanded={tagsExpanded}
-              className="inline-flex items-center justify-center rounded-full text-xs font-medium flex-shrink-0"
-              style={{ width: 26, height: 24, color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
-              {tagsExpanded ? '−' : '+'}
+              className="w-full mt-1.5 inline-flex items-center justify-center gap-1 rounded-full text-xs font-medium"
+              style={{ height: 24, color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
+              <i className={`ti ti-chevron-${tagsExpanded ? 'up' : 'down'}`} style={{ fontSize: '13px' }} />
+              {tagsExpanded ? 'Réduire' : `${hiddenTagCount} tag${hiddenTagCount > 1 ? 's' : ''} de plus`}
             </button>
           )}
         </div>
@@ -364,15 +382,21 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
 
       <div className="flex-1 overflow-y-auto">
         {query.length < 2 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <span className="text-3xl">🔍</span>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Tape pour chercher, ou choisis un tag</p>
-          </div>
+          recent.length > 0 && (
+            <div className="px-3 py-2">
+              <p className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                Récemment modifiées
+              </p>
+              {recent.map(page => (
+                <SearchResultRow key={page.id} page={page} snippet={null} query=""
+                  onSelect={() => { onSelect(page); onClose() }} />
+              ))}
+            </div>
+          )
         ) : results.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <span className="text-3xl">🌫️</span>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Aucun résultat pour « {query} »</p>
-          </div>
+          <p className="text-sm text-center px-6 py-10" style={{ color: 'var(--text-muted)' }}>
+            Aucun résultat pour « {query} »
+          </p>
         ) : (
           <div className="px-3 py-2">
             {noteResults.length > 0 && (
