@@ -1258,7 +1258,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             journalTab={showJournal} onTabChange={t => setShowJournal(t === 'journal')}
             onAddJournalEntry={addJournalEntry}
             onShowSettings={() => setShowSettings(true)}
-            onShowTags={() => { setTagsInitialTag(undefined); setShowTags(true) }}
             onSelectTag={tag => { setTagsInitialTag(tag); setShowTags(true) }}
             onMoveTo={id => setMoveToPageId(id)}
             onDuplicate={id => duplicatePage(id)}
