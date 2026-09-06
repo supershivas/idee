@@ -932,12 +932,14 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   // drawer, puis on démonte. La fermeture au swipe, elle, reste immédiate —
   // le doigt a déjà descendu la feuille, rejouer une animation depuis le haut
   // la ferait remonter d'un cran avant de partir.
-  // Écran qui reste derrière le drawer (liste ou journal) : il recule
-  // légèrement en carte arrondie — profondeur du geste, et vraie zone de
-  // backdrop à taper pour fermer.
+  // Écran qui reste derrière le drawer (liste ou journal). Il reculait
+  // légèrement (scale 0.94) façon feuille iOS, mais l'effet se lit surtout
+  // comme un dézoom parasite de la liste au moment d'ouvrir une note : on ne
+  // garde que les coins arrondis. La bande visible en haut du drawer suffit à
+  // donner la profondeur et à offrir une zone à taper pour fermer.
   const behindDrawerTransition = 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)'
   const behindDrawerStyle: React.CSSProperties = noteDrawer && !drawerClosing
-    ? { transform: 'scale(0.94)', transformOrigin: 'top center', borderRadius: 14, overflow: 'hidden', transition: behindDrawerTransition }
+    ? { borderRadius: 14, overflow: 'hidden', transition: behindDrawerTransition }
     : { transition: behindDrawerTransition }
   function closeNoteAnimated() {
     if (!noteDrawer) { doCloseNote(); return }

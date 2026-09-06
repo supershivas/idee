@@ -41,28 +41,55 @@ function isFontOrIconCdn(url) {
 
 // Immuable (assets hashés, fonts/icônes CDN versionnées) : on sert direct
 // depuis le cache si présent, sinon on va chercher et on met en réserve.
+//
+// `response.ok` seul ne suffit pas : une feuille de style ou une police
+// chargée depuis un autre domaine via <link> part en mode `no-cors`, et sa
+// réponse est donc *opaque* — status 0, `ok` à false — même quand le serveur
+// répond parfaitement. Les CSS des icônes Tabler et de Google Fonts
+// n'entraient donc JAMAIS en cache. Hors-ligne, ces deux <link> bloquants
+// pendaient ~12 s avant d'échouer : c'était là, et pas dans les données, que
+// se jouait la lenteur du démarrage hors-ligne.
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName)
   const cached = await cache.match(request)
   if (cached) return cached
   const response = await fetch(request)
-  if (response && response.ok) cache.put(request, response.clone())
+  if (response && (response.ok || response.type === 'opaque')) cache.put(request, response.clone())
   return response
 }
 
+// Délai au-delà duquel on préfère servir la version en cache plutôt que
+// continuer d'attendre le réseau. `navigator.onLine` ment régulièrement (wifi
+// capté mais sans accès, portail captif, réseau mobile qui ne répond pas) :
+// sans ce garde-fou, chaque requête attend son propre échec, et l'app entière
+// se traîne alors qu'elle a tout ce qu'il lui faut en cache.
+const NETWORK_TIMEOUT_MS = 2500
+
 // Contenu vivant (pages, données Supabase) : toujours essayer le réseau
-// d'abord pour rester à jour ; ne retomber sur le cache qu'hors-ligne.
+// d'abord pour rester à jour ; ne retomber sur le cache qu'hors-ligne ou
+// quand le réseau tarde trop.
 async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName)
-  try {
-    const response = await fetch(request)
+  const cached = await cache.match(request)
+
+  // Hors-ligne déclaré : inutile d'attendre l'échec, on sert le cache tout de
+  // suite. C'est ce qui rendait le démarrage hors-ligne interminable.
+  if (cached && self.navigator && self.navigator.onLine === false) return cached
+
+  const network = fetch(request).then(response => {
     if (response && response.ok) cache.put(request, response.clone())
     return response
-  } catch (err) {
-    const cached = await cache.match(request)
-    if (cached) return cached
-    throw err
-  }
+  })
+
+  // Rien en cache : on n'a pas le choix, on attend vraiment le réseau.
+  if (!cached) return network
+
+  // Sinon on rend la main au cache si le réseau échoue ou traîne — la requête
+  // continue en arrière-plan et rafraîchit le cache pour la fois suivante.
+  return Promise.race([
+    network.catch(() => cached),
+    new Promise(resolve => setTimeout(() => resolve(cached), NETWORK_TIMEOUT_MS)),
+  ])
 }
 
 self.addEventListener('fetch', event => {
