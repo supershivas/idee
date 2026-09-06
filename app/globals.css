@@ -475,6 +475,10 @@ html, body {
 }
 .editor-toolbar::-webkit-scrollbar { display: none; }
 
+/* Rangée qui défile sans barre de défilement visible (tags sous le titre). */
+.hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
 /* Barre de style mobile : pastille flottante au-dessus du clavier, dans le
    même vocabulaire visuel que celle d'iOS posée juste en dessous — coins
    arrondis, fond légèrement translucide et flouté, ombre portée douce.

@@ -30,13 +30,19 @@ function MenuButton({ icon, label, onClick, danger }: {
   )
 }
 
-export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, onMoveTo, fullWidth, children }: {
+export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, onMoveTo, fullWidth, children, footer }: {
   onDelete: () => void
   onConvertToJournal?: () => void
   onToggleFullWidth?: () => void
   onMoveTo?: () => void
   fullWidth?: boolean
-  children?: ReactNode
+  // Entrées personnalisées. Sous forme de fonction, elles reçoivent de quoi
+  // refermer le menu — utile quand l'entrée ouvre une modale rendue AILLEURS
+  // que dans le menu (une modale rendue ici disparaîtrait avec lui).
+  children?: ReactNode | ((api: { close: () => void }) => ReactNode)
+  // Bas de menu, sous un filet : informations de la note plutôt qu'actions
+  // (dates de création et de modification).
+  footer?: ReactNode
 }) {
   const [open, setOpen]       = useState(false)
   const [visible, setVisible] = useState(false)
@@ -94,7 +100,7 @@ export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, o
               : 'none',
           }}
         >
-          {children && <div className="p-1">{children}</div>}
+          {children && <div className="p-1">{typeof children === 'function' ? children({ close: () => setOpen(false) }) : children}</div>}
           {children && <div style={{ height: '1px', background: 'var(--border)' }} />}
           <div className="p-1">
             {onToggleFullWidth && (
@@ -125,6 +131,12 @@ export function ActionsMenu({ onDelete, onConvertToJournal, onToggleFullWidth, o
               danger
             />
           </div>
+          {footer && (
+            <>
+              <div style={{ height: '1px', background: 'var(--border)' }} />
+              <div className="px-3 py-2">{footer}</div>
+            </>
+          )}
         </div>
       )}
     </div>
