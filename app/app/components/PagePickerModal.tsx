@@ -129,7 +129,7 @@ export function PagePickerModal({ pages, onSelect, onClose, onCloseSplit, hideCl
               className="u-hover-bg w-full text-sm py-2 rounded-lg"
               style={{ color: 'var(--text-muted)' }}
             >
-              <i className="ti ti-layout-columns-off mr-2" />
+              <i className="ti ti-x mr-2" />
               Fermer la vue partagée
             </button>
           </div>

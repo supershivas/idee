@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Page, SaveState } from '../types'
 import { SaveIndicator } from './SaveIndicator'
 import { tiptapToText, getSnippet, matchesQuery, Highlighted } from '../search'
+import { TagBadge } from './TagsView'
 
 const MOBILE_JOURNAL_PAGE = 30
 
@@ -236,10 +237,12 @@ export function useBackgroundScrollLock() {
   return backdropRef
 }
 
-function MobileSearchOverlay({ pages, onSelect, onClose }: {
+function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag, onShowAllTags }: {
   pages: Page[]
   onSelect: (p: Page) => void
   onClose: () => void
+  onSelectTag: (tag: string) => void
+  onShowAllTags: () => void
 }) {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -256,6 +259,14 @@ function MobileSearchOverlay({ pages, onSelect, onClose }: {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
+
+  // Les plus employés d'abord : deux lignes de pastilles suffisent rarement à
+  // tout montrer, le « + » ouvre le reste.
+  const topTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    pages.forEach(p => (p.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)))
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 12).map(([t]) => t)
+  }, [pages])
 
   const pageTexts = useMemo(
     () => pages.map(function(p) { return { page: p, text: tiptapToText(p.content) } }),
@@ -301,11 +312,30 @@ function MobileSearchOverlay({ pages, onSelect, onClose }: {
         </button>
       </div>
 
+      {/* Tags principaux, juste sous le champ : chercher par tag est une
+          recherche comme une autre — elle vivait dans un bouton séparé de
+          l'en-tête. Deux lignes au plus, terminées par « + » qui ouvre la
+          liste complète. */}
+      {topTags.length > 0 && (
+        <div className="px-4 pt-3 pb-1 flex-shrink-0 flex flex-wrap gap-1.5 overflow-hidden" style={{ maxHeight: 68 }}>
+          {topTags.map(tag => (
+            <button key={tag} onClick={() => onSelectTag(tag)} className="flex-shrink-0">
+              <TagBadge tag={tag} />
+            </button>
+          ))}
+          <button onClick={onShowAllTags} title="Tous les tags"
+            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+            style={{ color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
+            +
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto">
         {query.length < 2 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2">
             <span className="text-3xl">🔍</span>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Tape pour chercher dans tes pages</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Tape pour chercher, ou choisis un tag</p>
           </div>
         ) : results.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2">
@@ -525,12 +555,12 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite, selectMode,
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onShowReview, onShowRecent, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
   onAdd: (parentId: string | null) => void
-  onShowTrash: () => void
+  onSelectTag: (tag: string) => void
   trashedCount: number
   onToggleFavorite: (id: string) => void
   onShowJournal: () => void
@@ -538,8 +568,6 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
   onAddJournalEntry: () => void
   onShowSettings: () => void
   onShowTags: () => void
-  onShowReview: () => void
-  onShowRecent: () => void
   onMoveTo: (id: string) => void
   onDuplicate: (id: string) => void
   onDeleteRequest: (id: string) => void
@@ -701,6 +729,8 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           pages={pages}
           onSelect={function(p) { onSelect(p) }}
           onClose={() => setShowSearch(false)}
+          onSelectTag={tag => { setShowSearch(false); onSelectTag(tag) }}
+          onShowAllTags={() => { setShowSearch(false); onShowTags() }}
         />
       )}
 
@@ -710,43 +740,23 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           <img src="/apple-touch-icon.png" alt="Idée" className="w-7 h-7 rounded-xl flex-shrink-0" />
           <span className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>Idée</span>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onShowTags}
-            className="w-9 h-9 flex items-center justify-center rounded-xl"
-            style={{ color: 'var(--text-muted)' }}
-            title="Tags"
-          >🏷️</button>
-          <button
-            onClick={onShowReview}
-            className="w-9 h-9 flex items-center justify-center rounded-xl"
-            style={{ color: 'var(--text-muted)' }}
-            title="Mode révision"
-          >🎲</button>
-          <button
-            onClick={onShowRecent}
-            className="w-9 h-9 flex items-center justify-center rounded-xl"
-            style={{ color: 'var(--text-muted)' }}
-            title="Vue récente"
-          >🕐</button>
-          <button
-            onClick={onShowTrash}
-            className="relative w-9 h-9 flex items-center justify-center rounded-xl"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            🗑
-            {trashedCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">
-                {trashedCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={onShowSettings}
-            className="w-9 h-9 flex items-center justify-center rounded-xl"
-            style={{ color: 'var(--text-muted)' }}
-          >⚙️</button>
-        </div>
+        {/* Une seule entrée : cinq boutons emoji en haut d'un écran de
+            téléphone faisaient barre d'outils plus que repère. Tags, révision,
+            vue récente et corbeille ont rejoint la recherche (tags) et les
+            paramètres (le reste). Icône au trait, comme sur desktop. */}
+        <button
+          onClick={onShowSettings}
+          className="relative w-9 h-9 flex items-center justify-center rounded-xl"
+          style={{ color: 'var(--text-muted)' }}
+          title="Paramètres"
+        >
+          <i className="ti ti-settings" style={{ fontSize: '19px' }} />
+          {trashedCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">
+              {trashedCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="flex px-3 gap-1 pb-2 flex-shrink-0"
@@ -924,26 +934,29 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onShowTrash
           </button>
         </div>
       ) : (
+        // Marges latérales et basses élargies, coins nettement plus ronds :
+        // collés aux bords avec un rayon de 16px, ces deux boutons juraient
+        // avec l'arrondi de l'écran de l'iPhone qui les encadre.
         <div
-          className="flex-shrink-0 flex items-stretch gap-2 px-3 pt-2"
+          className="flex-shrink-0 flex items-stretch gap-2.5 px-4 pt-3"
           style={{
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
             borderTop: '1px solid var(--border)',
             background: 'var(--app-bg)',
           }}
         >
           <button
             onClick={() => tab === 'journal' ? onAddJournalEntry() : onAdd(currentParentId)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-colors"
-            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-medium transition-colors"
+            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)', borderRadius: 26 }}
           >
             <i className={`ti ${tab === 'journal' ? 'ti-pencil' : 'ti-plus'}`} style={{ fontSize: '15px' }} />
             <span>{tab === 'journal' ? 'Nouvelle entrée' : drillStack.length > 0 ? 'Nouvelle sous-page' : 'Nouvelle page'}</span>
           </button>
           <button
             onClick={() => setShowSearch(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
-            style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}
+            className="flex items-center justify-center gap-1.5 px-4 py-3.5 text-sm font-medium transition-colors flex-shrink-0"
+            style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)', borderRadius: 26 }}
           >
             <i className="ti ti-search" style={{ fontSize: '15px' }} />
             <span>Rechercher</span>

@@ -27,13 +27,19 @@ export function useTheme() {
 }
 
 // ── SettingsPanel ─────────────────────────────────────────────────────────────
-export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, userEmail }: {
+export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, userEmail, onShowTrash, onShowReview, onShowRecent }: {
   onClose: () => void
   onLogout: () => void
   onImport: (pages: Omit<Page, 'user_id'>[]) => Promise<{ count: number; errors: number }>
   pages: Page[]
   userId: string
   userEmail?: string
+  // Écrans qui avaient chacun leur bouton en haut de l'écran d'accueil mobile
+  // (corbeille, révision, vue récente) : ils vivent désormais ici. Le compte
+  // d'éléments en corbeille est déjà calculé plus bas depuis `pages`.
+  onShowTrash?: () => void
+  onShowReview?: () => void
+  onShowRecent?: () => void
 }) {
   const { theme, setTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -105,6 +111,41 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
 
         {/* Contenu */}
         <div ref={contentRef} className="px-5 py-4 space-y-5 overflow-y-auto overscroll-contain flex-1">
+            {/* Accès rapides — d'abord, parce qu'on ouvre bien plus souvent les
+                paramètres pour atteindre la corbeille que pour changer de
+                thème. Masqués sur desktop, où la sidebar les propose déjà. */}
+            {(onShowTrash || onShowReview || onShowRecent) && (
+              <div className="md:hidden">
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Naviguer</p>
+                <div className="rounded-xl overflow-hidden" style={{ background: 'var(--selected-bg)' }}>
+                  {onShowRecent && (
+                    <button onClick={onShowRecent} className="u-hover-bg w-full flex items-center gap-3 px-4 py-3 text-sm text-left" style={{ color: 'var(--text-primary)' }}>
+                      <i className="ti ti-clock-hour-4" style={{ fontSize: '15px', width: 18, opacity: 0.6 }} />
+                      <span className="flex-1">Vue récente</span>
+                      <i className="ti ti-chevron-right" style={{ fontSize: '13px', color: 'var(--text-faint)' }} />
+                    </button>
+                  )}
+                  {onShowReview && (
+                    <button onClick={onShowReview} className="u-hover-bg w-full flex items-center gap-3 px-4 py-3 text-sm text-left" style={{ color: 'var(--text-primary)', borderTop: '1px solid var(--border)' }}>
+                      <i className="ti ti-refresh" style={{ fontSize: '15px', width: 18, opacity: 0.6 }} />
+                      <span className="flex-1">Mode révision</span>
+                      <i className="ti ti-chevron-right" style={{ fontSize: '13px', color: 'var(--text-faint)' }} />
+                    </button>
+                  )}
+                  {onShowTrash && (
+                    <button onClick={onShowTrash} className="u-hover-bg w-full flex items-center gap-3 px-4 py-3 text-sm text-left" style={{ color: 'var(--text-primary)', borderTop: '1px solid var(--border)' }}>
+                      <i className="ti ti-trash" style={{ fontSize: '15px', width: 18, opacity: 0.6 }} />
+                      <span className="flex-1">Corbeille</span>
+                      {trashedCount > 0 && (
+                        <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>{trashedCount}</span>
+                      )}
+                      <i className="ti ti-chevron-right" style={{ fontSize: '13px', color: 'var(--text-faint)' }} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Apparence */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Apparence</p>

@@ -1256,14 +1256,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
             onSelect={p => { selectPage(p); setShowJournal(false) }}
-            onAdd={parentId => addPage(parentId)} onShowTrash={() => setShowTrash(true)}
+            onAdd={parentId => addPage(parentId)}
             trashedCount={trashedPages.length} onToggleFavorite={toggleFavorite}
             onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
             onAddJournalEntry={addJournalEntry}
             onShowSettings={() => setShowSettings(true)}
             onShowTags={() => { setTagsInitialTag(undefined); setShowTags(true) }}
-            onShowReview={() => setShowReview(true)}
-            onShowRecent={() => setShowRecent(true)}
+            onSelectTag={tag => { setTagsInitialTag(tag); setShowTags(true) }}
             onMoveTo={id => setMoveToPageId(id)}
             onDuplicate={id => duplicatePage(id)}
             onDeleteRequest={id => setConfirmDeleteId(id)}
@@ -1297,7 +1296,13 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         <RecentView pages={[...activePages, ...journalEntries]} onSelect={p => { selectPage(p); setShowRecent(false); if (p.type === 'journal') setShowJournal(true) }} onClose={() => setShowRecent(false)} />
       )}
       {showTrash && <TrashPanel trashedPages={trashedPages} onRestore={restorePage} onDeleteForever={deleteForever} onClose={() => setShowTrash(false)} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} onImport={importPages} pages={pages} userId={userId} userEmail={userEmail} />}
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} onLogout={logout} onImport={importPages}
+          pages={pages} userId={userId} userEmail={userEmail}
+          onShowTrash={() => { setShowSettings(false); setShowTrash(true) }}
+          onShowReview={() => { setShowSettings(false); setShowReview(true) }}
+          onShowRecent={() => { setShowSettings(false); setShowRecent(true) }} />
+      )}
       {showHistory && <HistoryModal pages={pages} onClose={() => setShowHistory(false)} onNavigate={p => { selectPage(p); setShowHistory(false); setShowJournal(p.type === 'journal') }} />}
       {/* ── Desktop : vue journal ── */}
       {showingJournalDesktop && (
@@ -1405,7 +1410,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                 <i className="ti ti-arrows-exchange" style={{ fontSize: '14px' }} />
               </button>
               <button onClick={closeSplit} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Fermer la vue partagée">
-                <i className="ti ti-layout-columns-off" style={{ fontSize: '14px' }} />
+                <i className="ti ti-x" style={{ fontSize: '14px' }} />
               </button>
             </div>
           )}
@@ -1556,7 +1561,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                   <i className="ti ti-arrows-exchange" style={{ fontSize: '14px' }} />
                 </button>
                 <button onClick={closeSplit} className="w-7 h-7 flex items-center justify-center rounded-md transition-colors" style={{ color: 'var(--text-muted)' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Fermer la vue partagée">
-                  <i className="ti ti-layout-columns-off" style={{ fontSize: '14px' }} />
+                  <i className="ti ti-x" style={{ fontSize: '14px' }} />
                 </button>
               </div>
               {selectedRight ? (
