@@ -1252,7 +1252,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             pages={[...activePages, ...journalEntries]} selectedId={null}
             onSelect={p => selectPage(p)}
             onAdd={parentId => addPage(parentId)}
-            trashedCount={trashedPages.length} onToggleFavorite={toggleFavorite}
+            onToggleFavorite={toggleFavorite}
             onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
             journalTab={showJournal} onTabChange={t => setShowJournal(t === 'journal')}
             onAddJournalEntry={addJournalEntry}

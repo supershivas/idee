@@ -555,13 +555,12 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite, selectMode,
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCount, onToggleFavorite, onShowJournal, journalTab, onTabChange, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFavorite, onShowJournal, journalTab, onTabChange, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
   onAdd: (parentId: string | null) => void
   onSelectTag: (tag: string) => void
-  trashedCount: number
   onToggleFavorite: (id: string) => void
   onShowJournal: () => void
   // L'onglet affiché appartient à l'appelant : fermer une entrée de journal
@@ -761,16 +760,11 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCoun
             paramètres (le reste). Icône au trait, comme sur desktop. */}
         <button
           onClick={onShowSettings}
-          className="relative w-9 h-9 flex items-center justify-center rounded-xl"
+          className="w-9 h-9 flex items-center justify-center rounded-xl"
           style={{ color: 'var(--text-muted)' }}
           title="Paramètres"
         >
           <i className="ti ti-settings" style={{ fontSize: '19px' }} />
-          {trashedCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-400 text-white text-[9px] rounded-full flex items-center justify-center">
-              {trashedCount}
-            </span>
-          )}
         </button>
       </div>
 
@@ -962,19 +956,22 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCoun
         >
           <button
             onClick={() => tab === 'journal' ? onAddJournalEntry() : onAdd(currentParentId)}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-medium transition-colors"
-            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)', borderRadius: 26 }}
+            className="flex-1 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
+            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)', height: 52, borderRadius: 26 }}
           >
             <i className={`ti ${tab === 'journal' ? 'ti-pencil' : 'ti-plus'}`} style={{ fontSize: '15px' }} />
             <span>{tab === 'journal' ? 'Nouvelle entrée' : drillStack.length > 0 ? 'Nouvelle sous-page' : 'Nouvelle page'}</span>
           </button>
+          {/* Loupe seule, en rond : le libellé « Rechercher » prenait un tiers
+              de la largeur pour une action qu'une icône suffit à désigner. */}
           <button
             onClick={() => setShowSearch(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-3.5 text-sm font-medium transition-colors flex-shrink-0"
-            style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)', borderRadius: 26 }}
+            aria-label="Rechercher"
+            title="Rechercher"
+            className="flex items-center justify-center transition-colors flex-shrink-0"
+            style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)', width: 52, height: 52, borderRadius: '50%' }}
           >
-            <i className="ti ti-search" style={{ fontSize: '15px' }} />
-            <span>Rechercher</span>
+            <i className="ti ti-search" style={{ fontSize: '18px' }} />
           </button>
         </div>
       )}
