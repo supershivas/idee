@@ -17,10 +17,26 @@ export function useTheme() {
 
   useEffect(() => {
     const root = document.documentElement
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const isDark = theme === 'dark' || (theme === 'system' && prefersDark)
-    root.classList.toggle('dark', isDark)
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+
+    function apply() {
+      const isDark = theme === 'dark' || (theme === 'system' && mq.matches)
+      root.classList.toggle('dark', isDark)
+      // `theme-color` teinte l'interface du navigateur (barre d'adresse Safari,
+      // barre d'état Android). Figée sur la couleur claire, elle restait claire
+      // en thème sombre. On la relit depuis `--app-bg` plutôt que d'en
+      // recopier la valeur ici : les couleurs restent dans globals.css.
+      const bg = getComputedStyle(root).getPropertyValue('--app-bg').trim()
+      const meta = document.querySelector('meta[name="theme-color"]')
+      if (meta && bg) meta.setAttribute('content', bg)
+    }
+
+    apply()
     localStorage.setItem('idee-theme', theme)
+    // En mode « système », suivre les bascules jour/nuit de l'iPhone tant que
+    // l'app est ouverte — sans quoi elle restait claire jusqu'au rechargement.
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
   }, [theme])
 
   return { theme, setTheme }
