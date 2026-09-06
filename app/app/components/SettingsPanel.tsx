@@ -146,6 +146,12 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
               </div>
             )}
 
+            {/* Ordre : ce qu'on vient faire souvent d'abord (naviguer, changer de
+                thème), l'administratif ensuite. « Contenu » et « Données » se
+                chevauchaient — elles deviennent « Ma bibliothèque » (ce que
+                contient le compte) et « Sauvegarde » (ce qu'on en sort ou y
+                remet). La déconnexion rejoint le compte, la version rejoint
+                « À propos ». */}
             {/* Apparence */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Apparence</p>
@@ -169,26 +175,9 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
               </div>
             </div>
 
-            {/* Compte */}
+            {/* Ma bibliothèque */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Compte</p>
-              <div className="rounded-xl px-4 py-3 space-y-1.5" style={{ background: 'var(--selected-bg)' }}>
-                {userEmail && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Email</span>
-                    <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{userEmail}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>ID</span>
-                  <span className="text-xs font-mono truncate max-w-40" style={{ color: 'var(--text-faint)' }}>{userId.slice(0, 8)}…</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Contenu</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Ma bibliothèque</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: 'Pages',    value: totalPages,    icon: '📄' },
@@ -207,9 +196,9 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
               </div>
             </div>
 
-            {/* Données */}
+            {/* Sauvegarde */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Données</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Sauvegarde</p>
               <div className="space-y-2">
                 <button
                   onClick={exportJSON}
@@ -250,9 +239,37 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
               </div>
             </div>
 
-            {/* Applications */}
+            {/* Compte */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Applications</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Compte</p>
+              <div className="rounded-xl px-4 py-3 space-y-1.5" style={{ background: 'var(--selected-bg)' }}>
+                {userEmail && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Email</span>
+                    <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{userEmail}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>ID</span>
+                  <span className="text-xs font-mono truncate max-w-40" style={{ color: 'var(--text-faint)' }}>{userId.slice(0, 8)}…</span>
+                </div>
+              </div>
+            </div>
+
+{/* Déconnexion */}
+            <button
+              onClick={onLogout}
+              className="w-full py-3 rounded-xl border text-sm font-medium transition-colors"
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              Se déconnecter
+            </button>
+
+            {/* À propos */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>À propos</p>
               <div className="flex gap-2">
                 {[
                   { name: 'Source', url: 'https://source-sigma-kohl.vercel.app/app', favicon: 'https://source-sigma-kohl.vercel.app/favicon.ico' },
@@ -275,26 +292,16 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                   </a>
                 ))}
               </div>
+
+              {/* Version, sous les autres applications : c'est de
+                  l'information sur l'app, pas un réglage. */}
+              <p className="text-center text-[11px] mt-3" style={{ color: 'var(--text-faint)' }}>
+                Version {process.env.NEXT_PUBLIC_APP_VERSION}
+                {process.env.NEXT_PUBLIC_APP_UPDATED_AT && (
+                  <> · Mis à jour le {formatUpdatedAt(process.env.NEXT_PUBLIC_APP_UPDATED_AT)}</>
+                )}
+              </p>
             </div>
-
-            {/* Déconnexion */}
-            <button
-              onClick={onLogout}
-              className="w-full py-3 rounded-xl border text-sm font-medium transition-colors"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              Se déconnecter
-            </button>
-
-            {/* Informations de version */}
-            <p className="text-center text-[11px]" style={{ color: 'var(--text-faint)' }}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION}
-              {process.env.NEXT_PUBLIC_APP_UPDATED_AT && (
-                <> · Mis à jour le {formatUpdatedAt(process.env.NEXT_PUBLIC_APP_UPDATED_AT)}</>
-              )}
-            </p>
         </div>
 
         <div className="md:hidden flex-shrink-0" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
