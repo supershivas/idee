@@ -109,11 +109,6 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       setSelected(null)
     }
   }
-  // Swipe vers le bas depuis l'en-tête pour fermer la vue Journal mobile
-  // (seule vue « poussée » restante — Tags/Récents/Mode révision/Corbeille/
-  // Paramètres/Historique gèrent désormais leur propre modale).
-  const journalScrollRef = useRef<HTMLDivElement>(null)
-  const swipeCloseJournal = useSwipeDownToDismiss(() => setShowJournal(false), journalScrollRef)
   const pointerYRef = useRef(0)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverOverIdRef = useRef<string | null>(null)
@@ -1251,14 +1246,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
       </div>
 
       {/* ── Mobile : vue liste ── */}
-      {isMobile && (NOTE_DRAWER_MOBILE || !selected) && !showJournal && (
+      {isMobile && (NOTE_DRAWER_MOBILE || !selected) && (
         <div className="flex-1 flex flex-col overflow-hidden" style={behindDrawerStyle}>
           <MobileHomeView
             pages={[...activePages, ...journalEntries]} selectedId={null}
-            onSelect={p => { selectPage(p); setShowJournal(false) }}
+            onSelect={p => selectPage(p)}
             onAdd={parentId => addPage(parentId)}
             trashedCount={trashedPages.length} onToggleFavorite={toggleFavorite}
             onShowJournal={() => setShowJournal(true)} journalCount={journalEntries.length}
+            journalTab={showJournal} onTabChange={t => setShowJournal(t === 'journal')}
             onAddJournalEntry={addJournalEntry}
             onShowSettings={() => setShowSettings(true)}
             onShowTags={() => { setTagsInitialTag(undefined); setShowTags(true) }}
@@ -1272,16 +1268,11 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         </div>
       )}
 
-      {/* ── Mobile : vue journal ── */}
-      {isMobile && showJournal && (NOTE_DRAWER_MOBILE || !selected) && (
-        <div ref={swipeCloseJournal.sheetRef} className="flex-1 flex flex-col overflow-hidden"
-          style={{ ...swipeCloseJournal.style, ...behindDrawerStyle }}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
-            <button onClick={() => setShowJournal(false)} className="text-sm" style={{ color: 'var(--text-muted)' }}>← Pages</button>
-          </div>
-          <JournalList entries={journalEntries} selectedId={null} onSelect={p => { selectPage(p); setShowJournal(false) }} onAdd={addJournalEntry} scrollRef={journalScrollRef} />
-        </div>
-      )}
+      {/* Sur mobile, le journal n'a plus d'écran à lui : c'est un onglet de
+          l'accueil. Il en existait deux — on ouvrait une entrée depuis
+          l'onglet (avec ses onglets et sa barre du bas) et on la refermait
+          sur un écran nu « ← Pages », donc jamais la même mise en page à
+          l'aller et au retour. */}
 
       {/* ── Mode révision, Tags, Vue récente, Corbeille, Paramètres, Historique :
           même présentation partout (modale bottom sheet mobile / dialogue
