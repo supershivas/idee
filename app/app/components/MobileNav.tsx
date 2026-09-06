@@ -332,7 +332,7 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
           <input
             ref={inputRef}
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => { setQuery(e.target.value); setTagsExpanded(false) }}
             placeholder="Rechercher dans toutes les pages…"
             className="flex-1 bg-transparent text-sm outline-none"
             style={{ color: 'var(--text-primary)' }}
@@ -350,15 +350,17 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
           une autre — elle vivait dans un bouton séparé de l'en-tête. Trois
           rangées au plus, dépliables sur place. */}
       {allTags.length > 0 && (
-        <div className="px-4 pt-3 pb-1 flex-shrink-0">
-          {/* Les hauteurs valent un nombre entier de rangées (une pastille fait
-              24px, l'écart 6px) : une hauteur approchée tranche une rangée en
-              deux et laisse une bande de pastilles coupées. Déplié, on montre
-              six rangées et le reste défile — la recherche serait sinon
-              repoussée hors de l'écran par une centaine de tags. */}
+        <div className={`px-4 pt-3 pb-1 ${tagsExpanded ? 'flex-1 min-h-0 flex flex-col' : 'flex-shrink-0'}`}
+          style={tagsExpanded ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' } : undefined}>
+          {/* Replié, la hauteur vaut un nombre entier de rangées (une pastille
+              fait 24px, l'écart 6px) : une hauteur approchée tranche une rangée
+              en deux et laisse une bande de pastilles coupées. Déplié, la zone
+              prend toute la hauteur restante jusqu'au bas de l'écran — c'est ce
+              qu'on demande en la dépliant — et défile si les tags débordent
+              encore. */}
           <div ref={tagWrapRef}
-            className={`flex flex-wrap gap-1.5 ${tagsExpanded ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
-            style={{ maxHeight: tagsExpanded ? 'calc(6 * 24px + 5 * 6px)' : 'calc(3 * 24px + 2 * 6px)' }}>
+            className={`flex flex-wrap content-start gap-1.5 ${tagsExpanded ? 'flex-1 min-h-0 overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
+            style={tagsExpanded ? undefined : { maxHeight: 'calc(3 * 24px + 2 * 6px)' }}>
             {allTags.map(tag => (
               <button key={tag} onClick={() => onSelectTag(tag)} className="flex-shrink-0">
                 <TagBadge tag={tag} />
@@ -371,7 +373,7 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
           {(hiddenTagCount > 0 || tagsExpanded) && (
             <button onClick={() => setTagsExpanded(v => !v)}
               aria-expanded={tagsExpanded}
-              className="w-full mt-1.5 inline-flex items-center justify-center gap-1 rounded-full text-xs font-medium"
+              className="w-full mt-1.5 flex-shrink-0 inline-flex items-center justify-center gap-1 rounded-full text-xs font-medium"
               style={{ height: 24, color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
               <i className={`ti ti-chevron-${tagsExpanded ? 'up' : 'down'}`} style={{ fontSize: '13px' }} />
               {tagsExpanded ? 'Réduire' : `${hiddenTagCount} tag${hiddenTagCount > 1 ? 's' : ''} de plus`}
@@ -380,7 +382,10 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Dépliés, les tags occupent tout le reste : la liste n'aurait de toute
+          façon plus de place, et la masquer évite qu'elle se réduise à une
+          bande de deux pixels. */}
+      <div className={`flex-1 overflow-y-auto ${tagsExpanded ? 'hidden' : ''}`}>
         {query.length < 2 ? (
           recent.length > 0 && (
             <div className="px-3 py-2">
