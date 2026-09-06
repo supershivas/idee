@@ -237,15 +237,17 @@ export function useBackgroundScrollLock() {
   return backdropRef
 }
 
-function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag, onShowAllTags }: {
+function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
   pages: Page[]
   onSelect: (p: Page) => void
   onClose: () => void
   onSelectTag: (tag: string) => void
-  onShowAllTags: () => void
 }) {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const [tagsExpanded, setTagsExpanded] = useState(false)
+  const tagWrapRef = useRef<HTMLDivElement>(null)
+  const [tagsClipped, setTagsClipped] = useState(false)
 
   useEffect(() => {
     // Double tentative : immédiat + délai pour iOS qui ignore le premier focus
@@ -260,13 +262,24 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag, onShowAllT
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  // Les plus employés d'abord : trois rangées de pastilles suffisent rarement
-  // à tout montrer, le « + » ouvre le reste.
-  const topTags = useMemo(() => {
+  // Tous les tags, les plus employés d'abord. On les rend toujours tous : la
+  // zone est simplement rognée à trois rangées tant qu'elle n'est pas dépliée,
+  // ce qui permet de savoir s'il en reste à voir (voir plus bas).
+  const allTags = useMemo(() => {
     const counts = new Map<string, number>()
     pages.forEach(p => (p.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)))
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 18).map(([t]) => t)
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t)
   }, [pages])
+
+  // Le bouton ne s'affiche que s'il y a réellement des tags hors champ : avec
+  // trois pastilles, un « + » qui ne déplie rien serait un faux bouton. On le
+  // mesure plutôt que de le deviner d'un nombre de tags, la largeur d'une
+  // pastille dépendant du mot.
+  useEffect(() => {
+    const el = tagWrapRef.current
+    if (!el) return
+    setTagsClipped(el.scrollHeight > el.clientHeight + 1)
+  }, [allTags, tagsExpanded])
 
   const pageTexts = useMemo(
     () => pages.map(function(p) { return { page: p, text: tiptapToText(p.content) } }),
@@ -312,32 +325,40 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag, onShowAllT
         </button>
       </div>
 
-      {/* Tags principaux, juste sous le champ : chercher par tag est une
-          recherche comme une autre — elle vivait dans un bouton séparé de
-          l'en-tête. Trois rangées au plus, avec un « + » qui ouvre la liste
-          complète. */}
-      {topTags.length > 0 && (
+      {/* Tags, juste sous le champ : chercher par tag est une recherche comme
+          une autre — elle vivait dans un bouton séparé de l'en-tête. Trois
+          rangées au plus, dépliables sur place par le bouton de droite. */}
+      {allTags.length > 0 && (
         <div className="px-4 pt-3 pb-1 flex-shrink-0 flex items-start gap-1.5">
-          {/* Le « + » est hors de la zone rognée : à l'intérieur, il passait à
+          {/* Le bouton est hors de la zone rognée : à l'intérieur, il passait à
               la rangée suivante dès que les pastilles remplissaient les rangées
               visibles, et se retrouvait donc coupé — c'est-à-dire invisible
-              précisément quand il servait à quelque chose. */}
-          {/* Trois rangées pleines : une pastille fait 24px, l'écart 6px. La
-              hauteur exacte évite de trancher une quatrième rangée en deux,
-              ce qui donnait des pastilles coupées dans la hauteur. */}
-          <div className="flex-1 min-w-0 flex flex-wrap gap-1.5 overflow-hidden"
-            style={{ maxHeight: 'calc(3 * 24px + 2 * 6px)' }}>
-            {topTags.map(tag => (
+              précisément quand il servait à quelque chose.
+
+              Les hauteurs valent un nombre entier de rangées (une pastille fait
+              24px, l'écart 6px) : une hauteur approchée tranchait une rangée en
+              deux et laissait une bande de pastilles coupées. Déplié, on montre
+              six rangées et le reste défile — la recherche resterait sinon
+              repoussée hors de l'écran par une centaine de tags. */}
+          <div ref={tagWrapRef}
+            className={`flex-1 min-w-0 flex flex-wrap gap-1.5 ${tagsExpanded ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
+            style={{ maxHeight: tagsExpanded ? 'calc(6 * 24px + 5 * 6px)' : 'calc(3 * 24px + 2 * 6px)' }}>
+            {allTags.map(tag => (
               <button key={tag} onClick={() => onSelectTag(tag)} className="flex-shrink-0">
                 <TagBadge tag={tag} />
               </button>
             ))}
           </div>
-          <button onClick={onShowAllTags} title="Tous les tags" aria-label="Tous les tags"
-            className="inline-flex items-center justify-center rounded-full text-xs font-medium flex-shrink-0"
-            style={{ width: 26, height: 24, color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
-            +
-          </button>
+          {(tagsClipped || tagsExpanded) && (
+            <button onClick={() => setTagsExpanded(v => !v)}
+              title={tagsExpanded ? 'Réduire les tags' : 'Voir tous les tags'}
+              aria-label={tagsExpanded ? 'Réduire les tags' : 'Voir tous les tags'}
+              aria-expanded={tagsExpanded}
+              className="inline-flex items-center justify-center rounded-full text-xs font-medium flex-shrink-0"
+              style={{ width: 26, height: 24, color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
+              {tagsExpanded ? '−' : '+'}
+            </button>
+          )}
         </div>
       )}
 
@@ -565,7 +586,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite, selectMode,
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFavorite, onShowJournal, journalTab, onTabChange, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFavorite, onShowJournal, journalTab, onTabChange, journalCount, onAddJournalEntry, onShowSettings, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -580,7 +601,6 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFav
   journalCount: number
   onAddJournalEntry: () => void
   onShowSettings: () => void
-  onShowTags: () => void
   onMoveTo: (id: string) => void
   onDuplicate: (id: string) => void
   onDeleteRequest: (id: string) => void
@@ -754,7 +774,6 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFav
           onSelect={function(p) { onSelect(p) }}
           onClose={() => setShowSearch(false)}
           onSelectTag={tag => { setShowSearch(false); onSelectTag(tag) }}
-          onShowAllTags={() => { setShowSearch(false); onShowTags() }}
         />
       )}
 
