@@ -35,6 +35,7 @@ import { HistoryModal } from './components/HistoryModal'
 import { TagsView } from './components/TagsView'
 import { PageHeader } from './components/PageHeader'
 import { toast, Toaster } from './components/Toast'
+import VersionToast from './components/VersionToast'
 import TemplateModal, { Template } from './components/TemplateModal'
 import QuickCapture from './components/QuickCapture'
 import RecentView from './components/RecentView'
@@ -1711,6 +1712,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         )
       })()}
       <Toaster />
+      <VersionToast />
     </div>
   )
 }

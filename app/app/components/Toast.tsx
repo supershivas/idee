@@ -38,7 +38,10 @@ export function Toaster() {
   return createPortal(
     <>
       <style>{`@keyframes _toast_in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-      <div className="fixed bottom-5 right-4 z-[300] flex flex-col gap-2 pointer-events-none">
+      {/* Décalé au-dessus de l'indicateur d'accueil de l'iPhone, sans quoi le
+          dernier toast se retrouve à cheval dessus. */}
+      <div className="fixed right-4 z-[300] flex flex-col gap-2 pointer-events-none"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
         {items.map(item => {
           const c = colors[item.type]
           return (

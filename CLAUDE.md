@@ -37,6 +37,15 @@ purement doc/config sans impact utilisateur (comme celle-ci) n'a pas besoin
 de bump. La date affichée à côté reste automatique (date du commit courant,
 lue au build).
 
+**Toujours rappeler le numéro de version** dans la réponse à l'utilisateur,
+à chaque fois qu'un changement est livré — la version après bump, telle
+qu'elle s'affichera dans Paramètres.
+
+Côté app, `VersionToast` (monté à côté de `<Toaster />` dans `App.tsx`)
+compare la version du bundle à celle mémorisée au dernier lancement et
+annonce la mise à jour à l'utilisateur. Il n'y a donc rien à faire de plus
+qu'un bump de `package.json` pour que le toast apparaisse.
+
 ## Workflow Git
 
 - Toujours brancher depuis `main`, jamais commit direct sur `main`.
