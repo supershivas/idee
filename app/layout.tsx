@@ -11,6 +11,17 @@ export const metadata = {
   },
 }
 
+// Déclaré via l'API Next et non à la main dans le <head> : Next émet de
+// toute façon sa propre balise viewport, et la nôtre se retrouvait doublée
+// — donc `viewport-fit=cover` ignoré, `env(safe-area-inset-*)` à zéro, et
+// la bande de la barre d'état peinte par iOS au lieu de l'être par l'app.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover' as const,
+  themeColor: '#f0f0ec',
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -25,8 +36,6 @@ export default function RootLayout({
         {/* PWA manifest */}
         <link rel="manifest" href="/manifest.json" />
 
-        {/* Viewport — viewport-fit=cover pour safe-areas iPhone/iPad */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
         {/* iOS / iPadOS home screen icon */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -34,9 +43,12 @@ export default function RootLayout({
         {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Idée" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* `black-translucent` : la page s'étend sous la barre d'état, qu'elle
+            peint donc elle-même — avec `default`, iOS peignait cette bande de
+            sa propre couleur, d'où la démarcation en haut de l'écran. Les
+            en-têtes réservent déjà `env(safe-area-inset-top)`. */}
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#f0f0ec" />
 
         {/* Polices Playfair Display / Inter */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
