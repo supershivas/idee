@@ -3,6 +3,28 @@ import { useEffect, useRef } from 'react'
 
 const CHECK_MIN_INTERVAL_MS = 30_000
 
+// Le cache d'exécution du service worker contient le HTML des visites
+// précédentes. Après un déploiement, ce HTML référence les chunks d'un build
+// révolu : le servir ramènerait l'app dans la version qu'on cherche justement
+// à quitter. Les assets hashés (`/_next/static/`), eux, restent valides et
+// gardent leur cache.
+async function clearRuntimeCache() {
+  try {
+    if (!('caches' in window)) return
+    const keys = await caches.keys()
+    await Promise.all(keys.filter(k => k.includes('runtime')).map(k => caches.delete(k)))
+  } catch {}
+}
+
+// Un chunk chargé à la demande peut manquer à l'appel : réseau qui lâche au
+// mauvais moment, ou onglet resté ouvert sur un build dont les assets ne sont
+// plus servis. Next remonte alors « Loading chunk N failed » et l'écran reste
+// bloqué là.
+function isChunkLoadError(err: unknown) {
+  const msg = err instanceof Error ? `${err.name} ${err.message}` : String(err ?? '')
+  return /ChunkLoadError|Loading chunk \S+ failed|Loading CSS chunk/i.test(msg)
+}
+
 // Vérifie qu'une nouvelle version de l'app est en ligne et recharge la page
 // automatiquement quand c'est le cas — utile pour la PWA installée, dont le
 // WebView reste souvent ouvert en arrière-plan sur une ancienne version au
@@ -10,6 +32,31 @@ const CHECK_MIN_INTERVAL_MS = 30_000
 export default function PwaUpdater({ currentBuildId }: { currentBuildId: string | null }) {
   const lastCheckRef = useRef(0)
   const reloadingRef = useRef(false)
+
+  // Rattrapage d'un chunk manquant : un rechargement repart du HTML courant et
+  // suffit presque toujours. Une seule tentative par build, pour ne pas boucler
+  // si le chunk manque vraiment. Volontairement hors de l'effet ci-dessous :
+  // il doit fonctionner même sans identifiant de build.
+  useEffect(() => {
+    async function recover(err: unknown) {
+      if (reloadingRef.current || !isChunkLoadError(err)) return
+      const key = 'pwa_chunk_reload'
+      if (sessionStorage.getItem(key) === (currentBuildId || '1')) return
+      sessionStorage.setItem(key, currentBuildId || '1')
+      reloadingRef.current = true
+      await clearRuntimeCache()
+      window.location.reload()
+    }
+    const onError = (e: ErrorEvent) => { void recover(e.error || e.message) }
+    const onRejection = (e: PromiseRejectionEvent) => { void recover(e.reason) }
+
+    window.addEventListener('error', onError)
+    window.addEventListener('unhandledrejection', onRejection)
+    return () => {
+      window.removeEventListener('error', onError)
+      window.removeEventListener('unhandledrejection', onRejection)
+    }
+  }, [currentBuildId])
 
   useEffect(() => {
     if (!currentBuildId) return
@@ -31,6 +78,7 @@ export default function PwaUpdater({ currentBuildId }: { currentBuildId: string 
         if (sessionStorage.getItem(key) === buildId) return
         sessionStorage.setItem(key, buildId)
         reloadingRef.current = true
+        await clearRuntimeCache()
         window.location.reload()
       } catch {}
     }
