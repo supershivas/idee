@@ -555,7 +555,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite, selectMode,
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCount, onToggleFavorite, onShowJournal, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCount, onToggleFavorite, onShowJournal, journalTab, onTabChange, journalCount, onAddJournalEntry, onShowSettings, onShowTags, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -564,6 +564,10 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCoun
   trashedCount: number
   onToggleFavorite: (id: string) => void
   onShowJournal: () => void
+  // L'onglet affiché appartient à l'appelant : fermer une entrée de journal
+  // doit ramener sur l'onglet Journal, pas sur Pages.
+  journalTab: boolean
+  onTabChange: (tab: 'pages' | 'journal') => void
   journalCount: number
   onAddJournalEntry: () => void
   onShowSettings: () => void
@@ -575,14 +579,25 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, trashedCoun
   onDeleteMany?: (ids: string[]) => void
 }) {
   const [showSearch, setShowSearch] = useState(false)
-  const [tab, setTab] = useState<'pages' | 'journal'>('pages')
+  const [tab, setTab] = useState<'pages' | 'journal'>(journalTab ? 'journal' : 'pages')
   // Direction de l'effet de transition du contenu au changement d'onglet.
   const [tabAnim, setTabAnim] = useState<'from-right' | 'from-left'>('from-right')
   function switchTab(next: 'pages' | 'journal') {
     if (next === tab) return
     setTabAnim(next === 'journal' ? 'from-right' : 'from-left')
     setTab(next)
+    onTabChange(next)
   }
+  // L'onglet peut aussi changer depuis l'extérieur : fermeture d'une entrée de
+  // journal, ouverture d'une entrée depuis les tags ou la vue récente.
+  useEffect(() => {
+    const wanted = journalTab ? 'journal' : 'pages'
+    setTab(prev => {
+      if (prev === wanted) return prev
+      setTabAnim(wanted === 'journal' ? 'from-right' : 'from-left')
+      return wanted
+    })
+  }, [journalTab])
   const [journalLimit, setJournalLimit] = useState(MOBILE_JOURNAL_PAGE)
   const journalSentinelRef = useRef<HTMLDivElement>(null)
   // drill-down stack : chaque entrée = { id, title, icon } de la page parente
