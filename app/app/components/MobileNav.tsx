@@ -260,12 +260,12 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag, onShowAllT
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  // Les plus employés d'abord : deux lignes de pastilles suffisent rarement à
-  // tout montrer, le « + » ouvre le reste.
+  // Les plus employés d'abord : trois rangées de pastilles suffisent rarement
+  // à tout montrer, le « + » ouvre le reste.
   const topTags = useMemo(() => {
     const counts = new Map<string, number>()
     pages.forEach(p => (p.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)))
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 12).map(([t]) => t)
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 18).map(([t]) => t)
   }, [pages])
 
   const pageTexts = useMemo(
@@ -314,18 +314,28 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag, onShowAllT
 
       {/* Tags principaux, juste sous le champ : chercher par tag est une
           recherche comme une autre — elle vivait dans un bouton séparé de
-          l'en-tête. Deux lignes au plus, terminées par « + » qui ouvre la
-          liste complète. */}
+          l'en-tête. Trois rangées au plus, avec un « + » qui ouvre la liste
+          complète. */}
       {topTags.length > 0 && (
-        <div className="px-4 pt-3 pb-1 flex-shrink-0 flex flex-wrap gap-1.5 overflow-hidden" style={{ maxHeight: 68 }}>
-          {topTags.map(tag => (
-            <button key={tag} onClick={() => onSelectTag(tag)} className="flex-shrink-0">
-              <TagBadge tag={tag} />
-            </button>
-          ))}
-          <button onClick={onShowAllTags} title="Tous les tags"
-            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
-            style={{ color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
+        <div className="px-4 pt-3 pb-1 flex-shrink-0 flex items-start gap-1.5">
+          {/* Le « + » est hors de la zone rognée : à l'intérieur, il passait à
+              la rangée suivante dès que les pastilles remplissaient les rangées
+              visibles, et se retrouvait donc coupé — c'est-à-dire invisible
+              précisément quand il servait à quelque chose. */}
+          {/* Trois rangées pleines : une pastille fait 24px, l'écart 6px. La
+              hauteur exacte évite de trancher une quatrième rangée en deux,
+              ce qui donnait des pastilles coupées dans la hauteur. */}
+          <div className="flex-1 min-w-0 flex flex-wrap gap-1.5 overflow-hidden"
+            style={{ maxHeight: 'calc(3 * 24px + 2 * 6px)' }}>
+            {topTags.map(tag => (
+              <button key={tag} onClick={() => onSelectTag(tag)} className="flex-shrink-0">
+                <TagBadge tag={tag} />
+              </button>
+            ))}
+          </div>
+          <button onClick={onShowAllTags} title="Tous les tags" aria-label="Tous les tags"
+            className="inline-flex items-center justify-center rounded-full text-xs font-medium flex-shrink-0"
+            style={{ width: 26, height: 24, color: 'var(--text-muted)', border: '1px dashed var(--border)' }}>
             +
           </button>
         </div>
