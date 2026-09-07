@@ -978,12 +978,10 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const sidebarHiddenEff = sidebarHidden
 
   return (
-    // `h-screen` vaut `100vh`, qui n'est pas la hauteur réellement visible sur
-    // iPhone : il restait une bande du fond du document sous l'app, dans la
-    // zone de l'indicateur d'accueil. `100dvh` suit la zone visible ; la classe
-    // reste en repli pour les navigateurs qui ignorent l'unité.
-    <div className="flex w-full h-screen overflow-hidden"
-      style={{ height: '100dvh', background: 'var(--app-bg)' }}>
+    // `h-screen` (100vh) et non `100dvh` : la hauteur dynamique est la plus
+    // courte des deux sur iPhone, et l'app s'y trouvait amputée du bas — barre
+    // « Nouvelle page » remontée, bande découverte sous elle.
+    <div className="flex w-full h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
 
       {/* ── Sidebar desktop ── */}
       <div
