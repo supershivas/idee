@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo, ReactNode } from 'react'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -62,7 +62,7 @@ import { useKeyboardBarAnchor } from './hooks'
 import { toast } from './components/Toast'
 import { createClient } from '@/lib/supabase/client'
 
-function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: string, title: string }) {
+function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: ReactNode, title: string }) {
   return (
     // Dimensions en CSS (`.toolbar-btn`) et non en style inline : la pastille
     // mobile a besoin de les resserrer pour sa rangée d'options, ce qu'un
@@ -580,6 +580,8 @@ Image.extend({
       <ToolBtn
         onClick={() => editor?.isActive('table') ? setShowTableSheet(true) : editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
         active={editor?.isActive('table')} label="⊞" title="Tableau" />
+      <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
+        label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
       <Sep />
       {/* Couleurs de surlignage : n'existaient que dans la barre de sélection,
           donc inatteignables sur mobile depuis qu'elle y est désactivée. */}
@@ -630,11 +632,18 @@ Image.extend({
       <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" />
+      <Sep />
+      {/* Remet la sélection en texte nu : `unsetAllMarks` retire gras, italique,
+          couleurs, liens ; `clearNodes` ramène titres, listes et citations au
+          paragraphe. Il fallait sinon désactiver chaque style un par un, en
+          devinant lesquels étaient posés. */}
+      <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
+        label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
     </>
   )
 
   return (
-    <div className={`flex flex-col flex-1 overflow-hidden${focusMode ? ' focus-mode-content' : ''}`}>
+    <div className={`flex flex-col flex-1${isMobile ? ' overflow-hidden' : ''}${focusMode ? ' focus-mode-content' : ''}`}>
       {showLinkModal && <LinkModal onConfirm={insertLink} onClose={() => setShowLinkModal(false)} />}
       {showTableSheet && isMobile && <TableBottomSheet editor={editor} onClose={() => setShowTableSheet(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -729,14 +738,23 @@ Image.extend({
                 className="px-1.5 py-1 text-xs rounded-lg transition-colors text-white/60 hover:bg-white/10"
               >×</button>
             )}
+            <div className="w-px bg-white/20 self-stretch mx-0.5" />
+            <button
+              title="Effacer la mise en forme"
+              onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+              className="px-2 py-1 text-xs rounded-lg transition-colors text-white hover:bg-white/10"
+            ><i className="ti ti-clear-formatting" /></button>
           </div>
         </BubbleMenu>
       )}
 
 
+      {/* Barre de style desktop, collante sous l'en-tête de note (44px,
+          `--table-sticky-top`) : sur une note longue elle partait avec le
+          défilement, et il fallait remonter en haut pour changer un style. */}
       {!isMobile && (
-        <div className="editor-toolbar flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto flex-shrink-0"
-          style={{ minHeight: '48px' }}>
+        <div className="editor-toolbar sticky z-10 flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto flex-shrink-0"
+          style={{ minHeight: '48px', top: 'var(--table-sticky-top, 44px)' }}>
           {toolbarDesktop}
         </div>
       )}
