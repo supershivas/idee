@@ -684,11 +684,19 @@ input, textarea {
    JS ne connaît pas la largeur de l'écran au premier rendu et ferait
    apparaître l'écran rouge sur desktop le temps de l'hydratation. */
 .app-splash {
-  position: fixed; inset: 0; z-index: 500;
+  position: fixed; inset: 0; width: 100%; height: 100%; z-index: 500;
   display: flex; align-items: center; justify-content: center;
   background: var(--accent);
 }
-@media (min-width: 768px) { .app-splash { display: none } }
+/* La racine du document est peinte du même rouge tant que l'ouverture est là
+   (classe posée avant la première peinture, retirée par `AppSplash`) : une
+   barre d'une autre couleur apparaissait en bas de l'écran, le fixe ne
+   couvrant pas tout à fait la zone de sécurité de l'iPhone. */
+html.splash-up, html.splash-up body { background: var(--accent); }
+@media (min-width: 768px) {
+  .app-splash { display: none }
+  html.splash-up, html.splash-up body { background: var(--app-bg) }
+}
 
 .app-splash-mark {
   width: 96px; height: 96px; border-radius: 50%; background: #fff;
@@ -714,32 +722,34 @@ input, textarea {
   100% { opacity: 0;  transform: scale(2.6) }
 }
 
-/* Sortie : un trou circulaire s'ouvre dans le rouge, à la taille exacte de la
-   marque, et le contenu apparaît par là. Le trou est un masque en dégradé
-   radial dont on anime la taille — `mask-size` s'interpole partout, là où
-   animer un rayon dans `clip-path` demanderait `@property`. */
-.app-splash.is-out {
-  -webkit-mask-image: radial-gradient(circle, transparent 49.5%, #000 50%);
-          mask-image: radial-gradient(circle, transparent 49.5%, #000 50%);
-  -webkit-mask-position: center; mask-position: center;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  animation: splash-iris var(--splash-out, 620ms) cubic-bezier(.83,0,.17,1) forwards;
+/* Sortie : un trou circulaire s'ouvre à la taille exacte de la marque et le
+   contenu apparaît par là.
+   Le trou est un disque transparent cerné d'une ombre portée immense — c'est
+   elle qui peint le rouge — que l'on agrandit par `transform: scale`. Animer
+   une échelle est la seule chose qu'un téléphone compose vraiment sur le GPU :
+   la première version animait `mask-size`, qui saccadait sur iPhone. */
+.app-splash.is-out { background: transparent; }
+.app-splash.is-out::after {
+  content: '';
+  position: absolute; left: 50%; top: 50%;
+  width: 96px; height: 96px; margin: -48px 0 0 -48px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1200px var(--accent);
+  animation: splash-open var(--splash-out, 620ms) cubic-bezier(.83,0,.17,1) forwards;
 }
-@keyframes splash-iris {
-  from { -webkit-mask-size: 96px 96px;     mask-size: 96px 96px }
-  to   { -webkit-mask-size: 2600px 2600px; mask-size: 2600px 2600px }
-}
-/* La marque s'efface en s'élargissant : elle ne disparaît pas, elle devient
-   l'ouverture. */
-.app-splash.is-out .app-splash-mark {
-  animation: splash-mark-open var(--splash-out, 620ms) cubic-bezier(.83,0,.17,1) forwards;
-}
-@keyframes splash-mark-open { from { opacity: 1; transform: scale(1) } to { opacity: 0; transform: scale(2.4) } }
+/* ×14 : le trou dépasse la diagonale du plus grand iPhone (48 × 14 = 672 px de
+   rayon, pour 513 px nécessaires sur un 14 Pro Max). */
+@keyframes splash-open { from { transform: scale(1) } to { transform: scale(14) } }
+/* La marque s'efface vite : elle occupe exactement la place du trou, et le
+   fond de l'app étant lui-même très clair, le relais est imperceptible. */
+.app-splash.is-out .app-splash-mark { animation: splash-mark-out 220ms linear forwards; }
+@keyframes splash-mark-out { to { opacity: 0 } }
 
 @media (prefers-reduced-motion: reduce) {
   .app-splash-mark { animation: splash-in 200ms linear both }
   .app-splash-ring { display: none }
-  .app-splash.is-out { animation: splash-fade 200ms linear forwards; -webkit-mask-image: none; mask-image: none }
+  .app-splash.is-out { background: var(--accent); animation: splash-fade 200ms linear forwards }
+  .app-splash.is-out::after { display: none }
   .app-splash.is-out .app-splash-mark { animation: none }
   @keyframes splash-fade { to { opacity: 0 } }
 }

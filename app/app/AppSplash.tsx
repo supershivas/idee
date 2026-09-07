@@ -35,6 +35,9 @@ export default function AppSplash() {
       started = true
       waitTimer = setTimeout(() => {
         setPhase('out')
+        // La racine reprend sa couleur dès l'ouverture du trou, sinon le rouge
+        // qu'elle peint resterait visible derrière le contenu qui se découvre.
+        document.documentElement.classList.remove('splash-up')
         outTimer = setTimeout(() => setPhase('done'), OUT_MS)
       }, Math.max(0, MIN_MS - (Date.now() - shownAt)))
     }
@@ -49,6 +52,7 @@ export default function AppSplash() {
     return () => {
       window.removeEventListener('idee:ready', finish)
       clearTimeout(safety); clearTimeout(waitTimer); clearTimeout(outTimer)
+      document.documentElement.classList.remove('splash-up')
     }
   }, [])
 
