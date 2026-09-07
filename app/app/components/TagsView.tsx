@@ -145,19 +145,34 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
   })
   const allTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a])
 
-  const q = search.trim().toLowerCase()
-  const visibleTags = q ? allTags.filter(t => t.includes(q)) : allTags
-
   const filteredPages = selectedTags.length > 0
     ? pages.filter(p => !p.deleted_at && selectedTags.every(t => (p.tags || []).includes(t)))
     : []
+
+  // Une fois un tag choisi, le nuage ne montre plus que les tags portés par les
+  // pages retenues : ce sont les seuls qui affinent encore le filtre. Les
+  // autres menaient tous à « aucune page », sans rien indiquer avant le clic.
+  // Les compteurs suivent, et comptent dans les pages retenues, pas dans
+  // toute la bibliothèque.
+  const cloudCounts: Record<string, number> = {}
+  if (selectedTags.length > 0) {
+    filteredPages.forEach(p => (p.tags || []).forEach(t => {
+      if (!selectedTags.includes(t)) cloudCounts[t] = (cloudCounts[t] || 0) + 1
+    }))
+  } else {
+    Object.assign(cloudCounts, tagCounts)
+  }
+  const cloudTags = Object.keys(cloudCounts).sort((a, b) => cloudCounts[b] - cloudCounts[a])
+
+  const q = search.trim().toLowerCase()
+  const visibleTags = q ? cloudTags.filter(t => t.includes(q)) : cloudTags
 
   function toggleTag(tag: string) {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
 
   // max count for visual weight
-  const maxCount = allTags.length > 0 ? Math.max(...allTags.map(t => tagCounts[t])) : 1
+  const maxCount = cloudTags.length > 0 ? Math.max(...cloudTags.map(t => cloudCounts[t])) : 1
 
   return (
     <div ref={backdropRef} className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
@@ -259,10 +274,16 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
 
         {/* Tag cloud */}
         {allTags.length > 0 && (
-          <div className="px-3 py-3 md:px-6 md:py-5 flex flex-wrap gap-1.5 md:gap-2">
+          <div className="px-3 py-3 md:px-6 md:py-5">
+            {selectedTags.length > 0 && (
+              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                {cloudTags.length > 0 ? 'Affiner encore' : 'Aucun tag associé'}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-1.5 md:gap-2">
             {visibleTags.map(tag => {
               const c = tagColor(tag)
-              const count = tagCounts[tag]
+              const count = cloudCounts[tag]
               const isSelected = selectedTags.includes(tag)
               // visual weight: opacity 0.6→1 based on relative frequency
               const weight = maxCount > 1 ? 0.6 + 0.4 * (count - 1) / (maxCount - 1) : 1
@@ -282,11 +303,12 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
                 </button>
               )
             })}
-            {visibleTags.length === 0 && (
+            {visibleTags.length === 0 && search && (
               <p className="text-sm py-2" style={{ color: 'var(--text-muted)' }}>
                 Aucun tag correspondant à «&nbsp;{search}&nbsp;».
               </p>
             )}
+            </div>
           </div>
         )}
 
