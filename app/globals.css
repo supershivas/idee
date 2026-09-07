@@ -684,8 +684,19 @@ input, textarea {
    Mobile seulement, et par media query et non par test JavaScript : un test
    JS ne connaît pas la largeur de l'écran au premier rendu et ferait
    apparaître l'écran rouge sur desktop le temps de l'hydratation. */
+/* `inset: 0` cadre la fenêtre de mise en page, qui sur iPhone s'arrête avant
+   les zones de sécurité : d'où la bande découverte en bas, et un centre
+   remonté d'une demi-bande — le disque paraissait décentré. Les marges
+   négatives valent exactement les zones de sécurité, ni plus ni moins : le
+   calque couvre alors l'écran physique, et son centre est le centre réel de
+   l'écran. (Un débordement arbitraire, lui, ne recentre rien : la zone
+   découverte n'est pas symétrique, le débordement le serait.) */
 .app-splash {
-  position: fixed; inset: 0; z-index: 500;
+  position: fixed; z-index: 500;
+  top: calc(-1 * env(safe-area-inset-top, 0px));
+  right: calc(-1 * env(safe-area-inset-right, 0px));
+  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+  left: calc(-1 * env(safe-area-inset-left, 0px));
   display: flex; align-items: center; justify-content: center;
   background: var(--accent);
 }
@@ -712,6 +723,7 @@ html.splash-up.splash-closing, html.splash-up.splash-closing body {
 }
 
 .app-splash-mark {
+  position: relative; z-index: 1;
   width: 96px; height: 96px; border-radius: 50%; background: #fff;
   animation: splash-in 480ms cubic-bezier(.22,1,.36,1) both,
              splash-breathe 1900ms cubic-bezier(.45,0,.55,1) 480ms infinite;
@@ -723,7 +735,8 @@ html.splash-up.splash-closing, html.splash-up.splash-closing body {
 @keyframes splash-breathe { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.05) } }
 
 .app-splash-ring {
-  position: absolute; width: 96px; height: 96px; border-radius: 50%;
+  /* Au-dessus du disque du trou, peint après eux dans l'ordre du document. */
+  position: absolute; z-index: 1; width: 96px; height: 96px; border-radius: 50%;
   border: 1.5px solid rgba(255,255,255,.45);
   animation: splash-ring 2100ms cubic-bezier(.22,1,.36,1) infinite;
 }
@@ -741,13 +754,22 @@ html.splash-up.splash-closing, html.splash-up.splash-closing body {
    elle qui peint le rouge — que l'on agrandit par `transform: scale`. Animer
    une échelle est la seule chose qu'un téléphone compose vraiment sur le GPU :
    la première version animait `mask-size`, qui saccadait sur iPhone. */
-.app-splash.is-out { background: transparent; }
-.app-splash.is-out::after {
+/* Le disque existe dès l'attente, rempli du même rouge que le reste : il y est
+   donc invisible. À la sortie, on le vide et on l'agrandit — rien n'est créé à
+   cet instant. La version précédente faisait naître le pseudo-élément en même
+   temps qu'elle rendait le calque transparent : le temps que le nouveau bloc
+   soit peint, une image passait sans rouge du tout, d'où l'éclair clair. */
+.app-splash::after {
   content: '';
   position: absolute; left: 50%; top: 50%;
   width: 96px; height: 96px; margin: -48px 0 0 -48px;
   border-radius: 50%;
+  background: var(--accent);
   box-shadow: 0 0 0 1200px var(--accent);
+}
+.app-splash.is-out { background: transparent; }
+.app-splash.is-out::after {
+  background: transparent;
   animation: splash-open var(--splash-out, 620ms) cubic-bezier(.83,0,.17,1) forwards;
 }
 /* ×14 : le trou dépasse la diagonale du plus grand iPhone (48 × 14 = 672 px de
