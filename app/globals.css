@@ -178,6 +178,7 @@ html.dark {
 
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
 html, body {
+  height: 100%;
   background: var(--app-bg);
   font-family: var(--font-body);
   color: var(--text-primary);

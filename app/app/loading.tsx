@@ -9,7 +9,7 @@ export default function Loading() {
         alignItems: 'center',
         justifyContent: 'center',
         gap: '16px',
-        background: '#f0f0ec',
+        background: 'var(--app-bg)',
       }}
     >
       <img
@@ -27,7 +27,7 @@ export default function Loading() {
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: '22px',
           fontWeight: 700,
-          color: '#1a1714',
+          color: 'var(--text-primary)',
           letterSpacing: '-0.01em',
         }}
       >

@@ -35,10 +35,13 @@ export default function AppSplash() {
       started = true
       waitTimer = setTimeout(() => {
         setPhase('out')
-        // La racine reprend sa couleur dès l'ouverture du trou, sinon le rouge
-        // qu'elle peint resterait visible derrière le contenu qui se découvre.
-        document.documentElement.classList.remove('splash-up')
-        outTimer = setTimeout(() => setPhase('done'), OUT_MS)
+        outTimer = setTimeout(() => {
+          setPhase('done')
+          // La racine ne reprend sa couleur qu'une fois l'ouverture partie :
+          // la lâcher au déclenchement laissait, le temps de l'animation, la
+          // couleur du document apparaître partout où l'app ne peint pas.
+          document.documentElement.classList.remove('splash-up')
+        }, OUT_MS)
       }, Math.max(0, MIN_MS - (Date.now() - shownAt)))
     }
 
