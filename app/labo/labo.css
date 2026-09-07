@@ -3,10 +3,12 @@
    Chronologie commune : logo 0→0,5 s · chargement 0,5→1,4 s · sortie 1,4→2,3 s. */
 
 .lab-frame { position: relative; overflow: hidden; isolation: isolate; }
-/* Chaque couche occupe le cadre entier. `> *` ne suffit pas : les couches sont
-   remontées d'un cran par le conteneur qui porte la clé de rejeu. */
-.lab-frame > *,
-.lab-frame > * > * { position: absolute; inset: 0; }
+/* Les ouvertures à minutage fixe empilent leurs couches à deux niveaux (le
+   conteneur qui porte la clé de rejeu, puis les couches elles-mêmes). La règle
+   est volontairement bornée à ces cadres-là : appliquée partout, elle
+   attrapait aussi le SVG de la marque et le plaquait dans le coin. */
+.lab-frame-timeline > *,
+.lab-frame-timeline > * > * { position: absolute; inset: 0; }
 .lab-content { z-index: 0; }
 .lab-frame > .lab-persp { perspective: 1200px; }
 
@@ -30,7 +32,7 @@
 .lab-l-fade { animation: lab-l-fade 1900ms cubic-bezier(.4,0,.2,1) both; }
 
 /* ── 2. Tracé ─────────────────────────────────────────────────────────────── */
-.lab-draw-stack { position: relative; width: 104px; height: 104px; }
+.lab-draw-stack { position: relative; width: 96px; height: 96px; }
 .lab-draw-stack > svg { position: absolute; inset: 0; }
 @keyframes lab-draw { from { stroke-dashoffset: 620 } to { stroke-dashoffset: 0 } }
 @keyframes lab-draw-fade { to { opacity: 0 } }
@@ -84,7 +86,7 @@
 }
 .lab-g-filament { animation: lab-filament-bg 2200ms cubic-bezier(.4,0,.2,1) both; }
 .lab-halo {
-  position: absolute; width: 104px; height: 104px; border-radius: 50%;
+  position: absolute; width: 96px; height: 96px; border-radius: 50%;
   background: radial-gradient(circle, rgba(255,240,200,.95) 0%, rgba(255,200,120,.35) 45%, transparent 70%);
   animation: lab-halo 2200ms cubic-bezier(.4,0,.2,1) both;
 }
@@ -115,7 +117,7 @@
 }
 .lab-l-stamp { animation: lab-l-stamp 2100ms cubic-bezier(.4,0,.2,1) both; }
 .lab-ripple {
-  position: absolute; width: 104px; height: 104px; border-radius: 50%;
+  position: absolute; width: 96px; height: 96px; border-radius: 50%;
   border: 2px solid rgba(255,255,255,.5);
   animation: lab-ripple 900ms cubic-bezier(.22,1,.36,1) 460ms both;
 }
@@ -138,7 +140,7 @@
 
 /* ── 8. Pulsation ─────────────────────────────────────────────────────────── */
 .lab-ring {
-  position: absolute; width: 104px; height: 104px; border-radius: 50%;
+  position: absolute; width: 96px; height: 96px; border-radius: 50%;
   border: 1.5px solid rgba(255,255,255,.45);
 }
 @keyframes lab-ring { 0% { opacity: .55; transform: scale(.85) } 100% { opacity: 0; transform: scale(2.5) } }
@@ -172,7 +174,7 @@
 .lab-l-lift { animation: lab-l-lift 1700ms cubic-bezier(.4,0,.2,1) both; }
 
 /* ── 10. Constellation ────────────────────────────────────────────────────── */
-.lab-dots { position: relative; width: 104px; height: 104px; display: flex; align-items: center; justify-content: center; }
+.lab-dots { position: relative; width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; }
 .lab-dot {
   position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff;
   animation: lab-dot 1500ms cubic-bezier(.22,1,.36,1) both;
@@ -199,4 +201,66 @@
     animation-timing-function: linear !important;
     animation-delay: 0ms !important;
   }
+}
+
+/* ═══ Candidates 03 et 08, avec une phase de chargement bouclée ═════════════
+   Les états viennent d'une machine à états React (`ph-in`, `ph-loading`,
+   `ph-out`, `ph-done`) et non d'un enchaînement de délais : la durée du
+   chargement n'est pas connue à l'avance. C'est exactement le mécanisme que
+   l'implémentation utilisera — quelques classes basculées, rien de plus. */
+
+.lab-layer { position: absolute; inset: 0; }
+.cand-ground {
+  display: flex; align-items: center; justify-content: center;
+  background: #C0392B; z-index: 1;
+  transition: opacity 480ms cubic-bezier(.4,0,.2,1), visibility 480ms;
+}
+.cand-ground.is-out { opacity: 0; visibility: hidden; }
+
+/* ── Entrée commune ──────────────────────────────────────────────────────── */
+@keyframes cand-in { from { opacity: 0; transform: scale(.86) } to { opacity: 1; transform: scale(1) } }
+
+/* ── 03 · Iris ───────────────────────────────────────────────────────────── */
+/* Respiration : boucle infinie, et ses extrémités sont identiques — la
+   jonction entre deux tours est invisible, quel que soit le nombre de tours. */
+@keyframes cand-breathe { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.06) } }
+.cand-mark-iris.ph-in { animation: cand-in 480ms cubic-bezier(.22,1,.36,1) both; }
+.cand-mark-iris.ph-loading { animation: cand-breathe 1900ms cubic-bezier(.45,0,.55,1) infinite; }
+.cand-mark-iris.ph-out, .cand-mark-iris.ph-done { animation: cand-mark-open 620ms cubic-bezier(.83,0,.17,1) both; }
+@keyframes cand-mark-open { from { opacity: 1; transform: scale(1) } to { opacity: 0; transform: scale(2.8) } }
+
+/* Le contenu s'ouvre par un disque du rayon exact de la marque (52px), pour
+   que l'ouverture parte de la forme et non d'un point quelconque. */
+.cand-content-iris { z-index: 2; clip-path: circle(0px at 50% 50%); }
+.cand-content-iris.ph-out { animation: cand-iris 620ms cubic-bezier(.83,0,.17,1) both; }
+.cand-content-iris.ph-done { clip-path: none; }
+@keyframes cand-iris { from { clip-path: circle(48px at 50% 50%) } to { clip-path: circle(145% at 50% 50%) } }
+
+/* ── 08 · Pulsation ──────────────────────────────────────────────────────── */
+.cand-ring {
+  position: absolute; width: 96px; height: 96px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.45);
+  animation: cand-ring 2100ms cubic-bezier(.22,1,.36,1) infinite;
+}
+.cand-ring.r2 { animation-delay: 700ms }
+.cand-ring.r3 { animation-delay: 1400ms }
+@keyframes cand-ring {
+  0%   { opacity: .6; transform: scale(.9) }
+  70%  { opacity: 0;  transform: scale(2.6) }
+  100% { opacity: 0;  transform: scale(2.6) }
+}
+.cand-mark-pulse.ph-in { animation: cand-in 480ms cubic-bezier(.22,1,.36,1) both; }
+.cand-mark-pulse.ph-out, .cand-mark-pulse.ph-done { animation: cand-mark-fade 480ms cubic-bezier(.4,0,.2,1) both; }
+@keyframes cand-mark-fade { to { opacity: 0; transform: scale(1.12) } }
+
+.cand-content-rise { z-index: 0; opacity: 0; }
+.cand-content-rise.ph-out { animation: lab-content-in 620ms cubic-bezier(.22,1,.36,1) 120ms both; }
+.cand-content-rise.ph-done { opacity: 1; }
+
+/* Sur mobile, la marque de l'ouverture fait 96px : c'est la seule mesure à
+   reprendre à l'implémentation, avec le rayon de départ de l'iris. */
+@media (prefers-reduced-motion: reduce) {
+  .cand-ring { display: none }
+  .cand-mark-iris.ph-loading { animation: none }
+  .cand-content-iris.ph-out { animation-duration: 200ms }
 }

@@ -1,5 +1,5 @@
 'use client'
-import { Bulb } from './Bulb'
+import { Mark } from './Mark'
 import { AppMock } from './AppMock'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ function FadeBreathe() {
   return (
     <>
       <div className="lab-content lab-c-fade"><AppMock /></div>
-      <Ground className="lab-g-fade"><Bulb size={104} className="lab-l-fade" /></Ground>
+      <Ground className="lab-g-fade"><Mark size={96} className="lab-l-fade" /></Ground>
     </>
   )
 }
@@ -53,8 +53,8 @@ function DrawOn() {
       <div className="lab-content lab-c-fade"><AppMock /></div>
       <Ground className="lab-g-fade">
         <div className="lab-draw-stack">
-          <Bulb size={104} draw className="lab-draw-line" />
-          <Bulb size={104} className="lab-draw-fill" />
+          <Mark size={96} draw className="lab-draw-line" />
+          <Mark size={96} className="lab-draw-fill" />
         </div>
       </Ground>
     </>
@@ -65,7 +65,7 @@ function DrawOn() {
 function Iris() {
   return (
     <>
-      <Ground><Bulb size={104} className="lab-l-iris" /></Ground>
+      <Ground><Mark size={96} className="lab-l-iris" /></Ground>
       <div className="lab-content lab-c-iris"><AppMock /></div>
     </>
   )
@@ -76,7 +76,7 @@ function Ink() {
   return (
     <>
       <div className="lab-content lab-c-late"><AppMock /></div>
-      <Ground className="lab-g-ink"><Bulb size={104} className="lab-l-ink" /></Ground>
+      <Ground className="lab-g-ink"><Mark size={96} className="lab-l-ink" /></Ground>
     </>
   )
 }
@@ -88,7 +88,7 @@ function Filament() {
       <div className="lab-content lab-c-late"><AppMock /></div>
       <Ground className="lab-g-filament">
         <div className="lab-halo" />
-        <Bulb size={104} className="lab-l-filament" />
+        <Mark size={96} className="lab-l-filament" />
       </Ground>
     </>
   )
@@ -101,7 +101,7 @@ function Stamp() {
       <div className="lab-content lab-c-late"><AppMock /></div>
       <Ground className="lab-g-fade">
         <span className="lab-ripple" />
-        <Bulb size={104} className="lab-l-stamp" />
+        <Mark size={96} className="lab-l-stamp" />
       </Ground>
     </>
   )
@@ -115,7 +115,7 @@ function Curtain() {
       <div className="lab-curtain lab-curtain-top" />
       <div className="lab-curtain lab-curtain-bottom" />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <Bulb size={104} className="lab-l-curtain" />
+        <Mark size={96} className="lab-l-curtain" />
       </div>
     </>
   )
@@ -130,7 +130,7 @@ function Pulse() {
         <span className="lab-ring lab-ring-1" />
         <span className="lab-ring lab-ring-2" />
         <span className="lab-ring lab-ring-3" />
-        <Bulb size={104} className="lab-l-pulse" />
+        <Mark size={96} className="lab-l-pulse" />
       </Ground>
     </>
   )
@@ -141,7 +141,7 @@ function PageLift() {
   return (
     <div className="lab-persp">
       <div className="lab-content lab-c-late"><AppMock /></div>
-      <Ground className="lab-g-lift"><Bulb size={104} className="lab-l-lift" /></Ground>
+      <Ground className="lab-g-lift"><Mark size={96} className="lab-l-lift" /></Ground>
     </div>
   )
 }
@@ -174,7 +174,7 @@ function Constellation() {
               animationDelay: `${d.d}ms`,
             }} />
           ))}
-          <Bulb size={104} className="lab-l-const" />
+          <Mark size={96} className="lab-l-const" />
         </div>
       </Ground>
     </>
