@@ -35,7 +35,14 @@ export default function AppSplash() {
       started = true
       waitTimer = setTimeout(() => {
         setPhase('out')
-        outTimer = setTimeout(() => setPhase('done'), OUT_MS)
+        // Le fond du document repasse au fond de l'app en fondu, sur la durée
+        // de l'iris : basculer d'un coup faisait apparaître la bande du bas,
+        // rouge ou claire selon le moment.
+        document.documentElement.classList.add('splash-closing')
+        outTimer = setTimeout(() => {
+          setPhase('done')
+          document.documentElement.classList.remove('splash-up', 'splash-closing')
+        }, OUT_MS)
       }, Math.max(0, MIN_MS - (Date.now() - shownAt)))
     }
 
@@ -49,6 +56,7 @@ export default function AppSplash() {
     return () => {
       window.removeEventListener('idee:ready', finish)
       clearTimeout(safety); clearTimeout(waitTimer); clearTimeout(outTimer)
+      document.documentElement.classList.remove('splash-up', 'splash-closing')
     }
   }, [])
 
