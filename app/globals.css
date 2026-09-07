@@ -684,20 +684,21 @@ input, textarea {
    Mobile seulement, et par media query et non par test JavaScript : un test
    JS ne connaît pas la largeur de l'écran au premier rendu et ferait
    apparaître l'écran rouge sur desktop le temps de l'hydratation. */
+
+/* Les marges négatives ne sont pas une précaution de confort : sur iPhone,
+   `inset: 0` laissait une bande découverte en bas, dans la zone de
+   l'indicateur d'accueil — ni la hauteur de la fenêtre ni celle du document
+   n'y correspondent tout à fait. Plutôt que de chercher la bonne mesure,
+   l'ouverture déborde de 120px de chaque côté : elle ne peut alors plus
+   manquer un bord, quelle que soit la géométrie que rapporte le système.
+   Le centrage n'en souffre pas, le débordement étant symétrique. */
 .app-splash {
-  position: fixed; inset: 0; width: 100%; height: 100%; z-index: 500;
+  position: fixed; top: -120px; right: -120px; bottom: -120px; left: -120px;
+  z-index: 500;
   display: flex; align-items: center; justify-content: center;
   background: var(--accent);
 }
-/* La racine du document est peinte du même rouge tant que l'ouverture est là
-   (classe posée avant la première peinture, retirée par `AppSplash`) : une
-   barre d'une autre couleur apparaissait en bas de l'écran, le fixe ne
-   couvrant pas tout à fait la zone de sécurité de l'iPhone. */
-html.splash-up, html.splash-up body { background: var(--accent); }
-@media (min-width: 768px) {
-  .app-splash { display: none }
-  html.splash-up, html.splash-up body { background: var(--app-bg) }
-}
+@media (min-width: 768px) { .app-splash { display: none } }
 
 .app-splash-mark {
   width: 96px; height: 96px; border-radius: 50%; background: #fff;
