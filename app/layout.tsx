@@ -36,8 +36,13 @@ export default function RootLayout({
             éclair blanc à chaque ouverture en mode sombre. Ce script bloque le
             rendu (il est dans le <head>), donc la classe est là avant la
             première peinture. Il ne connaît aucune couleur : elles restent
-            dans globals.css, il ne fait que basculer la classe. */}
-        <script dangerouslySetInnerHTML={{ __html: "try{var t=localStorage.getItem('idee-theme')||'system';if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}" }} />
+            dans globals.css, il ne fait que basculer la classe.
+
+            Il pose au passage `splash-up` sur `/app` : le fond du document
+            reste visible sous la vue web dans la zone de l'indicateur
+            d'accueil, et c'est la seule surface qui puisse y répondre.
+            `AppSplash` l'accorde ensuite à l'app. */}
+        <script dangerouslySetInnerHTML={{ __html: "try{var t=localStorage.getItem('idee-theme')||'system';if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');if(location.pathname.indexOf('/app')===0)document.documentElement.classList.add('splash-up')}catch(e){}" }} />
 
         {/* Favicon standard */}
         <link rel="icon" href="/favicon-32x32.png" />
