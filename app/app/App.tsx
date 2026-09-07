@@ -148,6 +148,15 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   const drawerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (drawerCloseTimerRef.current) clearTimeout(drawerCloseTimerRef.current) }, [])
   const isMobile = useIsMobile()
+
+  // Signale à l'ouverture (`AppSplash`) que l'app est là. Le drapeau double
+  // l'événement : un composant monté après ce point ne verrait jamais passer
+  // l'événement, mais lit le drapeau.
+  useEffect(() => {
+    ;(window as any).__ideeReady = true
+    window.dispatchEvent(new Event('idee:ready'))
+  }, [])
+
   const toggleFavorite = useToggleFavorite(pages, setPages)
   const { saveState, queueSave } = usePageSaver(userId, pages)
 

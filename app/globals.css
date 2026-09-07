@@ -673,3 +673,73 @@ input, textarea {
   background: var(--text-faint);
   opacity: 0.5;
 }
+
+/* ─── Ouverture de l'app ─────────────────────────────────────────────────────
+   Ondes pendant l'attente, iris à l'arrivée. Rendue par `app/app/layout.tsx`,
+   donc présente dans le HTML initial et peinte avant l'exécution du bundle —
+   c'est exactement le temps qu'elle sert à couvrir, aucune bibliothèque
+   d'animation ne pourrait arriver assez tôt.
+
+   Mobile seulement, et par media query et non par test JavaScript : un test
+   JS ne connaît pas la largeur de l'écran au premier rendu et ferait
+   apparaître l'écran rouge sur desktop le temps de l'hydratation. */
+.app-splash {
+  position: fixed; inset: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent);
+}
+@media (min-width: 768px) { .app-splash { display: none } }
+
+.app-splash-mark {
+  width: 96px; height: 96px; border-radius: 50%; background: #fff;
+  animation: splash-in 480ms cubic-bezier(.22,1,.36,1) both,
+             splash-breathe 1900ms cubic-bezier(.45,0,.55,1) 480ms infinite;
+}
+@keyframes splash-in { from { opacity: 0; transform: scale(.86) } to { opacity: 1; transform: scale(1) } }
+/* La respiration part et revient à la même échelle : la jonction entre deux
+   tours est invisible, quel que soit le nombre de tours — l'attente peut donc
+   durer ce qu'elle veut. */
+@keyframes splash-breathe { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.05) } }
+
+.app-splash-ring {
+  position: absolute; width: 96px; height: 96px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.45);
+  animation: splash-ring 2100ms cubic-bezier(.22,1,.36,1) infinite;
+}
+.app-splash-ring.r2 { animation-delay: 700ms }
+.app-splash-ring.r3 { animation-delay: 1400ms }
+@keyframes splash-ring {
+  0%   { opacity: .6; transform: scale(.9) }
+  70%  { opacity: 0;  transform: scale(2.6) }
+  100% { opacity: 0;  transform: scale(2.6) }
+}
+
+/* Sortie : un trou circulaire s'ouvre dans le rouge, à la taille exacte de la
+   marque, et le contenu apparaît par là. Le trou est un masque en dégradé
+   radial dont on anime la taille — `mask-size` s'interpole partout, là où
+   animer un rayon dans `clip-path` demanderait `@property`. */
+.app-splash.is-out {
+  -webkit-mask-image: radial-gradient(circle, transparent 49.5%, #000 50%);
+          mask-image: radial-gradient(circle, transparent 49.5%, #000 50%);
+  -webkit-mask-position: center; mask-position: center;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  animation: splash-iris var(--splash-out, 620ms) cubic-bezier(.83,0,.17,1) forwards;
+}
+@keyframes splash-iris {
+  from { -webkit-mask-size: 96px 96px;     mask-size: 96px 96px }
+  to   { -webkit-mask-size: 2600px 2600px; mask-size: 2600px 2600px }
+}
+/* La marque s'efface en s'élargissant : elle ne disparaît pas, elle devient
+   l'ouverture. */
+.app-splash.is-out .app-splash-mark {
+  animation: splash-mark-open var(--splash-out, 620ms) cubic-bezier(.83,0,.17,1) forwards;
+}
+@keyframes splash-mark-open { from { opacity: 1; transform: scale(1) } to { opacity: 0; transform: scale(2.4) } }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-splash-mark { animation: splash-in 200ms linear both }
+  .app-splash-ring { display: none }
+  .app-splash.is-out { animation: splash-fade 200ms linear forwards; -webkit-mask-image: none; mask-image: none }
+  .app-splash.is-out .app-splash-mark { animation: none }
+  @keyframes splash-fade { to { opacity: 0 } }
+}
