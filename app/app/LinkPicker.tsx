@@ -23,11 +23,32 @@ export function LinkPicker({ pages, initialQuery = '', onPick, onClose }: {
   const listRef = useRef<HTMLDivElement>(null)
 
   const isUrl = looksLikeUrl(q)
+  // Recherche par mots plutôt que par sous-chaîne. Le champ est pré-rempli du
+  // texte sélectionné, qui est une expression et non un titre : chercher
+  // « le plan de printemps » tel quel ne trouvait rien, alors que la page
+  // « Jardin — plan de printemps » est manifestement la bonne. On compte donc
+  // les mots retrouvés dans le titre, et on classe par ce compte — les mots
+  // outils, trop courts, sont ignorés.
   const results = useMemo(() => {
-    const n = normalizeStr(q.trim())
     const candidates = pages.filter(p => !p.deleted_at)
+    const n = normalizeStr(q.trim())
     if (!n) return candidates.slice(0, 6)
-    return candidates.filter(p => normalizeStr(p.title || '').includes(n)).slice(0, 6)
+
+    const mots = n.split(/\s+/).filter(m => m.length >= 3)
+    // Une saisie trop courte pour donner un seul mot utile reste traitée
+    // comme un début de mot : taper « pl » doit encore proposer « plan ».
+    if (!mots.length) return candidates.filter(p => normalizeStr(p.title || '').includes(n)).slice(0, 6)
+
+    return candidates
+      .map(p => {
+        const t = normalizeStr(p.title || '')
+        return { p, score: mots.filter(m => t.includes(m)).length }
+      })
+      .filter(x => x.score > 0)
+      // À nombre de mots égal, le titre le plus court est le plus précis.
+      .sort((a, b) => b.score - a.score || (a.p.title || '').length - (b.p.title || '').length)
+      .slice(0, 6)
+      .map(x => x.p)
   }, [pages, q])
 
   // La ligne « lien externe » passe en tête : quand on tape une adresse, c'est

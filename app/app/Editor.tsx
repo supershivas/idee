@@ -477,6 +477,18 @@ Image.extend({
     }
   }, [page.id])
 
+  // Ouvre le sélecteur pré-rempli du texte sélectionné : le plus souvent, la
+  // page cherchée porte un titre proche des mots qu'on vient de sélectionner.
+  // Les quatre déclencheurs (barre d'outils, barre de sélection, ⌘K, `[[`)
+  // passent par ici, pour qu'ils se comportent tous pareil.
+  function openLinkPicker() {
+    const sel = editor?.state.selection
+    const text = sel && !sel.empty ? editor!.state.doc.textBetween(sel.from, sel.to, ' ').trim() : ''
+    // Au-delà d'une poignée de mots, la sélection est une phrase et non le nom
+    // d'une page : la pré-remplir ne rendrait service à personne.
+    setLinkQuery(text.split(/\s+/).length <= 5 && text.length <= 60 ? text : '')
+  }
+
   // Pose le lien sur la sélection, sans toucher au texte : contrairement à
   // `[[` et à la commande `/`, qui insèrent le titre de la page, on conserve
   // la formulation de l'auteur.
@@ -561,7 +573,7 @@ Image.extend({
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
       <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
-      <ToolBtn onClick={() => setLinkQuery('')} active={editor?.isActive('link')} label="🔗" title="Lien" />
+      <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" />
     </>
   )
 
@@ -625,7 +637,7 @@ Image.extend({
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Code" />
       <Sep />
-      <ToolBtn onClick={() => setLinkQuery('')} active={editor?.isActive('link')} label="🔗" title="Lien" />
+      <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" />
       <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" />
@@ -694,8 +706,7 @@ Image.extend({
                 if (editor.isActive('link')) {
                   editor.chain().focus().unsetLink().run()
                 } else {
-                  const url = window.prompt('URL du lien :')
-                  if (url) editor.chain().focus().setLink({ href: url }).run()
+                  openLinkPicker()
                 }
               }}
               className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('link') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
