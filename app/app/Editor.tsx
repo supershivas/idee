@@ -60,6 +60,8 @@ const TypographyShortcuts = Extension.create({
 import { Page } from './types'
 import { useKeyboardBarAnchor } from './hooks'
 import { toast } from './components/Toast'
+import { LinkPicker, LinkChoice } from './LinkPicker'
+import { createLinkOnSelection } from './LinkOnSelection'
 import { createClient } from '@/lib/supabase/client'
 
 function ToolBtn({ onClick, active, label, title }: { onClick: () => void, active?: boolean, label: ReactNode, title: string }) {
@@ -75,31 +77,6 @@ function ToolBtn({ onClick, active, label, title }: { onClick: () => void, activ
   )
 }
 
-function LinkModal({ onConfirm, onClose }: { onConfirm: (url: string) => void, onClose: () => void }) {
-  const [url, setUrl] = useState('https://')
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
-      <div className="rounded-t-2xl md:rounded-xl shadow-xl p-5 w-full md:w-80"
-        style={{ background: 'var(--card-bg)', color: 'var(--text-primary)' }}
-        onClick={e => e.stopPropagation()}>
-        <p className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Insérer un lien</p>
-        <input autoFocus value={url} onChange={e => setUrl(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') onConfirm(url) }}
-          className="w-full rounded-lg px-3 py-3 text-sm outline-none mb-3"
-          style={{ border: '1px solid var(--border)', background: 'var(--app-bg)', color: 'var(--text-primary)' }}
-          placeholder="https://..." />
-        <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2.5 text-sm" style={{ color: 'var(--text-muted)' }}>Annuler</button>
-          <button onClick={() => onConfirm(url)}
-            className="px-4 py-2.5 text-sm rounded-lg"
-            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
-            Insérer
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function TableBottomSheet({ editor, onClose }: { editor: any, onClose: () => void }) {
   const actions = [
@@ -303,7 +280,10 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string, isMobile: boolean
   focusMode?: boolean
 }) {
-  const [showLinkModal, setShowLinkModal] = useState(false)
+  // `null` = fermée. Une chaîne = ouverte, avec cette saisie initiale — `[[`
+  // sur une sélection la pré-remplit du texte sélectionné.
+  const [linkQuery, setLinkQuery] = useState<string | null>(null)
+
   const [showTableSheet, setShowTableSheet] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [wordCount, setWordCount] = useState(0)
@@ -343,6 +323,14 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   useEffect(() => { wikiPagesRef.current = pages }, [pages])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const wikiLinkExtension = useMemo(() => createWikiLinkExtension(wikiPagesRef, onNavigate), [])
+  // Collage d'une adresse sur une sélection, `[[` sur une sélection, ⌘K. La
+  // référence aux pages est partagée avec l'extension wiki : le plugin est
+  // créé une fois, mais lit toujours la bibliothèque à jour.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const linkOnSelection = useMemo(
+    () => createLinkOnSelection({ pagesRef: wikiPagesRef, openPicker: q => setLinkQuery(q) }),
+    []
+  )
 
   function updateStats(ed: any) {
     const text = ed.state.doc.textContent || ''
@@ -384,6 +372,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
       TableRow,
       subpageExtension,
       wikiLinkExtension,
+      linkOnSelection,
       CalloutExtension,
 Image.extend({
   addAttributes() {
@@ -488,10 +477,18 @@ Image.extend({
     }
   }, [page.id])
 
-  function insertLink(url: string) {
-    setShowLinkModal(false)
-    if (!url || url === 'https://') return
-    editor?.chain().focus().setLink({ href: url }).run()
+  // Pose le lien sur la sélection, sans toucher au texte : contrairement à
+  // `[[` et à la commande `/`, qui insèrent le titre de la page, on conserve
+  // la formulation de l'auteur.
+  function applyLink(choice: LinkChoice) {
+    setLinkQuery(null)
+    if (choice.kind === 'page') {
+      editor?.chain().focus()
+        .setLink({ href: `#${choice.page.id}`, 'data-page-id': choice.page.id, class: 'page-link', target: null, rel: null } as any)
+        .run()
+    } else {
+      editor?.chain().focus().setLink({ href: choice.href }).run()
+    }
   }
 
   useEffect(() => {
@@ -564,7 +561,7 @@ Image.extend({
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
       <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
-      <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien" />
+      <ToolBtn onClick={() => setLinkQuery('')} active={editor?.isActive('link')} label="🔗" title="Lien" />
     </>
   )
 
@@ -628,7 +625,7 @@ Image.extend({
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Code" />
       <Sep />
-      <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} label="🔗" title="Lien" />
+      <ToolBtn onClick={() => setLinkQuery('')} active={editor?.isActive('link')} label="🔗" title="Lien" />
       <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" />
@@ -644,7 +641,10 @@ Image.extend({
 
   return (
     <div className={`flex flex-col flex-1${isMobile ? ' overflow-hidden' : ''}${focusMode ? ' focus-mode-content' : ''}`}>
-      {showLinkModal && <LinkModal onConfirm={insertLink} onClose={() => setShowLinkModal(false)} />}
+      {linkQuery !== null && (
+        <LinkPicker pages={pages} initialQuery={linkQuery}
+          onPick={applyLink} onClose={() => setLinkQuery(null)} />
+      )}
       {showTableSheet && isMobile && <TableBottomSheet editor={editor} onClose={() => setShowTableSheet(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
