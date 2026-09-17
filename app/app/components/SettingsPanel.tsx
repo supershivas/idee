@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Page } from '../types'
 import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
+import { StorageUsage } from './StorageUsage'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -210,6 +211,13 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                   </div>
                 ))}
               </div>
+
+              {/* Ce que l'app occupe sur l'appareil : c'est la même question
+                  que « que contient mon compte », vue du côté du téléphone. */}
+              <p className="text-[11px] font-semibold uppercase tracking-wider mt-4 mb-1 px-1" style={{ color: 'var(--text-faint)' }}>
+                Stockage sur l’appareil
+              </p>
+              <StorageUsage />
             </div>
 
             {/* Sauvegarde */}
