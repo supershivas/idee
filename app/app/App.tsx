@@ -568,6 +568,22 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     }
   }
 
+  // Crée une page pour y poser un lien, sans y naviguer : on est en train
+  // d'écrire ailleurs. `addPage` ouvre la page créée, ce qui ferait perdre le
+  // fil — d'où une fonction distincte plutôt qu'un drapeau de plus.
+  async function createPageForLink(title: string, parentId: string | null): Promise<Page | null> {
+    const icons = ['📄','📝','💡','🗂️','📌','🔖','⭐','🚀','🎯','💬']
+    const icon = icons[Math.floor(Math.random() * icons.length)]
+    const { data, error } = await createClient().from('pages')
+      .insert({ title: title.trim() || 'Sans titre', content: '', user_id: userId, parent_id: parentId, position: pages.length, icon, type: 'page' })
+      .select().single()
+    if (error || !data) { toast('Impossible de créer la page — vérifiez votre connexion.', 'error'); return null }
+    markHydrated(data.id)
+    setPages(prev => [...prev, data])
+    if (parentId) setOpenMap(o => ({ ...o, [parentId]: true }))
+    return data as Page
+  }
+
   async function addJournalEntry() {
     const mots = ['Réflexion', 'Fragment', 'Éclat', 'Lueur', 'Souffle', 'Trace', 'Murmure', 'Impression', 'Intuition', 'Instant', 'Étincelle', 'Écho', 'Envol', 'Vibration', 'Pensée', 'Grain', 'Sillon', 'Élancement']
     const title = mots[Math.floor(Math.random() * mots.length)]
@@ -1532,6 +1548,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                       onUpdate={content => updateContent(content, selected.id)}
                       onAddSubpage={() => addPage(selected.id)}
                       onNavigate={p => { selectPage(p); if (p.type === 'journal') setShowJournal(false) }}
+                      onCreatePage={createPageForLink}
                       userId={userId}
                       isMobile={isMobile}
                       focusMode={sidebarHidden}
@@ -1618,6 +1635,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
                       onUpdate={content => updateContent(content, selectedRight.id)}
                       onAddSubpage={() => addPage(selectedRight.id)}
                       onNavigate={p => selectPageRight(p)}
+                      onCreatePage={createPageForLink}
                       userId={userId}
                       isMobile={false}
                       focusMode={false}
