@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 // État du stockage local — ce que l'app occupe sur l'appareil pour fonctionner
 // hors ligne (cache du service worker, données locales), et ce que le
@@ -102,6 +103,121 @@ export function StorageUsage() {
       <p className="text-[11px] mt-2.5 leading-relaxed" style={{ color: 'var(--text-faint)' }}>
         Place occupée sur cet appareil pour la lecture hors ligne. Tes notes,
         elles, sont conservées sur le serveur et ne comptent pas ici.
+      </p>
+    </div>
+  )
+}
+
+// ── Poids réel des notes, côté serveur ───────────────────────────────────────
+// Deux sources distinctes, et c'est tout l'intérêt de les séparer : le texte
+// vit dans la table `pages`, les images dans le bucket `images`. Une note qui
+// « pèse » lourd, c'est presque toujours ses images — le texte, lui, dépasse
+// rarement quelques mégaoctets pour une vie entière de prise de notes.
+//
+// Calcul à la demande et non au montage : mesurer le texte suppose de le
+// rapatrier entièrement, ce qui ne doit pas se payer à chaque ouverture des
+// paramètres.
+type ServerUsage = {
+  texte: number
+  corbeille: number
+  images: number
+  nbImages: number
+  pages: number
+  journal: number
+}
+
+// Séparé du composant pour être éprouvable : la pagination du listage et le
+// comptage des octets sont la seule partie où l'on peut se tromper en silence.
+export async function computeServerUsage(supabase: any, userId: string): Promise<ServerUsage> {
+  const octets = (s: string | null | undefined) => (s ? new TextEncoder().encode(s).length : 0)
+
+  const { data: rows, error } = await supabase.from('pages').select('title, content, summary, type, deleted_at')
+  if (error) throw error
+
+  const acc: ServerUsage = { texte: 0, corbeille: 0, images: 0, nbImages: 0, pages: 0, journal: 0 }
+  for (const r of rows || []) {
+    const n = octets(r.title) + octets(r.content) + octets(r.summary)
+    acc.texte += n
+    if (r.deleted_at) acc.corbeille += n
+    else if (r.type === 'journal') acc.journal += n
+    else acc.pages += n
+  }
+
+  // Le listage est paginé : sans cette boucle on s'arrêterait aux cent
+  // premières images, et le total serait faux sans jamais le dire.
+  let offset = 0
+  const lot = 100
+  for (;;) {
+    const { data: fichiers, error: e2 } = await supabase.storage.from('images').list(userId, { limit: lot, offset })
+    if (e2) throw e2
+    for (const f of fichiers || []) {
+      const taille = f?.metadata?.size
+      if (typeof taille === 'number') { acc.images += taille; acc.nbImages++ }
+    }
+    if (!fichiers || fichiers.length < lot) break
+    offset += lot
+  }
+  return acc
+}
+
+export function ServerUsage({ userId, client }: { userId: string; client?: any }) {
+  const [etat, setEtat] = useState<'repos' | 'calcul' | 'fait' | 'erreur'>('repos')
+  const [u, setU] = useState<ServerUsage | null>(null)
+
+  async function calculer() {
+    setEtat('calcul')
+    try {
+      setU(await computeServerUsage(client || createClient(), userId))
+      setEtat('fait')
+    } catch {
+      setEtat('erreur')
+    }
+  }
+
+  if (etat === 'repos' || etat === 'calcul') {
+    return (
+      <button onClick={calculer} disabled={etat === 'calcul'}
+        className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm disabled:opacity-60"
+        style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}>
+        <i className="ti ti-cloud" style={{ fontSize: 15 }} />
+        {etat === 'calcul' ? 'Calcul en cours…' : 'Calculer le poids de mes notes'}
+      </button>
+    )
+  }
+
+  if (etat === 'erreur') {
+    return (
+      <button onClick={calculer}
+        className="mt-2 w-full rounded-xl px-3 py-2.5 text-sm"
+        style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
+        Calcul impossible — réessayer
+      </button>
+    )
+  }
+
+  const { texte, corbeille, images, nbImages, pages, journal } = u!
+  const lignes: [string, string][] = [
+    ['Pages', formatBytes(pages)],
+    ['Journal', formatBytes(journal)],
+    ...(corbeille > 0 ? [['Corbeille', formatBytes(corbeille)] as [string, string]] : []),
+    ['Images', `${formatBytes(images)}${nbImages ? ` · ${nbImages}` : ''}`],
+  ]
+
+  return (
+    <div className="mt-2 rounded-xl px-3 py-3" style={{ background: 'var(--selected-bg)' }}>
+      <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+        {formatBytes(texte + images)} <span className="font-normal" style={{ color: 'var(--text-muted)' }}>au total</span>
+      </p>
+      <div className="flex flex-col gap-1">
+        {lignes.map(([k, v]) => (
+          <div key={k} className="flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--text-muted)' }}>{k}</span>
+            <span className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>{v}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] mt-2.5 leading-relaxed" style={{ color: 'var(--text-faint)' }}>
+        Texte des notes et images envoyées, mesurés sur le serveur.
       </p>
     </div>
   )
