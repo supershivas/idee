@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Page } from '../types'
 import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
-import { StorageUsage } from './StorageUsage'
+import { StorageUsage, ServerUsage } from './StorageUsage'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -218,6 +218,13 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                 Stockage sur l’appareil
               </p>
               <StorageUsage />
+
+              {/* Le poids réel des notes, lui, est sur le serveur — c'est la
+                  question qu'on se pose vraiment en regardant « stockage ». */}
+              <p className="text-[11px] font-semibold uppercase tracking-wider mt-4 mb-1 px-1" style={{ color: 'var(--text-faint)' }}>
+                Poids de mes notes
+              </p>
+              <ServerUsage userId={userId} />
             </div>
 
             {/* Sauvegarde */}
