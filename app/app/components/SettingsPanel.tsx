@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Page } from '../types'
 import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
-import { StorageUsage, ServerUsage } from './StorageUsage'
+import { ServerUsage } from './StorageUsage'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -212,15 +212,9 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                 ))}
               </div>
 
-              {/* Ce que l'app occupe sur l'appareil : c'est la même question
-                  que « que contient mon compte », vue du côté du téléphone. */}
-              <p className="text-[11px] font-semibold uppercase tracking-wider mt-4 mb-1 px-1" style={{ color: 'var(--text-faint)' }}>
-                Stockage sur l’appareil
-              </p>
-              <StorageUsage />
-
-              {/* Le poids réel des notes, lui, est sur le serveur — c'est la
-                  question qu'on se pose vraiment en regardant « stockage ». */}
+              {/* Le poids réel des notes est sur le serveur — c'est la question
+                  qu'on se pose vraiment en regardant « stockage ». Ce que l'app
+                  occupe sur le disque de l'appareil, lui, n'apprend rien. */}
               <p className="text-[11px] font-semibold uppercase tracking-wider mt-4 mb-1 px-1" style={{ color: 'var(--text-faint)' }}>
                 Poids de mes notes
               </p>
