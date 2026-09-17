@@ -1,21 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { QuotaChart, TrendChart, type Point } from './UsageCharts'
+import { formatBytes } from './formatBytes'
 
-// Unités françaises, une décimale tant que le nombre est petit — « 4,2 Mo » se
-// lit, « 4404019 octets » non.
-export function formatBytes(n: number): string {
-  if (!Number.isFinite(n) || n < 0) return '—'
-  if (n < 1024) return `${n} o`
-  const unites = ['ko', 'Mo', 'Go', 'To']
-  let v = n / 1024
-  let i = 0
-  while (v >= 1024 && i < unites.length - 1) { v /= 1024; i++ }
-  // Aucune décimale au-delà de 100, et jamais de « ,0 » traînant, qui donne
-  // l'air d'une mesure plus précise qu'elle ne l'est.
-  const dec = v >= 100 ? 0 : 1
-  return `${v.toFixed(dec).replace(/\.0$/, '').replace('.', ',')} ${unites[i]}`
-}
 
 // ── Poids réel des notes, côté serveur ───────────────────────────────────────
 // Deux sources distinctes, et c'est tout l'intérêt de les séparer : le texte
@@ -72,7 +60,20 @@ export async function computeServerUsage(supabase: any, userId: string): Promise
 
 const CLE_CACHE = 'idee_notes_usage'
 
-type Memo = { u: ServerUsage; date: string }
+type Memo = { u: ServerUsage; date: string; hist?: Point[] }
+
+// Assez de points pour une courbe lisible, pas assez pour peser : quelques
+// centaines d'octets dans localStorage.
+const MAX_POINTS = 60
+
+// Un point par jour au plus : deux calculs dans la même minute décriraient une
+// évolution qui n'existe pas. Le dernier mesuré du jour l'emporte.
+function ajouterPoint(hist: Point[], u: ServerUsage, date: string): Point[] {
+  const jour = (iso: string) => iso.slice(0, 10)
+  const point: Point = { d: date, t: u.texte, i: u.images }
+  const sans = hist.filter(p => jour(p.d) !== jour(date))
+  return [...sans, point].slice(-MAX_POINTS)
+}
 
 // localStorage lève en navigation privée sur certains navigateurs : le poids
 // s'affiche alors sans jamais être mémorisé, ce qui reste acceptable.
@@ -82,7 +83,12 @@ function lireMemo(): Memo | null {
     if (!brut) return null
     const m = JSON.parse(brut)
     if (!m || typeof m.date !== 'string' || !m.u || typeof m.u.texte !== 'number') return null
-    return m as Memo
+    // `hist` est arrivé après coup : une mémoire enregistrée par une version
+    // précédente reste lisible, elle démarre simplement sans historique.
+    const hist = Array.isArray(m.hist)
+      ? m.hist.filter((p: any) => p && typeof p.d === 'string' && typeof p.t === 'number' && typeof p.i === 'number')
+      : []
+    return { u: m.u, date: m.date, hist } as Memo
   } catch { return null }
 }
 
@@ -110,7 +116,8 @@ export function ServerUsage({ userId, client }: { userId: string; client?: any }
     setEtat('calcul')
     try {
       const u = await computeServerUsage(client || createClient(), userId)
-      const m: Memo = { u, date: new Date().toISOString() }
+      const date = new Date().toISOString()
+      const m: Memo = { u, date, hist: ajouterPoint(memo?.hist || [], u, date) }
       ecrireMemo(m)
       setMemo(m)
       setEtat('repos')
@@ -160,7 +167,10 @@ export function ServerUsage({ userId, client }: { userId: string; client?: any }
           </div>
         ))}
       </div>
-      <p className="text-[11px] mt-2.5 leading-relaxed" style={{ color: 'var(--text-faint)' }}>
+      <QuotaChart texte={texte} images={images} />
+      <TrendChart points={memo.hist || []} />
+
+      <p className="text-[11px] mt-2.5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
         {etat === 'erreur'
           ? 'Dernier calcul impossible — chiffres du '
           : 'Texte des notes et images envoyées, mesurés sur le serveur. Mis à jour le '}
