@@ -1,19 +1,9 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-// État du stockage local — ce que l'app occupe sur l'appareil pour fonctionner
-// hors ligne (cache du service worker, données locales), et ce que le
-// navigateur lui accorde. Ce n'est PAS le poids des notes sur le serveur :
-// celles-ci vivent chez Supabase et ne comptent pas dans ce quota.
-type Estimate = {
-  usage: number
-  quota: number
-  details?: Record<string, number>
-}
-
-// Unités françaises, une décimale au-delà du mégaoctet — « 4,2 Mo » se lit,
-// « 4404019 octets » non.
+// Unités françaises, une décimale tant que le nombre est petit — « 4,2 Mo » se
+// lit, « 4404019 octets » non.
 export function formatBytes(n: number): string {
   if (!Number.isFinite(n) || n < 0) return '—'
   if (n < 1024) return `${n} o`
@@ -21,91 +11,10 @@ export function formatBytes(n: number): string {
   let v = n / 1024
   let i = 0
   while (v >= 1024 && i < unites.length - 1) { v /= 1024; i++ }
-  // Une décimale tant que le nombre est petit, aucune au-delà de 100 — et
-  // jamais de « ,0 » traînant, qui donne l'air d'une mesure plus précise
-  // qu'elle ne l'est.
+  // Aucune décimale au-delà de 100, et jamais de « ,0 » traînant, qui donne
+  // l'air d'une mesure plus précise qu'elle ne l'est.
   const dec = v >= 100 ? 0 : 1
   return `${v.toFixed(dec).replace(/\.0$/, '').replace('.', ',')} ${unites[i]}`
-}
-
-const LIBELLES: Record<string, string> = {
-  caches: 'Cache hors-ligne',
-  indexedDB: 'Base locale',
-  serviceWorkerRegistrations: 'Service worker',
-  fileSystem: 'Fichiers',
-}
-
-export function StorageUsage() {
-  const [est, setEst] = useState<Estimate | null>(null)
-  // `null` tant qu'on n'a pas tranché, pour ne pas afficher l'indisponibilité
-  // le temps de la première mesure.
-  const [dispo, setDispo] = useState<boolean | null>(null)
-
-  const mesurer = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.storage?.estimate) { setDispo(false); return }
-    try {
-      const r: any = await navigator.storage.estimate()
-      if (typeof r?.usage !== 'number' || typeof r?.quota !== 'number') { setDispo(false); return }
-      setEst({ usage: r.usage, quota: r.quota, details: r.usageDetails })
-      setDispo(true)
-    } catch { setDispo(false) }
-  }, [])
-
-  useEffect(() => { void mesurer() }, [mesurer])
-
-  if (dispo === null) return null
-  if (dispo === false) {
-    return (
-      <p className="text-xs mt-2 px-1" style={{ color: 'var(--text-muted)' }}>
-        Ce navigateur ne communique pas son état de stockage.
-      </p>
-    )
-  }
-
-  const { usage, quota, details } = est!
-  // Le quota est souvent immense : un pourcentage à l'entier afficherait 0 %
-  // en permanence et n'apprendrait rien. On garde une décimale sous 10 %.
-  const pct = quota > 0 ? (usage / quota) * 100 : 0
-  const pctTexte = pct >= 10 ? `${Math.round(pct)} %` : `${pct.toFixed(1).replace('.', ',')} %`
-  // Une barre à zéro pixel ne se lit pas comme « presque rien » mais comme un
-  // défaut d'affichage : on lui garde une amorce. Trois pour cent et non deux,
-  // car en dessous le remplissage devient plus large que haut et se lit comme
-  // une puce, pas comme une barre.
-  const largeur = Math.max(usage > 0 ? 3 : 0, Math.min(100, pct))
-  const lignes = Object.entries(details || {})
-    .filter(([, v]) => typeof v === 'number' && v > 0)
-    .sort((a, b) => b[1] - a[1])
-
-  return (
-    <div className="mt-2 rounded-xl px-3 py-3" style={{ background: 'var(--selected-bg)' }}>
-      <div className="flex items-baseline justify-between gap-2 mb-2">
-        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-          {formatBytes(usage)} <span className="font-normal" style={{ color: 'var(--text-muted)' }}>sur {formatBytes(quota)}</span>
-        </p>
-        <p className="text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>{pctTexte}</p>
-      </div>
-
-      <div className="rounded-full overflow-hidden" style={{ height: 6, background: 'var(--border)' }}>
-        <div style={{ width: `${largeur}%`, height: '100%', background: 'var(--accent)', transition: 'width 300ms ease' }} />
-      </div>
-
-      {lignes.length > 0 && (
-        <div className="mt-2.5 flex flex-col gap-1">
-          {lignes.map(([cle, v]) => (
-            <div key={cle} className="flex items-center justify-between text-[11px]">
-              <span style={{ color: 'var(--text-muted)' }}>{LIBELLES[cle] || cle}</span>
-              <span className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>{formatBytes(v)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <p className="text-[11px] mt-2.5 leading-relaxed" style={{ color: 'var(--text-faint)' }}>
-        Place occupée sur cet appareil pour la lecture hors ligne. Tes notes,
-        elles, sont conservées sur le serveur et ne comptent pas ici.
-      </p>
-    </div>
-  )
 }
 
 // ── Poids réel des notes, côté serveur ───────────────────────────────────────
@@ -116,7 +25,8 @@ export function StorageUsage() {
 //
 // Calcul à la demande et non au montage : mesurer le texte suppose de le
 // rapatrier entièrement, ce qui ne doit pas se payer à chaque ouverture des
-// paramètres.
+// paramètres. Le dernier résultat est donc conservé, avec sa date : entre deux
+// calculs, on lit un chiffre daté plutôt qu'un bouton.
 type ServerUsage = {
   texte: number
   corbeille: number
@@ -160,42 +70,68 @@ export async function computeServerUsage(supabase: any, userId: string): Promise
   return acc
 }
 
+const CLE_CACHE = 'idee_notes_usage'
+
+type Memo = { u: ServerUsage; date: string }
+
+// localStorage lève en navigation privée sur certains navigateurs : le poids
+// s'affiche alors sans jamais être mémorisé, ce qui reste acceptable.
+function lireMemo(): Memo | null {
+  try {
+    const brut = localStorage.getItem(CLE_CACHE)
+    if (!brut) return null
+    const m = JSON.parse(brut)
+    if (!m || typeof m.date !== 'string' || !m.u || typeof m.u.texte !== 'number') return null
+    return m as Memo
+  } catch { return null }
+}
+
+function ecrireMemo(m: Memo) {
+  try { localStorage.setItem(CLE_CACHE, JSON.stringify(m)) } catch {}
+}
+
+// « Mis à jour le 17 septembre 2026 à 14:03 » — la date seule suffirait si le
+// calcul était rare, mais on peut le relancer à la minute.
+export function formatDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 export function ServerUsage({ userId, client }: { userId: string; client?: any }) {
-  const [etat, setEtat] = useState<'repos' | 'calcul' | 'fait' | 'erreur'>('repos')
-  const [u, setU] = useState<ServerUsage | null>(null)
+  const [etat, setEtat] = useState<'repos' | 'calcul' | 'erreur'>('repos')
+  const [memo, setMemo] = useState<Memo | null>(null)
+
+  // Lecture au montage et non à l'initialisation de l'état : le rendu serveur
+  // n'a pas de localStorage, et un état initial divergent casserait l'hydratation.
+  useEffect(() => { setMemo(lireMemo()) }, [])
 
   async function calculer() {
     setEtat('calcul')
     try {
-      setU(await computeServerUsage(client || createClient(), userId))
-      setEtat('fait')
+      const u = await computeServerUsage(client || createClient(), userId)
+      const m: Memo = { u, date: new Date().toISOString() }
+      ecrireMemo(m)
+      setMemo(m)
+      setEtat('repos')
     } catch {
       setEtat('erreur')
     }
   }
 
-  if (etat === 'repos' || etat === 'calcul') {
+  // Aucun chiffre encore mesuré : il n'y a rien à afficher qu'une invitation.
+  if (!memo) {
     return (
       <button onClick={calculer} disabled={etat === 'calcul'}
         className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm disabled:opacity-60"
-        style={{ background: 'var(--selected-bg)', color: 'var(--text-secondary)' }}>
+        style={{ background: 'var(--selected-bg)', color: etat === 'erreur' ? 'var(--text-muted)' : 'var(--text-secondary)' }}>
         <i className="ti ti-cloud" style={{ fontSize: 15 }} />
-        {etat === 'calcul' ? 'Calcul en cours…' : 'Calculer le poids de mes notes'}
+        {etat === 'calcul' ? 'Calcul en cours…' : etat === 'erreur' ? 'Calcul impossible — réessayer' : 'Calculer le poids de mes notes'}
       </button>
     )
   }
 
-  if (etat === 'erreur') {
-    return (
-      <button onClick={calculer}
-        className="mt-2 w-full rounded-xl px-3 py-2.5 text-sm"
-        style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
-        Calcul impossible — réessayer
-      </button>
-    )
-  }
-
-  const { texte, corbeille, images, nbImages, pages, journal } = u!
+  const { texte, corbeille, images, nbImages, pages, journal } = memo.u
   const lignes: [string, string][] = [
     ['Pages', formatBytes(pages)],
     ['Journal', formatBytes(journal)],
@@ -205,9 +141,17 @@ export function ServerUsage({ userId, client }: { userId: string; client?: any }
 
   return (
     <div className="mt-2 rounded-xl px-3 py-3" style={{ background: 'var(--selected-bg)' }}>
-      <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-        {formatBytes(texte + images)} <span className="font-normal" style={{ color: 'var(--text-muted)' }}>au total</span>
-      </p>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+          {formatBytes(texte + images)} <span className="font-normal" style={{ color: 'var(--text-muted)' }}>au total</span>
+        </p>
+        <button onClick={calculer} disabled={etat === 'calcul'} title="Recalculer"
+          aria-label="Recalculer le poids de mes notes"
+          className="shrink-0 -mt-0.5 -mr-1 p-1 rounded-lg disabled:opacity-60"
+          style={{ color: 'var(--text-muted)' }}>
+          <i className={`ti ti-refresh${etat === 'calcul' ? ' animate-spin' : ''}`} style={{ fontSize: 14, display: 'block' }} />
+        </button>
+      </div>
       <div className="flex flex-col gap-1">
         {lignes.map(([k, v]) => (
           <div key={k} className="flex items-center justify-between text-[11px]">
@@ -217,7 +161,10 @@ export function ServerUsage({ userId, client }: { userId: string; client?: any }
         ))}
       </div>
       <p className="text-[11px] mt-2.5 leading-relaxed" style={{ color: 'var(--text-faint)' }}>
-        Texte des notes et images envoyées, mesurés sur le serveur.
+        {etat === 'erreur'
+          ? 'Dernier calcul impossible — chiffres du '
+          : 'Texte des notes et images envoyées, mesurés sur le serveur. Mis à jour le '}
+        {formatDate(memo.date)}.
       </p>
     </div>
   )
