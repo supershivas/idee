@@ -95,6 +95,14 @@
   /* Search highlight */
   --search-highlight: rgba(192,57,43,0.25);
 
+  /* Graphiques — une seule teinte (l'accent) pour « ce que j'occupe », plus une
+     teinte d'alerte quand un quota approche de sa limite. Validées toutes deux
+     contre la surface des cartes, en clair comme en sombre. */
+  --chart-fill:      #C0392B;
+  --chart-track:     rgba(192,57,43,0.12);
+  --chart-area:      rgba(192,57,43,0.10);
+  --chart-warn:      #B45309;
+
   /* Drag handle */
   --drag-handle-offset: 44px;
   /* Décalage de l'en-tête de tableau sticky (sous le header sticky de page). */
@@ -174,6 +182,11 @@ html.dark {
   --empty-title:     #8c8680;
 
   --search-highlight: rgba(192,57,43,0.25);
+
+  --chart-fill:      #C0392B;
+  --chart-track:     rgba(192,57,43,0.22);
+  --chart-area:      rgba(192,57,43,0.16);
+  --chart-warn:      #C0801F;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
