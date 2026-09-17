@@ -4,7 +4,10 @@ import { Page } from './types'
 import { normalizeStr } from './utils'
 import { looksLikeUrl, toHref, hostOf } from './linkUtils'
 
-export type LinkChoice = { kind: 'page'; page: Page } | { kind: 'url'; href: string }
+export type LinkChoice =
+  | { kind: 'page'; page: Page }
+  | { kind: 'url'; href: string }
+  | { kind: 'create'; title: string }
 
 // Un seul champ pour les deux sortes de liens. On ne demande pas à
 // l'utilisateur de déclarer ce qu'il s'apprête à saisir : ce qui ressemble à
@@ -12,9 +15,13 @@ export type LinkChoice = { kind: 'page'; page: Page } | { kind: 'url'; href: str
 // tout le reste cherche parmi ses pages. Lier vers une de ses propres pages
 // est le cas le plus fréquent, et c'était précisément celui qui manquait —
 // le bouton n'offrait qu'un champ `https://`.
-export function LinkPicker({ pages, initialQuery = '', onPick, onClose }: {
+export function LinkPicker({ pages, initialQuery = '', busy = false, onPick, onClose }: {
   pages: Page[]
   initialQuery?: string
+  // La création d'une page passe par le réseau : on garde la fenêtre ouverte
+  // et inerte le temps qu'elle aboutisse, plutôt que de la fermer sur un
+  // résultat incertain.
+  busy?: boolean
   onPick: (choice: LinkChoice) => void
   onClose: () => void
 }) {
@@ -51,12 +58,23 @@ export function LinkPicker({ pages, initialQuery = '', onPick, onClose }: {
       .map(x => x.p)
   }, [pages, q])
 
-  // La ligne « lien externe » passe en tête : quand on tape une adresse, c'est
-  // elle qu'on veut, et elle doit se trouver sous la touche Entrée.
+  // Ordre des lignes, et c'est le cœur de l'affaire :
+  //   — « lien externe » en tête quand la saisie est une adresse : c'est alors
+  //     certainement ce qu'on veut, et ce doit être sous la touche Entrée ;
+  //   — les pages existantes ensuite ;
+  //   — « créer la page » en DERNIER, jamais avant une page du même nom :
+  //     créer un doublon par inadvertance coûte plus cher que de descendre
+  //     d'une ligne. Elle n'apparaît pas si une page porte déjà ce titre,
+  //     ni si la saisie est une adresse.
+  const titreExistant = useMemo(
+    () => pages.some(p => !p.deleted_at && normalizeStr(p.title || '') === normalizeStr(q.trim())),
+    [pages, q]
+  )
   const rows: LinkChoice[] = useMemo(() => [
     ...(isUrl ? [{ kind: 'url' as const, href: toHref(q) }] : []),
     ...results.map(p => ({ kind: 'page' as const, page: p })),
-  ], [isUrl, q, results])
+    ...(q.trim() && !isUrl && !titreExistant ? [{ kind: 'create' as const, title: q.trim() }] : []),
+  ], [isUrl, q, results, titreExistant])
 
   useEffect(() => setIdx(0), [q])
   useEffect(() => {
@@ -76,10 +94,11 @@ export function LinkPicker({ pages, initialQuery = '', onPick, onClose }: {
 
         <div className="p-4 pb-2">
           <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+            disabled={busy}
             onKeyDown={e => {
               if (e.key === 'ArrowDown') { e.preventDefault(); setIdx(i => Math.min(i + 1, rows.length - 1)) }
               else if (e.key === 'ArrowUp') { e.preventDefault(); setIdx(i => Math.max(i - 1, 0)) }
-              else if (e.key === 'Enter') { e.preventDefault(); if (rows[idx]) onPick(rows[idx]) }
+              else if (e.key === 'Enter') { e.preventDefault(); if (rows[idx] && !busy) onPick(rows[idx]) }
               else if (e.key === 'Escape') { e.preventDefault(); onClose() }
             }}
             placeholder="Chercher une page, ou coller une adresse…"
@@ -90,14 +109,14 @@ export function LinkPicker({ pages, initialQuery = '', onPick, onClose }: {
         <div ref={listRef} className="px-2 pb-2 overflow-y-auto" style={{ maxHeight: 264 }}>
           {rows.length === 0 && (
             <p className="text-xs px-3 py-4" style={{ color: 'var(--text-muted)' }}>
-              Aucune page à ce nom. Pour un lien externe, saisis une adresse complète.
+              Commence à taper : une page à lier, une adresse, ou un nom de page à créer.
             </p>
           )}
           {rows.map((r, i) => (
-            <button key={r.kind === 'url' ? 'url' : r.page.id}
+            <button key={r.kind === 'url' ? 'url' : r.kind === 'create' ? 'create' : r.page.id}
               data-active={i === idx}
               onMouseEnter={() => setIdx(i)}
-              onMouseDown={e => { e.preventDefault(); onPick(r) }}
+              onMouseDown={e => { e.preventDefault(); if (!busy) onPick(r) }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg"
               style={{ background: i === idx ? 'var(--hover-bg)' : 'transparent' }}>
               {r.kind === 'url' ? (
@@ -105,6 +124,16 @@ export function LinkPicker({ pages, initialQuery = '', onPick, onClose }: {
                   <i className="ti ti-external-link flex-shrink-0" style={{ fontSize: 15, color: 'var(--text-muted)' }} />
                   <span className="flex-1 min-w-0 text-sm truncate">{hostOf(q)}</span>
                   <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-faint)' }}>lien externe</span>
+                </>
+              ) : r.kind === 'create' ? (
+                <>
+                  <i className="ti ti-file-plus flex-shrink-0" style={{ fontSize: 15, color: 'var(--accent)' }} />
+                  <span className="flex-1 min-w-0 text-sm truncate">
+                    Créer la page «&nbsp;{r.title}&nbsp;»
+                  </span>
+                  <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-faint)' }}>
+                    {busy ? 'création…' : 'nouvelle'}
+                  </span>
                 </>
               ) : (
                 <>

@@ -275,14 +275,17 @@ function onMouseLeave(e: MouseEvent) {
     </div>
   )
 }
-export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, userId, isMobile, focusMode }: {
+export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate, onCreatePage, userId, isMobile, focusMode }: {
   page: Page, pages: Page[], onUpdate: (content: string) => void
   onAddSubpage: () => void, onNavigate: (page: Page) => void, userId: string, isMobile: boolean
+  // Crée une page et la renvoie, sans y naviguer : on est en train d'écrire ici.
+  onCreatePage?: (title: string, parentId: string | null) => Promise<Page | null>
   focusMode?: boolean
 }) {
   // `null` = fermée. Une chaîne = ouverte, avec cette saisie initiale — `[[`
   // sur une sélection la pré-remplit du texte sélectionné.
   const [linkQuery, setLinkQuery] = useState<string | null>(null)
+  const [creatingPage, setCreatingPage] = useState(false)
 
   const [showTableSheet, setShowTableSheet] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -492,12 +495,29 @@ Image.extend({
   // Pose le lien sur la sélection, sans toucher au texte : contrairement à
   // `[[` et à la commande `/`, qui insèrent le titre de la page, on conserve
   // la formulation de l'auteur.
-  function applyLink(choice: LinkChoice) {
+  function linkToPage(id: string) {
+    editor?.chain().focus()
+      .setLink({ href: `#${id}`, 'data-page-id': id, class: 'page-link', target: null, rel: null } as any)
+      .run()
+  }
+
+  async function applyLink(choice: LinkChoice) {
+    if (choice.kind === 'create') {
+      if (!onCreatePage) return
+      setCreatingPage(true)
+      // La nouvelle page devient une sous-page de celle où l'on écrit : à la
+      // racine, elle serait orpheline et introuvable autrement que par le lien
+      // qu'on vient de poser. Une entrée de journal, elle, n'a pas d'enfants
+      // dans l'arborescence — sa page va donc à la racine.
+      const created = await onCreatePage(choice.title, page.type === 'journal' ? null : page.id)
+      setCreatingPage(false)
+      setLinkQuery(null)
+      if (created) linkToPage(created.id)
+      return
+    }
     setLinkQuery(null)
     if (choice.kind === 'page') {
-      editor?.chain().focus()
-        .setLink({ href: `#${choice.page.id}`, 'data-page-id': choice.page.id, class: 'page-link', target: null, rel: null } as any)
-        .run()
+      linkToPage(choice.page.id)
     } else {
       editor?.chain().focus().setLink({ href: choice.href }).run()
     }
@@ -654,8 +674,8 @@ Image.extend({
   return (
     <div className={`flex flex-col flex-1${isMobile ? ' overflow-hidden' : ''}${focusMode ? ' focus-mode-content' : ''}`}>
       {linkQuery !== null && (
-        <LinkPicker pages={pages} initialQuery={linkQuery}
-          onPick={applyLink} onClose={() => setLinkQuery(null)} />
+        <LinkPicker pages={pages} initialQuery={linkQuery} busy={creatingPage}
+          onPick={applyLink} onClose={() => { if (!creatingPage) setLinkQuery(null) }} />
       )}
       {showTableSheet && isMobile && <TableBottomSheet editor={editor} onClose={() => setShowTableSheet(false)} />}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
