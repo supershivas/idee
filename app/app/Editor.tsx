@@ -417,7 +417,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
     function measure() {
       if (!el) return
       if (!collapsed) fullBarWidthRef.current = Math.max(fullBarWidthRef.current, el.scrollWidth)
-      setCollapsed(fullBarWidthRef.current > el.clientWidth + 1)
+      setCollapsed(fullBarWidthRef.current > el.clientWidth - 8)
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -863,7 +863,7 @@ Image.extend({
           {/* Rangée propre (`w-full` force le retour à la ligne) : la rangée
               habituelle ne bouge pas d'un pixel quand on déplie. */}
           {collapsed && moreDesktop && (
-            <div className="w-full flex items-center gap-0.5 flex-nowrap overflow-x-auto">
+            <div className="toolbar-row-more w-full flex items-center gap-0.5">
               {toolbarDesktopSecondary}
             </div>
           )}
@@ -939,7 +939,7 @@ Image.extend({
               retour à la ligne) : la rangée habituelle ne bouge pas d'un
               pixel quand on déplie. */}
           {moreTools && (
-            <div className="toolbar-row-more w-full flex items-center gap-0.5 flex-nowrap overflow-x-auto">
+            <div className="toolbar-row-more w-full flex items-center gap-0.5">
               {toolbarMobileSecondary}
             </div>
           )}
