@@ -82,7 +82,7 @@ function ToolBtn({ onClick, active, label, title }: { onClick: () => void, activ
 // flottante, pastille mobile) : mêmes dimensions et même état actif partout.
 // Les teintes de bordure viennent de la surface (`--toolbar-swatch-*`), claire
 // ou sombre selon la barre.
-function PillSwatches({ editor }: { editor: any }) {
+function PillSwatches({ editor, onPick }: { editor: any, onPick?: () => void }) {
   return (
     <>
       {PILL_COLORS.map(c => {
@@ -94,6 +94,7 @@ function PillSwatches({ editor }: { editor: any }) {
             onClick={() => {
               if (isActive) editor?.chain().focus().unsetMark('pill').run()
               else editor?.chain().focus().setMark('pill', { color: c.id }).run()
+              onPick?.()
             }}
             className="toolbar-swatch flex items-center justify-center flex-shrink-0"
           >
@@ -108,10 +109,71 @@ function PillSwatches({ editor }: { editor: any }) {
         )
       })}
       {editor?.isActive('pill') && (
-        <ToolBtn onClick={() => editor?.chain().focus().unsetMark('pill').run()}
+        <ToolBtn onClick={() => { editor?.chain().focus().unsetMark('pill').run(); onPick?.() }}
           label="×" title="Retirer le surlignage" />
       )}
     </>
+  )
+}
+
+// Dégradé des cinq couleurs, affiché quand aucun surlignage n'est posé : un
+// rond vide se lirait comme un bouton désactivé.
+const PILL_WHEEL = `conic-gradient(${PILL_COLORS
+  .map((c, i) => `${c.swatch} ${(i * 100) / PILL_COLORS.length}% ${((i + 1) * 100) / PILL_COLORS.length}%`)
+  .join(', ')})`
+
+// Surlignage replié derrière un seul bouton : cinq pastilles alignées
+// coûtaient 150px dans chaque barre pour une action occasionnelle, et la
+// barre flottante débordait alors de son volet. Le bouton porte la couleur
+// courante, donc l'état reste lisible sans ouvrir le menu.
+function PillMenu({ editor, up }: { editor: any, up?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent | TouchEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('touchstart', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('touchstart', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const active = PILL_COLORS.find(c => editor?.isActive('pill', { color: c.id }))
+
+  return (
+    // `onMouseDown` neutralisé : ouvrir le menu ne doit pas déplacer la
+    // sélection, sinon la barre flottante disparaît avec elle — et sur
+    // mobile, le clavier se refermerait sous le doigt.
+    <div ref={ref} className="relative flex-shrink-0" onMouseDown={e => e.preventDefault()}>
+      <button
+        title="Surlignage"
+        onClick={() => setOpen(v => !v)}
+        className={`toolbar-btn flex items-center justify-center rounded text-sm font-medium transition-colors
+          ${open || active ? 'is-active' : ''}`}
+      >
+        <span style={{
+          width: 15, height: 15, borderRadius: '50%', display: 'block',
+          background: active ? active.swatch : PILL_WHEEL,
+          border: '1.5px solid var(--toolbar-swatch-border)',
+        }} />
+      </button>
+      {open && (
+        <div className="toolbar-popover" style={{
+          left: '50%', transform: 'translateX(-50%)',
+          ...(up ? { bottom: '100%', marginBottom: 6 } : { top: '100%', marginTop: 6 }),
+        }}>
+          <PillSwatches editor={editor} onPick={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -340,6 +402,30 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   const [editing, setEditing] = useState(false)
   // Pastille mobile : 7 actions courantes visibles, le reste derrière « … ».
   const [moreTools, setMoreTools] = useState(false)
+  // Barre desktop : même principe, mais le repli se décide sur la largeur
+  // disponible plutôt qu'à la main — tant que tout tient, aucun « ⋯ ».
+  const [moreDesktop, setMoreDesktop] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const desktopBarRef = useRef<HTMLDivElement>(null)
+  // Largeur nécessaire à la barre dépliée, mesurée au premier rendu : une fois
+  // repliée, `scrollWidth` ne vaut plus que la rangée courte, et la comparer à
+  // elle-même ferait osciller la barre à chaque pixel de redimensionnement.
+  const fullBarWidthRef = useRef(0)
+  useEffect(() => {
+    const el = desktopBarRef.current
+    if (isMobile || !el) return
+    function measure() {
+      if (!el) return
+      if (!collapsed) fullBarWidthRef.current = Math.max(fullBarWidthRef.current, el.scrollWidth)
+      setCollapsed(fullBarWidthRef.current > el.clientWidth + 1)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isMobile, collapsed])
+  // Barre redevenue assez large : la rangée d'options n'a plus lieu d'être.
+  useEffect(() => { if (!collapsed) setMoreDesktop(false) }, [collapsed])
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (blurTimerRef.current) clearTimeout(blurTimerRef.current) }, [])
   // On repart replié à chaque nouvelle session d'édition.
@@ -649,11 +735,14 @@ Image.extend({
       <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
         label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
       <Sep />
-      <PillSwatches editor={editor} />
+      <PillMenu editor={editor} up />
     </>
   )
 
-  const toolbarDesktop = (
+  // Découpée en deux comme la pastille mobile : quand le volet de note est
+  // trop étroit pour les dix-sept actions, les secondaires passent derrière
+  // « ⋯ » plutôt que de partir en défilement horizontal.
+  const toolbarDesktopPrimary = (
     <>
       <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
@@ -668,16 +757,18 @@ Image.extend({
       <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Bloc de code" />
-      <Sep />
       <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" />
-      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
-      <Sep />
-      <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" />
-      <Sep />
       {/* Surlignage : n'existait que dans la barre de sélection, donc
           inatteignable tant qu'on n'avait pas déjà sélectionné du texte. */}
-      <PillSwatches editor={editor} />
+      <PillMenu editor={editor} />
+    </>
+  )
+
+  const toolbarDesktopSecondary = (
+    <>
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Bloc de code" />
+      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
+      <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" />
       <Sep />
       {/* Remet la sélection en texte nu : `unsetAllMarks` retire gras, italique,
           couleurs, liens ; `clearNodes` ramène titres, listes et citations au
@@ -743,7 +834,7 @@ Image.extend({
               active={editor.isActive('link')} label="🔗"
               title={editor.isActive('link') ? 'Retirer le lien' : 'Ajouter un lien'} />
             <Sep />
-            <PillSwatches editor={editor} />
+            <PillMenu editor={editor} up />
             <Sep />
             <ToolBtn onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
               label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
@@ -756,9 +847,26 @@ Image.extend({
           `--table-sticky-top`) : sur une note longue elle partait avec le
           défilement, et il fallait remonter en haut pour changer un style. */}
       {!isMobile && (
-        <div className="editor-toolbar sticky z-10 flex items-center gap-0.5 px-2 flex-nowrap overflow-x-auto flex-shrink-0"
+        <div ref={desktopBarRef}
+          className={`editor-toolbar sticky z-10 flex items-center gap-0.5 px-2 flex-shrink-0 ${moreDesktop ? 'is-expanded' : 'flex-nowrap overflow-x-auto'}`}
           style={{ minHeight: '48px', top: 'var(--table-sticky-top, 44px)' }}>
-          {toolbarDesktop}
+          {toolbarDesktopPrimary}
+          {!collapsed && <Sep />}
+          {!collapsed && toolbarDesktopSecondary}
+          {collapsed && (
+            <>
+              <Sep />
+              <ToolBtn onClick={() => setMoreDesktop(v => !v)} active={moreDesktop}
+                label={moreDesktop ? '⌄' : '⋯'} title={moreDesktop ? 'Moins d\'options' : 'Plus d\'options'} />
+            </>
+          )}
+          {/* Rangée propre (`w-full` force le retour à la ligne) : la rangée
+              habituelle ne bouge pas d'un pixel quand on déplie. */}
+          {collapsed && moreDesktop && (
+            <div className="w-full flex items-center gap-0.5 flex-nowrap overflow-x-auto">
+              {toolbarDesktopSecondary}
+            </div>
+          )}
         </div>
       )}
       {!isMobile && headings.length >= 2 && (

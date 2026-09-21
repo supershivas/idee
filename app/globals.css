@@ -520,6 +520,33 @@ html, body {
   padding: 0 6px;
 }
 .editor-toolbar-bubble .toolbar-swatch { min-height: 36px; }
+/* Garde-fou : plutôt que de déborder de son volet (et de faire défiler la
+   note), la pastille passe sur deux rangées. Avec le surlignage replié en un
+   bouton elle mesure ~435px, donc ça ne devrait jamais servir. */
+.editor-toolbar-bubble {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  max-width: min(560px, calc(100vw - 32px));
+}
+
+/* Menu des couleurs de surlignage, ouvert depuis le bouton unique des barres.
+   Il hérite des `--toolbar-swatch-*` de la barre qui le porte : sombre sous la
+   barre collante et la flottante, clair sous la pastille mobile. */
+.toolbar-popover {
+  position: absolute;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 5px;
+  border-radius: 12px;
+  background: var(--sidebar-bg);
+  box-shadow: 0 6px 20px var(--pill-toolbar-shadow), 0 0 0 0.5px var(--sidebar-border);
+}
+.editor-toolbar-pill .toolbar-popover {
+  background: var(--card-bg);
+  box-shadow: 0 6px 20px var(--pill-toolbar-shadow), 0 0 0 0.5px var(--border);
+}
 
 /* Rangée qui défile sans barre de défilement visible (tags sous le titre). */
 .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
@@ -566,8 +593,9 @@ html, body {
 .editor-toolbar-pill .toolbar-row-more .toolbar-swatch { min-width: 26px; }
 .editor-toolbar-pill .toolbar-row-more .toolbar-sep { display: none; }
 
-/* Deux rangées quand les actions secondaires sont dépliées. */
-.editor-toolbar-pill.is-expanded {
+/* Deux rangées quand les actions secondaires sont dépliées (pastille mobile
+   comme barre desktop repliée). */
+.editor-toolbar.is-expanded {
   flex-wrap: wrap;
   overflow-x: visible;
   row-gap: 2px;
