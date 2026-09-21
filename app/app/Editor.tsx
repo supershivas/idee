@@ -78,6 +78,43 @@ function ToolBtn({ onClick, active, label, title }: { onClick: () => void, activ
 }
 
 
+// Pastilles de surlignage, partagées par les trois barres (collante,
+// flottante, pastille mobile) : mêmes dimensions et même état actif partout.
+// Les teintes de bordure viennent de la surface (`--toolbar-swatch-*`), claire
+// ou sombre selon la barre.
+function PillSwatches({ editor }: { editor: any }) {
+  return (
+    <>
+      {PILL_COLORS.map(c => {
+        const isActive = editor?.isActive('pill', { color: c.id })
+        return (
+          <button
+            key={c.id}
+            title={`Surligner ${c.id}`}
+            onClick={() => {
+              if (isActive) editor?.chain().focus().unsetMark('pill').run()
+              else editor?.chain().focus().setMark('pill', { color: c.id }).run()
+            }}
+            className="toolbar-swatch flex items-center justify-center flex-shrink-0"
+          >
+            <span style={{
+              width: 15, height: 15, borderRadius: '50%', background: c.swatch, display: 'block',
+              border: isActive
+                ? '2px solid var(--toolbar-swatch-active)'
+                : '1.5px solid var(--toolbar-swatch-border)',
+              transform: isActive ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s',
+            }} />
+          </button>
+        )
+      })}
+      {editor?.isActive('pill') && (
+        <ToolBtn onClick={() => editor?.chain().focus().unsetMark('pill').run()}
+          label="×" title="Retirer le surlignage" />
+      )}
+    </>
+  )
+}
+
 function TableBottomSheet({ editor, onClose }: { editor: any, onClose: () => void }) {
   const actions = [
     { label: '← Colonne avant', fn: () => editor.chain().focus().addColumnBefore().run() },
@@ -601,7 +638,7 @@ Image.extend({
     <>
       <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} label="`·`" title="Code" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} label="</>" title="Code en ligne" />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
@@ -612,31 +649,7 @@ Image.extend({
       <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
         label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
       <Sep />
-      {/* Couleurs de surlignage : n'existaient que dans la barre de sélection,
-          donc inatteignables sur mobile depuis qu'elle y est désactivée. */}
-      {PILL_COLORS.map(c => {
-        const isActive = editor?.isActive('pill', { color: c.id })
-        return (
-          <button
-            key={c.id}
-            title={`Surligner ${c.id}`}
-            onClick={() => {
-              if (isActive) editor?.chain().focus().unsetMark('pill').run()
-              else editor?.chain().focus().setMark('pill', { color: c.id }).run()
-            }}
-            className="toolbar-swatch flex items-center justify-center flex-shrink-0"
-          >
-            <span style={{
-              width: 15, height: 15, borderRadius: '50%', background: c.swatch, display: 'block',
-              border: isActive ? '2px solid var(--text-primary)' : '1.5px solid var(--border)',
-              transform: isActive ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s',
-            }} />
-          </button>
-        )
-      })}
-      {editor?.isActive('pill') && (
-        <ToolBtn onClick={() => editor?.chain().focus().unsetMark('pill').run()} label="×" title="Retirer le surlignage" />
-      )}
+      <PillSwatches editor={editor} />
     </>
   )
 
@@ -655,12 +668,16 @@ Image.extend({
       <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Code" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Bloc de code" />
       <Sep />
       <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" />
       <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" />
+      <Sep />
+      {/* Surlignage : n'existait que dans la barre de sélection, donc
+          inatteignable tant qu'on n'avait pas déjà sélectionné du texte. */}
+      <PillSwatches editor={editor} />
       <Sep />
       {/* Remet la sélection en texte nu : `unsetAllMarks` retire gras, italique,
           couleurs, liens ; `clearNodes` ramène titres, listes et citations au
@@ -700,81 +717,36 @@ Image.extend({
           }}
           tippyOptions={{ placement: 'top', offset: [0, 8], animation: 'fade', maxWidth: 'none' }}
         >
-          <div className="flex items-center gap-0.5 rounded-xl shadow-xl px-1.5 py-1.5" style={{ background: '#1a1a1a' }}>
-            <button onClick={() => editor.chain().focus().toggleBold().run()}
-              className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('bold') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>B</button>
-            <button onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={`px-2 py-1 text-xs italic rounded-lg transition-colors ${editor.isActive('italic') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>I</button>
-            <button onClick={() => editor.chain().focus().toggleUnderline().run()}
-              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('underline') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
-              style={{ textDecoration: 'underline' }}>U</button>
-            <button onClick={() => editor.chain().focus().toggleStrike().run()}
-              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('strike') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}><s>S</s></button>
-            <button onClick={() => editor.chain().focus().toggleCode().run()}
-              className={`px-2 py-1 text-xs font-mono rounded-lg transition-colors ${editor.isActive('code') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>`·`</button>
-            <div className="w-px bg-white/20 self-stretch mx-0.5" />
-            <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-              className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>H1</button>
-            <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-              className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}>H2</button>
-            <button onClick={() => editor.chain().focus().toggleBlockquote().run()}
-              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('blockquote') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
-              title="Citation">❝</button>
-            <div className="w-px bg-white/20 self-stretch mx-0.5" />
-            <button
+          {/* Mêmes boutons, mêmes séparateurs et mêmes pastilles que la barre
+              collante : seule la surface diffère (pastille flottante), via
+              `.editor-toolbar-bubble`. Tout était auparavant réécrit ici en
+              dur — d'où deux barres qui divergeaient à chaque retouche. */}
+          <div className="editor-toolbar editor-toolbar-bubble flex items-center gap-0.5 px-1.5 py-1.5">
+            <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} label="B" title="Gras" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} label="I" title="Italique" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} label="U̲" title="Souligné" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} label="S̶" title="Barré" />
+            <Sep />
+            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
+            <Sep />
+            <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} label="❝" title="Citation" />
+            {/* Sur une sélection, « code » veut dire code en ligne — le bloc de
+                code, lui, s'applique depuis la barre collante. */}
+            <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} label="</>" title="Code en ligne" />
+            <Sep />
+            <ToolBtn
               onClick={() => {
-                if (editor.isActive('link')) {
-                  editor.chain().focus().unsetLink().run()
-                } else {
-                  openLinkPicker()
-                }
+                if (editor.isActive('link')) editor.chain().focus().unsetLink().run()
+                else openLinkPicker()
               }}
-              className={`px-2 py-1 text-xs rounded-lg transition-colors ${editor.isActive('link') ? 'bg-white text-gray-900' : 'text-white hover:bg-white/10'}`}
-              title={editor.isActive('link') ? 'Retirer le lien' : 'Ajouter un lien'}
-            >🔗</button>
-            <div className="w-px bg-white/20 self-stretch mx-0.5" />
-            {PILL_COLORS.map(c => {
-              const isActive = editor.isActive('pill', { color: c.id })
-              return (
-                <button
-                  key={c.id}
-                  title={`Pill ${c.id}`}
-                  onClick={() => {
-                    if (isActive) {
-                      editor.chain().focus().unsetMark('pill').run()
-                    } else {
-                      editor.chain().focus().setMark('pill', { color: c.id }).run()
-                    }
-                  }}
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: '50%',
-                    // Affichage saturé (menu) ; la pill appliquée reste pastel.
-                    background: c.swatch,
-                    border: isActive ? '2px solid #fff' : '1.5px solid rgba(255,255,255,0.25)',
-                    flexShrink: 0,
-                    cursor: 'pointer',
-                    padding: 0,
-                    transition: 'transform 0.1s',
-                    transform: isActive ? 'scale(1.25)' : 'scale(1)',
-                  }}
-                />
-              )
-            })}
-            {editor.isActive('pill') && (
-              <button
-                title="Retirer la pill"
-                onClick={() => editor.chain().focus().unsetMark('pill').run()}
-                className="px-1.5 py-1 text-xs rounded-lg transition-colors text-white/60 hover:bg-white/10"
-              >×</button>
-            )}
-            <div className="w-px bg-white/20 self-stretch mx-0.5" />
-            <button
-              title="Effacer la mise en forme"
-              onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
-              className="px-2 py-1 text-xs rounded-lg transition-colors text-white hover:bg-white/10"
-            ><i className="ti ti-clear-formatting" /></button>
+              active={editor.isActive('link')} label="🔗"
+              title={editor.isActive('link') ? 'Retirer le lien' : 'Ajouter un lien'} />
+            <Sep />
+            <PillSwatches editor={editor} />
+            <Sep />
+            <ToolBtn onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
+              label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
           </div>
         </BubbleMenu>
       )}

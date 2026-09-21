@@ -493,8 +493,33 @@ html, body {
   -webkit-overflow-scrolling: touch;
   background: var(--sidebar-bg);
   border-top: 1px solid var(--sidebar-border);
+  /* Teintes des pastilles de surlignage, redéfinies par surface : sombre ici
+     et dans la barre flottante, claire dans la pastille mobile qui suit le
+     thème de l'app. Les pastilles elles-mêmes sont un composant unique. */
+  --toolbar-swatch-border: var(--sidebar-border);
+  --toolbar-swatch-active: var(--sidebar-fg);
 }
 .editor-toolbar::-webkit-scrollbar { display: none; }
+
+/* Barre de sélection (flottante, au-dessus du texte) : même surface et mêmes
+   boutons que la barre collante — seule change la forme, celle d'une pastille
+   posée par-dessus la note. Tout ce qui n'est pas listé ici vient donc de
+   `.editor-toolbar` / `.toolbar-btn`, pour que les deux barres ne puissent
+   plus diverger. */
+.editor-toolbar-bubble {
+  border-top: none;
+  border-radius: 14px;
+  overflow: visible;
+  box-shadow: 0 6px 20px var(--pill-toolbar-shadow), 0 0 0 0.5px var(--sidebar-border);
+}
+/* Flottante = plus légère que la barre collante : mêmes dimensions que la
+   pastille mobile, qui joue déjà ce rôle de barre posée sur le texte. */
+.editor-toolbar-bubble .toolbar-btn {
+  min-width: 32px;
+  min-height: 36px;
+  padding: 0 6px;
+}
+.editor-toolbar-bubble .toolbar-swatch { min-height: 36px; }
 
 /* Rangée qui défile sans barre de défilement visible (tags sous le titre). */
 .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
@@ -509,6 +534,8 @@ html, body {
 .editor-toolbar-pill {
   border-radius: 14px;
   border-top: none;
+  --toolbar-swatch-border: var(--border);
+  --toolbar-swatch-active: var(--text-primary);
   background: color-mix(in srgb, var(--card-bg) 88%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
   backdrop-filter: blur(16px) saturate(160%);
