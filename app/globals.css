@@ -491,6 +491,11 @@ html, body {
 .editor-toolbar {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* `::-webkit-scrollbar` ne couvre que Chrome et Safari : sans ces deux
+     lignes, Firefox et Edge dessinent bel et bien la barre de défilement sous
+     les boutons. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   background: var(--sidebar-bg);
   border-top: 1px solid var(--sidebar-border);
   /* Teintes des pastilles de surlignage, redéfinies par surface : sombre ici
@@ -581,6 +586,16 @@ html, body {
 .toolbar-swatch {
   min-width: 30px;
   min-height: 36px;
+}
+
+/* Rangée des options, dépliée sous la rangée principale : elle passe à la
+   ligne plutôt que de défiler — elle n'héritait d'aucune des règles qui
+   masquent les barres de défilement, et c'est elle qui en laissait paraître
+   une. Son contenu est court, deux rangées valent mieux qu'un défilement. */
+.editor-toolbar .toolbar-row-more {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  overflow-x: visible;
 }
 
 /* Rangée des options : boutons resserrés et séparateurs masqués, pour que les
