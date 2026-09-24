@@ -7,7 +7,10 @@ export const metadata = {
   title: 'Idée',
   description: 'Home-made note app',
   icons: {
-    icon: '/favicon-32x32.png',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
   },
 }
 

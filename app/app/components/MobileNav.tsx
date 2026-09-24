@@ -615,7 +615,7 @@ function JournalRow({ entry, selectedId, onSelect, onToggleFavorite, selectMode,
   )
 }
 
-export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFavorite, onShowJournal, journalTab, onTabChange, journalCount, onAddJournalEntry, onShowSettings, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
+export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFavorite, onShowJournal, journalTab, onTabChange, journalCount, onAddJournalEntry, onShowSettings, onGoHome, onSelectTag, onMoveTo, onDuplicate, onDeleteRequest, onRefresh, onDeleteMany }: {
   pages: Page[]
   selectedId: string | null
   onSelect: (p: Page) => void
@@ -630,6 +630,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFav
   journalCount: number
   onAddJournalEntry: () => void
   onShowSettings: () => void
+  onGoHome: (e?: React.MouseEvent) => void
   onMoveTo: (id: string) => void
   onDuplicate: (id: string) => void
   onDeleteRequest: (id: string) => void
@@ -808,19 +809,20 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFav
 
       <div className="flex items-center justify-between px-4 pb-2 flex-shrink-0"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)' }}>
-        <div className="flex items-center gap-2">
-          <img src="/apple-touch-icon.png" alt="Idée" className="w-7 h-7 rounded-xl flex-shrink-0" />
+        <a href="/app" onClick={onGoHome} className="flex items-center gap-2 min-h-[44px]" title="Revenir à l'accueil">
+          <img src="/apple-touch-icon.png" alt="" className="w-7 h-7 rounded-xl flex-shrink-0" />
           <span className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>Idée</span>
-        </div>
+        </a>
         {/* Une seule entrée : cinq boutons emoji en haut d'un écran de
             téléphone faisaient barre d'outils plus que repère. Tags, révision,
             vue récente et corbeille ont rejoint la recherche (tags) et les
             paramètres (le reste). Icône au trait, comme sur desktop. */}
         <button
           onClick={onShowSettings}
-          className="w-9 h-9 flex items-center justify-center rounded-xl"
+          className="w-11 h-11 -mr-1 flex items-center justify-center rounded-xl"
           style={{ color: 'var(--text-muted)' }}
-          title="Paramètres"
+          title="Réglages"
+          aria-label="Réglages"
         >
           <i className="ti ti-settings" style={{ fontSize: '19px' }} />
         </button>

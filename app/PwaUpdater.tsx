@@ -2,6 +2,17 @@
 import { useEffect, useRef } from 'react'
 
 const CHECK_MIN_INTERVAL_MS = 30_000
+const CHECK_EVERY_MS = 5 * 60_000
+const BUSY_RETRY_MS = 5_000
+
+// Une saisie est en cours : champ ou éditeur focalisé, ou modale ouverte.
+// Recharger à ce moment ferait perdre ce qui n'est pas encore enregistré ;
+// la mise à jour attend donc que l'utilisateur ait fini.
+function isBusy() {
+  const el = document.activeElement as HTMLElement | null
+  if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return true
+  return !!document.querySelector('dialog[open], [role="dialog"], [aria-modal="true"]')
+}
 
 // Le cache d'exécution du service worker contient le HTML des visites
 // précédentes. Après un déploiement, ce HTML référence les chunks d'un build
@@ -32,6 +43,7 @@ function isChunkLoadError(err: unknown) {
 export default function PwaUpdater({ currentBuildId }: { currentBuildId: string | null }) {
   const lastCheckRef = useRef(0)
   const reloadingRef = useRef(false)
+  const waitingRef = useRef(false)
 
   // Rattrapage d'un chunk manquant : un rechargement repart du HTML courant et
   // suffit presque toujours. Une seule tentative par build, pour ne pas boucler
@@ -61,8 +73,27 @@ export default function PwaUpdater({ currentBuildId }: { currentBuildId: string 
   useEffect(() => {
     if (!currentBuildId) return
 
-    async function checkForUpdate() {
+    async function reloadWhenIdle(buildId: string) {
       if (reloadingRef.current) return
+      if (isBusy()) {
+        waitingRef.current = true
+        setTimeout(() => { void reloadWhenIdle(buildId) }, BUSY_RETRY_MS)
+        return
+      }
+      waitingRef.current = false
+      // Ne tente qu'une seule fois par version détectée : si le rechargement
+      // ne suffit pas à récupérer la nouvelle version (HTML mis en cache en
+      // amont), on évite une boucle de reload.
+      const key = 'pwa_reload_attempted'
+      if (sessionStorage.getItem(key) === buildId) return
+      sessionStorage.setItem(key, buildId)
+      reloadingRef.current = true
+      await clearRuntimeCache()
+      window.location.reload()
+    }
+
+    async function checkForUpdate() {
+      if (reloadingRef.current || waitingRef.current) return
       const now = Date.now()
       if (now - lastCheckRef.current < CHECK_MIN_INTERVAL_MS) return
       lastCheckRef.current = now
@@ -71,15 +102,7 @@ export default function PwaUpdater({ currentBuildId }: { currentBuildId: string 
         if (!res.ok) return
         const { buildId } = await res.json()
         if (!buildId || buildId === currentBuildId) return
-        // Ne tente qu'une seule fois par version détectée : si le rechargement
-        // ne suffit pas à récupérer la nouvelle version (HTML mis en cache en
-        // amont), on évite une boucle de reload toutes les 30 s.
-        const key = 'pwa_reload_attempted'
-        if (sessionStorage.getItem(key) === buildId) return
-        sessionStorage.setItem(key, buildId)
-        reloadingRef.current = true
-        await clearRuntimeCache()
-        window.location.reload()
+        await reloadWhenIdle(buildId)
       } catch {}
     }
 
@@ -91,7 +114,9 @@ export default function PwaUpdater({ currentBuildId }: { currentBuildId: string 
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
     window.addEventListener('pageshow', onVisible)
+    const interval = setInterval(() => { void checkForUpdate() }, CHECK_EVERY_MS)
     return () => {
+      clearInterval(interval)
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
       window.removeEventListener('pageshow', onVisible)

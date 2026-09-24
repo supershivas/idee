@@ -4,8 +4,8 @@
 
 Éditeur de notes (https://idee-neon.vercel.app/). App Next.js / React /
 TypeScript / Tailwind (`app/app/App.tsx` + composants dans
-`app/app/components/`), styles globaux dans `app/globals.css`. Cible : mobile
-et bureau.
+`app/app/components/`), styles globaux dans `app/globals.css`. Catégorie :
+**primaire**. Cible : mobile et bureau.
 
 ## Parité visuelle avec Source (IMPORTANT)
 
@@ -33,26 +33,20 @@ design-system et dans source.
 
 ## Versioning
 
-Le numéro affiché dans Paramètres (`package.json` → `version`) n'est
-**jamais bumpé par l'utilisateur** : à chaque PR qui change le comportement
-de l'app, Claude Code incrémente lui-même `package.json` selon la nature du
-changement — `patch` pour un correctif, `minor` pour une nouvelle
-fonctionnalité, `major` pour un changement notable/structurant. Un PR
-purement doc/config sans impact utilisateur (comme celle-ci) n'a pas besoin
-de bump. La date affichée à côté reste automatique (date du commit courant,
-lue au build).
+Conforme aux conventions : `public/version.json` est la seule source de
+vérité, `public/CHANGELOG.md` l'historique. `next.config.js` les lit au build
+et expose `NEXT_PUBLIC_APP_VERSION` et `NEXT_PUBLIC_APP_CHANGELOG` (5
+dernières versions, affichées dans Réglages par `Changelog.tsx`). La date
+affichée à côté de la version reste celle du commit courant, lue au build.
 
 **Toujours rappeler le numéro de version** dans la réponse à l'utilisateur,
-à chaque fois qu'un changement est livré — la version après bump, telle
-qu'elle s'affichera dans Paramètres.
+à chaque fois qu'un changement est livré.
 
-Côté app, `VersionToast` (monté à côté de `<Toaster />` dans `App.tsx`)
-compare la version du bundle à celle mémorisée au dernier lancement et
-annonce la mise à jour à l'utilisateur. Il n'y a donc rien à faire de plus
-qu'un bump de `package.json` pour que le toast apparaisse.
+Mise à jour : `PwaUpdater` compare l'identifiant de build servi par
+`/api/build-id` (au retour au premier plan et toutes les 5 minutes) et
+recharge dès qu'aucune saisie n'est en cours ; `VersionToast` annonce ensuite
+« Mis à jour en vX.Y.Z ».
 
 ## Exceptions aux conventions
 
-- Versioning (section 2) : la version vit dans `package.json` et non dans
-  `version.json` ; un changement purement doc/config n'est pas bumpé. Voir
-  « Versioning » ci-dessus.
+Aucune.

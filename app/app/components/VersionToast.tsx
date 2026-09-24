@@ -36,7 +36,7 @@ export default function VersionToast() {
     // Première ouverture sur cet appareil : rien à annoncer, on se contente
     // de mémoriser la version pour la prochaine fois.
     if (!previous || previous === current) return
-    setTimeout(() => toast(`Mise à jour installée — version ${current}`, 'success'), 600)
+    setTimeout(() => toast(`Mis à jour en v${current}`, 'success'), 600)
   }, [])
 
   return null

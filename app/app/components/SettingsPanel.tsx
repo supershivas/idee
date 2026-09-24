@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Page } from '../types'
 import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 import { ServerUsage } from './StorageUsage'
+import Changelog from './Changelog'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -120,7 +121,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Paramètres</span>
+          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Réglages</span>
           <button onClick={onClose}
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
             style={{ color: 'var(--text-muted)' }}>✕</button>
@@ -326,6 +327,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                   <> · Mis à jour le {formatUpdatedAt(process.env.NEXT_PUBLIC_APP_UPDATED_AT)}</>
                 )}
               </p>
+              <Changelog />
             </div>
         </div>
 

@@ -937,6 +937,19 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
     await reorderSiblings(active.id as string, over.id as string, finalPosition || 'after')
   }
 
+  // Clic sur le nom de l'app : retour à l'accueil depuis n'importe quelle
+  // vue, modales et panneaux refermés (conventions du design system).
+  function goHome(e?: React.MouseEvent) {
+    if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0)) return
+    e?.preventDefault()
+    setShowTrash(false); setShowJournal(false); setShowTags(false)
+    setShowSettings(false); setShowHistory(false); setShowMore(false)
+    setShowTemplateModal(false); setShowQuickCapture(false); setShowRecent(false)
+    setShowReview(false); setShowCmdPalette(false); setContextMenu(null)
+    setMoveToPageId(null); setConfirmDeleteId(null); setPagePicker(null)
+    selectPage(null)
+  }
+
   const activeDragPage = pages.find(p => p.id === activeDragId)
   const subpages = selected ? activePages.filter(p => p.parent_id === selected.id) : []
   const subpagesRight = selectedRight ? activePages.filter(p => p.parent_id === selectedRight.id) : []
@@ -1017,10 +1030,12 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
         {/* Header */}
         <div className="px-3 flex items-center justify-between gap-2" style={{ minHeight: '52px', borderBottom: '1px solid var(--sidebar-border)' }}>
           <div className="flex items-center gap-2 min-w-0">
-            <img src="/apple-touch-icon.png" alt="Idée" className="w-6 h-6 rounded-lg flex-shrink-0" />
-            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 700, color: 'var(--sidebar-fg)', letterSpacing: '-0.01em', lineHeight: 1 }}>
-              Idée
-            </span>
+            <a href="/app" onClick={goHome} className="flex items-center gap-2 min-w-0" title="Revenir à l'accueil">
+              <img src="/apple-touch-icon.png" alt="" className="w-6 h-6 rounded-lg flex-shrink-0" />
+              <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 700, color: 'var(--sidebar-fg)', letterSpacing: '-0.01em', lineHeight: 1 }}>
+                Idée
+              </span>
+            </a>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
@@ -1039,7 +1054,8 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               style={{ color: 'var(--sidebar-icon)', background: 'transparent' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-icon)' }}
-              title="Paramètres"
+              title="Réglages"
+              aria-label="Réglages"
             >
               <i className="ti ti-settings" style={{ fontSize: '15px' }} />
             </button>
@@ -1286,6 +1302,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
             journalTab={showJournal} onTabChange={t => setShowJournal(t === 'journal')}
             onAddJournalEntry={addJournalEntry}
             onShowSettings={() => setShowSettings(true)}
+            onGoHome={goHome}
             onSelectTag={tag => { setTagsInitialTag(tag); setShowTags(true) }}
             onMoveTo={id => setMoveToPageId(id)}
             onDuplicate={id => duplicatePage(id)}
