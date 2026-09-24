@@ -1,5 +1,10 @@
 # Historique des versions
 
+## 1.38.0 — 2026-09-24
+- Images et tableaux directement dans la barre d'outils ; « ⋯ » n'apparaît plus que si la place manque
+- Tableaux : une petite poignée par ligne et par colonne ouvre un menu qui reste ouvert
+- Menu des tableaux aux couleurs et au style des autres menus
+
 ## 1.37.0 — 2026-09-24
 - Le nom « Idée » en haut ramène à l'accueil
 - Les réglages affichent les dernières nouveautés

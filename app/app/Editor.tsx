@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef, useMemo, ReactNode } from 'react'
+import { useEffect, useState, useRef, useMemo, Fragment, ReactNode } from 'react'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -126,16 +126,14 @@ const PILL_WHEEL = `conic-gradient(${PILL_COLORS
 // coûtaient 150px dans chaque barre pour une action occasionnelle, et la
 // barre flottante débordait alors de son volet. Le bouton porte la couleur
 // courante, donc l'état reste lisible sans ouvrir le menu.
-function PillMenu({ editor, up }: { editor: any, up?: boolean }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
+// Referme un menu de barre au clic en dehors ou sur Échap.
+function useDismiss(open: boolean, ref: React.RefObject<HTMLElement>, close: () => void) {
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent | TouchEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+      if (!ref.current?.contains(e.target as Node)) close()
     }
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') close() }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('touchstart', onDown)
     document.addEventListener('keydown', onKey)
@@ -144,7 +142,14 @@ function PillMenu({ editor, up }: { editor: any, up?: boolean }) {
       document.removeEventListener('touchstart', onDown)
       document.removeEventListener('keydown', onKey)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+}
+
+function PillMenu({ editor, up }: { editor: any, up?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useDismiss(open, ref, () => setOpen(false))
 
   const active = PILL_COLORS.find(c => editor?.isActive('pill', { color: c.id }))
 
@@ -154,7 +159,7 @@ function PillMenu({ editor, up }: { editor: any, up?: boolean }) {
     // mobile, le clavier se refermerait sous le doigt.
     <div ref={ref} className="relative flex-shrink-0" onMouseDown={e => e.preventDefault()}>
       <button
-        title="Surlignage"
+        title="Surlignage" data-keep-open
         onClick={() => setOpen(v => !v)}
         className={`toolbar-btn flex items-center justify-center rounded text-sm font-medium transition-colors
           ${open || active ? 'is-active' : ''}`}
@@ -171,6 +176,26 @@ function PillMenu({ editor, up }: { editor: any, up?: boolean }) {
           ...(up ? { bottom: '100%', marginBottom: 6 } : { top: '100%', marginTop: 6 }),
         }}>
           <PillSwatches editor={editor} onPick={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// « ⋯ » de la barre desktop : les actions qui ne tiennent plus s'ouvrent
+// dans un menu sous le bouton, plutôt que sur une seconde rangée souvent
+// presque vide. Un choix referme le menu, sauf l'ouverture du surlignage.
+function MoreMenu({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useDismiss(open, ref, () => setOpen(false))
+  return (
+    <div ref={ref} className="relative flex-shrink-0" onMouseDown={e => e.preventDefault()}>
+      <ToolBtn onClick={() => setOpen(v => !v)} active={open} label="⋯" title="Plus d'options" />
+      {open && (
+        <div className="toolbar-popover" style={{ right: 0, top: '100%', marginTop: 6, flexWrap: 'wrap', width: 'max-content', maxWidth: 320 }}
+          onClick={e => { if (!(e.target as HTMLElement).closest('[data-keep-open]')) setOpen(false) }}>
+          {children}
         </div>
       )}
     </div>
@@ -400,32 +425,40 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
   // un bouton (qui sort brièvement du champ) la fasse disparaître sous le
   // doigt.
   const [editing, setEditing] = useState(false)
-  // Pastille mobile : 7 actions courantes visibles, le reste derrière « … ».
+  // Pastille mobile : 9 actions courantes visibles, « … » bascule la rangée
+  // sur les autres.
   const [moreTools, setMoreTools] = useState(false)
-  // Barre desktop : même principe, mais le repli se décide sur la largeur
-  // disponible plutôt qu'à la main — tant que tout tient, aucun « ⋯ ».
-  const [moreDesktop, setMoreDesktop] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
+  // Barre desktop : autant d'actions que la largeur du volet en permet, le
+  // reste dans le menu « ⋯ » — tant que tout tient, aucun « ⋯ ». Les
+  // largeurs viennent d'une copie invisible de la barre complète : la barre
+  // visible, une fois repliée, ne peut plus dire combien il lui manquait.
+  const [fitCount, setFitCount] = useState(Infinity)
   const desktopBarRef = useRef<HTMLDivElement>(null)
-  // Largeur nécessaire à la barre dépliée, mesurée au premier rendu : une fois
-  // repliée, `scrollWidth` ne vaut plus que la rangée courte, et la comparer à
-  // elle-même ferait osciller la barre à chaque pixel de redimensionnement.
-  const fullBarWidthRef = useRef(0)
+  const measureRowRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const el = desktopBarRef.current
-    if (isMobile || !el) return
+    const bar = desktopBarRef.current, row = measureRowRef.current
+    if (isMobile || !bar || !row) return
     function measure() {
-      if (!el) return
-      if (!collapsed) fullBarWidthRef.current = Math.max(fullBarWidthRef.current, el.scrollWidth)
-      setCollapsed(fullBarWidthRef.current > el.clientWidth - 8)
+      if (!bar || !row) return
+      const GAP = 2, MORE = 9 + 36 + 2 * GAP // séparateur, bouton « ⋯ » et leurs espacements
+      const style = getComputedStyle(bar)
+      const avail = bar.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+      const widths = Array.from(row.children).map(c => c.getBoundingClientRect().width)
+      const total = widths.reduce((sum, w) => sum + w, 0) + GAP * Math.max(0, widths.length - 1)
+      if (total <= avail) { setFitCount(Infinity); return }
+      let used = 0, n = 0
+      for (const w of widths) {
+        if (used + w + GAP + MORE > avail) break
+        used += w + GAP; n++
+      }
+      setFitCount(n)
     }
     measure()
     const ro = new ResizeObserver(measure)
-    ro.observe(el)
+    ro.observe(bar)
+    ro.observe(row)
     return () => ro.disconnect()
-  }, [isMobile, collapsed])
-  // Barre redevenue assez large : la rangée d'options n'a plus lieu d'être.
-  useEffect(() => { if (!collapsed) setMoreDesktop(false) }, [collapsed])
+  }, [isMobile])
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (blurTimerRef.current) clearTimeout(blurTimerRef.current) }, [])
   // On repart replié à chaque nouvelle session d'édition.
@@ -717,9 +750,15 @@ Image.extend({
       <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
       <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
       <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" />
+      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
+      <ToolBtn
+        onClick={() => editor?.isActive('table') ? setShowTableSheet(true) : editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+        active={editor?.isActive('table')} label="⊞" title="Tableau" />
     </>
   )
 
+  // Remplace la rangée principale au lieu de s'ouvrir dessous : une seconde
+  // rangée à moitié vide faisait sauter la pastille au-dessus du clavier.
   const toolbarMobileSecondary = (
     <>
       <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
@@ -728,10 +767,8 @@ Image.extend({
       <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
-      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
-      <ToolBtn
-        onClick={() => editor?.isActive('table') ? setShowTableSheet(true) : editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-        active={editor?.isActive('table')} label="⊞" title="Tableau" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label={<i className="ti ti-code" />} title="Bloc de code" />
+      <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
         label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
       <Sep />
@@ -739,45 +776,46 @@ Image.extend({
     </>
   )
 
-  // Découpée en deux comme la pastille mobile : quand le volet de note est
-  // trop étroit pour les dix-sept actions, les secondaires passent derrière
-  // « ⋯ » plutôt que de partir en défilement horizontal.
-  const toolbarDesktopPrimary = (
-    <>
-      <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
-      <Sep />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
-      <Sep />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste à puces" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Liste numérotée" />
-      <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
-      <Sep />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
-      <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" />
-      {/* Surlignage : n'existait que dans la barre de sélection, donc
-          inatteignable tant qu'on n'avait pas déjà sélectionné du texte. */}
-      <PillMenu editor={editor} />
-    </>
-  )
-
-  const toolbarDesktopSecondary = (
-    <>
-      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Bloc de code" />
-      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
-      <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" />
-      <Sep />
-      {/* Remet la sélection en texte nu : `unsetAllMarks` retire gras, italique,
-          couleurs, liens ; `clearNodes` ramène titres, listes et citations au
-          paragraphe. Il fallait sinon désactiver chaque style un par un, en
-          devinant lesquels étaient posés. */}
-      <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
-        label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
-    </>
-  )
+  // Une entrée par bouton (ou séparateur), dans l'ordre d'usage : ce qui ne
+  // tient pas passe dans « ⋯ » en partant de la fin.
+  const desktopItems: { key: string; node: ReactNode; sep?: boolean }[] = [
+    { key: 'bold', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" /> },
+    { key: 'italic', node: <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" /> },
+    { key: 'underline', node: <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" /> },
+    { key: 'strike', node: <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" /> },
+    { key: 's1', node: <Sep />, sep: true },
+    { key: 'h1', node: <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" /> },
+    { key: 'h2', node: <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" /> },
+    { key: 's2', node: <Sep />, sep: true },
+    { key: 'bullet', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste à puces" /> },
+    { key: 'ordered', node: <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Liste numérotée" /> },
+    { key: 'task', node: <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" /> },
+    { key: 's3', node: <Sep />, sep: true },
+    { key: 'quote', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" /> },
+    { key: 'link', node: <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" /> },
+    { key: 'image', node: <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" /> },
+    { key: 'table', node: <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" /> },
+    // Surlignage : n'existait que dans la barre de sélection, donc
+    // inatteignable tant qu'on n'avait pas déjà sélectionné du texte.
+    { key: 'pill', node: <PillMenu editor={editor} /> },
+    { key: 's4', node: <Sep />, sep: true },
+    { key: 'codeBlock', node: <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Bloc de code" /> },
+    // Remet la sélection en texte nu : `unsetAllMarks` retire gras, italique,
+    // couleurs, liens ; `clearNodes` ramène titres, listes et citations au
+    // paragraphe. Il fallait sinon désactiver chaque style un par un, en
+    // devinant lesquels étaient posés.
+    { key: 'clear', node: <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
+        label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" /> },
+  ]
+  // Pas de séparateur orphelin en bout de barre ni en tête du menu.
+  const trimSeps = (items: typeof desktopItems) => {
+    let a = 0, b = items.length
+    while (a < b && items[a].sep) a++
+    while (b > a && items[b - 1].sep) b--
+    return items.slice(a, b)
+  }
+  const desktopVisible = trimSeps(desktopItems.slice(0, fitCount))
+  const desktopOverflow = trimSeps(desktopItems.slice(fitCount))
 
   return (
     <div className={`flex flex-col flex-1${isMobile ? ' overflow-hidden' : ''}${focusMode ? ' focus-mode-content' : ''}`}>
@@ -847,26 +885,23 @@ Image.extend({
           `--table-sticky-top`) : sur une note longue elle partait avec le
           défilement, et il fallait remonter en haut pour changer un style. */}
       {!isMobile && (
+        // Pas de défilement : le repli garantit que tout tient, et un
+        // conteneur qui défile rognerait les menus (surlignage, « ⋯ »).
         <div ref={desktopBarRef}
-          className={`editor-toolbar sticky z-10 flex items-center gap-0.5 px-2 flex-shrink-0 ${moreDesktop ? 'is-expanded' : 'flex-nowrap overflow-x-auto'}`}
-          style={{ minHeight: '48px', top: 'var(--table-sticky-top, 44px)' }}>
-          {toolbarDesktopPrimary}
-          {!collapsed && <Sep />}
-          {!collapsed && toolbarDesktopSecondary}
-          {collapsed && (
+          className="editor-toolbar sticky z-10 flex items-center gap-0.5 px-2 flex-shrink-0 flex-nowrap"
+          style={{ minHeight: '48px', top: 'var(--table-sticky-top, 44px)', overflow: 'visible' }}>
+          {desktopVisible.map(i => <Fragment key={i.key}>{i.node}</Fragment>)}
+          {desktopOverflow.length > 0 && (
             <>
               <Sep />
-              <ToolBtn onClick={() => setMoreDesktop(v => !v)} active={moreDesktop}
-                label={moreDesktop ? '⌄' : '⋯'} title={moreDesktop ? 'Moins d\'options' : 'Plus d\'options'} />
+              <MoreMenu>{desktopOverflow.map(i => <Fragment key={i.key}>{i.node}</Fragment>)}</MoreMenu>
             </>
           )}
-          {/* Rangée propre (`w-full` force le retour à la ligne) : la rangée
-              habituelle ne bouge pas d'un pixel quand on déplie. */}
-          {collapsed && moreDesktop && (
-            <div className="toolbar-row-more w-full flex items-center gap-0.5">
-              {toolbarDesktopSecondary}
-            </div>
-          )}
+          {/* Copie invisible de la barre complète, pour mesurer chaque bouton. */}
+          <div ref={measureRowRef} aria-hidden className="absolute left-0 top-0 flex items-center gap-0.5 flex-nowrap"
+            style={{ visibility: 'hidden', pointerEvents: 'none', height: 0, overflow: 'hidden', width: 'max-content' }}>
+            {desktopItems.map(i => <Fragment key={i.key}>{i.node}</Fragment>)}
+          </div>
         </div>
       )}
       {!isMobile && headings.length >= 2 && (
@@ -913,7 +948,7 @@ Image.extend({
           l'appui ne sorte pas du champ (sinon le clavier se referme et la
           barre s'en va sous le doigt). */}
       {isMobile && editing && (
-        <div className={`editor-toolbar editor-toolbar-pill flex items-center gap-0.5 px-1.5 ${moreTools ? 'is-expanded' : 'flex-nowrap overflow-x-auto'}`}
+        <div className="editor-toolbar editor-toolbar-pill flex items-center gap-0.5 px-1.5 flex-nowrap overflow-x-auto"
           onMouseDown={e => e.preventDefault()}
           style={{
             position: 'fixed',
@@ -930,19 +965,11 @@ Image.extend({
             minHeight: '40px',
             transition: 'top 0.2s ease',
           }}>
-          {toolbarMobilePrimary}
-          {/* Ressort : garde le bouton d'ouverture calé à droite du rang. */}
+          {moreTools ? toolbarMobileSecondary : toolbarMobilePrimary}
+          {/* Ressort : garde le bouton de bascule calé à droite du rang. */}
           <div className="flex-1 min-w-0" />
           <ToolBtn onClick={() => setMoreTools(v => !v)} active={moreTools}
-            label={moreTools ? '⌄' : '⋯'} title={moreTools ? 'Moins d\'options' : 'Plus d\'options'} />
-          {/* Les options s'ouvrent sur leur propre rangée (`w-full` force le
-              retour à la ligne) : la rangée habituelle ne bouge pas d'un
-              pixel quand on déplie. */}
-          {moreTools && (
-            <div className="toolbar-row-more w-full flex items-center gap-0.5">
-              {toolbarMobileSecondary}
-            </div>
-          )}
+            label={moreTools ? <i className="ti ti-x" /> : '⋯'} title={moreTools ? 'Revenir aux actions courantes' : 'Plus d\'options'} />
         </div>
       )}
 

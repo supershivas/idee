@@ -574,13 +574,15 @@ html, body {
   box-shadow: 0 6px 20px var(--pill-toolbar-shadow), 0 0 0 0.5px var(--border);
 }
 /* Boutons plus compacts dans la pastille que dans la barre desktop, sans
-   descendre sous la zone tactile confortable. */
+   descendre sous la zone tactile confortable : neuf actions et « ⋯ » doivent
+   tenir sur une rangée de téléphone (375px). */
 .editor-toolbar-pill .toolbar-btn {
-  min-width: 32px;
+  min-width: 30px;
   min-height: 36px;
-  padding: 0 6px;
+  padding: 0 4px;
   color: var(--text-secondary);
 }
+.editor-toolbar-pill .toolbar-sep { margin: 0 2px; }
 .editor-toolbar-pill .toolbar-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
 .editor-toolbar-pill .toolbar-btn.is-active { background: var(--selected-bg); color: var(--text-primary); }
 .toolbar-swatch {
@@ -588,35 +590,63 @@ html, body {
   min-height: 36px;
 }
 
-/* Rangée des options, dépliée sous la rangée principale : elle passe à la
-   ligne plutôt que de défiler — elle n'héritait d'aucune des règles qui
-   masquent les barres de défilement, et c'est elle qui en laissait paraître
-   une. Son contenu est court, deux rangées valent mieux qu'un défilement. */
-.editor-toolbar .toolbar-row-more {
-  flex-wrap: wrap;
-  row-gap: 2px;
-  overflow-x: visible;
+/* ─── Contrôles des tableaux (bureau) ───────────────────────────────────────
+   Poignées discrètes posées sur la note (elles suivent donc le thème de
+   l'app), et menu de ligne/colonne dans la même surface sombre que les menus
+   des barres de style (`.toolbar-popover`), pastilles de couleur comprises. */
+.table-grip {
+  position: fixed;
+  z-index: 60;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px var(--pill-toolbar-shadow);
+  transition: background 0.1s, color 0.1s;
 }
+.table-grip.is-round { border-radius: 9999px; }
+.table-grip:hover, .table-grip.is-active { background: var(--selected-bg); color: var(--text-primary); }
+/* Zone de clic plus large que la poignée visible, sans la grossir. */
+.table-grip::after { content: ''; position: absolute; inset: -6px; }
 
-/* Rangée des options : boutons resserrés et séparateurs masqués, pour que les
-   dix actions et les cinq couleurs tiennent dans la largeur d'un téléphone
-   sans avoir à défiler. */
-.editor-toolbar-pill .toolbar-row-more .toolbar-btn {
-  min-width: 30px;
-  padding: 0 3px;
+.table-menu {
+  position: fixed;
+  z-index: 61;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  box-shadow: 0 6px 20px var(--pill-toolbar-shadow), 0 0 0 0.5px var(--sidebar-border);
+  --toolbar-swatch-border: var(--sidebar-border);
+  --toolbar-swatch-active: var(--sidebar-fg);
 }
-.editor-toolbar-pill .toolbar-row-more .toolbar-swatch { min-width: 26px; }
-.editor-toolbar-pill .toolbar-row-more .toolbar-sep { display: none; }
-
-/* Deux rangées quand les actions secondaires sont dépliées (pastille mobile
-   comme barre desktop repliée). */
-.editor-toolbar.is-expanded {
-  flex-wrap: wrap;
-  overflow-x: visible;
-  row-gap: 2px;
-  padding-top: 4px;
-  padding-bottom: 4px;
+.table-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--sidebar-fg);
+  transition: background 0.1s;
 }
+.table-menu-item i { font-size: 16px; color: var(--sidebar-icon); }
+.table-menu-item:hover { background: var(--sidebar-hover); }
+.table-menu-item.is-danger, .table-menu-item.is-danger i { color: #f87171; }
+.table-menu-sep { height: 1px; margin: 4px 6px; background: var(--sidebar-border); }
+.table-menu-label { padding: 4px 10px 0; font-size: 11px; color: var(--sidebar-muted); }
+/* Les huit couleurs sur une seule rangée. */
+.table-menu .toolbar-swatch { min-width: 25px; }
 
 /* ─── Toolbar boutons ────────────────────────────────────────────────────────*/
 .toolbar-btn {

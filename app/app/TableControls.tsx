@@ -32,21 +32,23 @@ type Geometry = {
 
 // Sélectionne toute une colonne (CellSelection) à partir de sa cellule d'en-tête.
 // resolve(pos-1) = position juste avant la cellule (nodeAfter === cellule).
-function selectColumn(view: EditorView, cellDom: HTMLElement) {
+// Sans focus à l'ouverture d'un menu : rendre le focus à l'éditeur peut faire
+// défiler la page, ce qui refermerait aussitôt le menu.
+function selectColumn(view: EditorView, cellDom: HTMLElement, focus = true) {
   try {
     const pos = view.posAtDOM(cellDom, 0)
     const $cell = view.state.doc.resolve(pos - 1)
     view.dispatch(view.state.tr.setSelection(CellSelection.colSelection($cell)))
-    view.focus()
+    if (focus) view.focus()
   } catch (err) { console.warn('selectColumn:', err) }
 }
 // Sélectionne toute une ligne à partir de sa première cellule.
-function selectRow(view: EditorView, cellDom: HTMLElement) {
+function selectRow(view: EditorView, cellDom: HTMLElement, focus = true) {
   try {
     const pos = view.posAtDOM(cellDom, 0)
     const $cell = view.state.doc.resolve(pos - 1)
     view.dispatch(view.state.tr.setSelection(CellSelection.rowSelection($cell)))
-    view.focus()
+    if (focus) view.focus()
   } catch (err) { console.warn('selectRow:', err) }
 }
 // Place le curseur dans une cellule (sélection simple).
@@ -81,90 +83,121 @@ function measure(tableEl: HTMLTableElement): Geometry | null {
   }
 }
 
-function IconBtn({ title, onClick, children, danger }: {
-  title: string; onClick: () => void; children: React.ReactNode; danger?: boolean
+type Menu = { type: 'row' | 'col'; index: number; cell: HTMLElement; left: number; top: number }
+
+const MENU_WIDTH = 220
+const MENU_HEIGHT = 290 // hauteur approximative, pour le basculer au-dessus en bas d'écran
+
+function MenuItem({ icon, label, onClick, danger }: {
+  icon: string; label: string; onClick: () => void; danger?: boolean
 }) {
   return (
-    <button
-      title={title}
-      onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
-      onClick={e => { e.preventDefault(); e.stopPropagation(); onClick() }}
-      style={{ pointerEvents: 'auto' }}
-      className={`w-6 h-6 flex items-center justify-center rounded text-[12px] transition-colors ${
-        danger ? 'text-red-400 hover:bg-red-500/10' : 'hover:bg-white/10'
-      }`}
-    >{children}</button>
+    <button type="button" className={`table-menu-item${danger ? ' is-danger' : ''}`}
+      onMouseDown={e => e.preventDefault()}
+      onClick={e => { e.stopPropagation(); onClick() }}>
+      <i className={`ti ${icon}`} />
+      <span>{label}</span>
+    </button>
   )
 }
 
-function ColorRow({ onPick }: { onPick: (v: string | null) => void }) {
+// Pastilles identiques à celles du surlignage (`PillSwatches` d'Editor.tsx) :
+// même bouton `.toolbar-swatch`, même rond de 15px, même bordure.
+function CellColorSwatches({ onPick }: { onPick: (v: string | null) => void }) {
   return (
-    <div className="flex items-center gap-1 px-1.5 py-1" style={{ pointerEvents: 'auto' }}>
+    <div className="flex items-center flex-wrap px-1">
       {CELL_COLORS.map(c => (
-        <button key={c.label} title={c.label}
-          onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
-          onClick={e => { e.preventDefault(); e.stopPropagation(); onPick(c.value) }}
-          className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center hover:scale-110 transition-transform"
-          style={{ background: c.swatch || 'transparent', border: c.swatch ? '1px solid rgba(0,0,0,0.2)' : '1px solid rgba(255,255,255,0.3)' }}>
-          {c.value === null && <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>⦸</span>}
+        <button key={c.label} type="button" title={c.label}
+          onMouseDown={e => e.preventDefault()}
+          onClick={e => { e.stopPropagation(); onPick(c.value) }}
+          className="toolbar-swatch flex items-center justify-center flex-shrink-0">
+          <span style={{
+            width: 15, height: 15, borderRadius: '50%', display: 'block',
+            background: c.swatch || 'linear-gradient(135deg, transparent 44%, var(--sidebar-muted) 44%, var(--sidebar-muted) 56%, transparent 56%)',
+            border: '1.5px solid var(--toolbar-swatch-border)',
+          }} />
         </button>
       ))}
     </div>
   )
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="flex items-center gap-0.5 rounded-lg shadow-lg px-1 py-0.5"
-      style={{ background: '#1f1f22', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-    >{children}</div>
-  )
-}
-
+// Contrôles des tableaux (bureau). Une petite poignée apparaît à gauche de la
+// ligne survolée et au-dessus de la colonne survolée ; un clic ouvre le menu
+// de la ligne ou de la colonne, qui reste ouvert jusqu'à un clic ailleurs ou
+// Échap. Les anciennes barres s'ouvraient au survol et se refermaient dès que
+// la souris s'écartait de quelques pixels.
 function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
   const [geo, setGeo] = useState<Geometry | null>(null)
   const [hoverCol, setHoverCol] = useState<number | null>(null)
   const [hoverRow, setHoverRow] = useState<number | null>(null)
-  const [colorFor, setColorFor] = useState<{ type: 'col' | 'row'; index: number } | null>(null)
-  const tableRef = useRef<HTMLTableElement | null>(null)
+  const [menu, setMenu] = useState<Menu | null>(null)
+  // Miroir pour les écouteurs posés une seule fois.
+  const menuRef = useRef<Menu | null>(null)
+  const openedAt = useRef(0)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  function openMenu(m: Menu | null) {
+    menuRef.current = m
+    if (m) openedAt.current = Date.now()
+    setMenu(m)
+  }
+  function hideAll() {
+    openMenu(null); setGeo(null); setHoverCol(null); setHoverRow(null)
+  }
   function clearHide() { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null } }
   function scheduleHide() {
+    if (menuRef.current) return
     clearHide()
-    hideTimer.current = setTimeout(() => {
-      setGeo(null); setHoverCol(null); setHoverRow(null); setColorFor(null); tableRef.current = null
-    }, 250)
+    hideTimer.current = setTimeout(() => { if (!menuRef.current) hideAll() }, 400)
   }
 
   useEffect(() => {
+    // Écouté sur tout le document, et non via `onMouseEnter` sur les
+    // poignées : l'overlay est une racine React à part, qui ne reçoit pas le
+    // `mouseout` de l'éditeur — `onMouseEnter` n'y partait jamais, et les
+    // contrôles disparaissaient sous la souris.
     function onMove(e: MouseEvent) {
-      const target = e.target as HTMLElement
+      if (menuRef.current) return // menu ouvert : la poignée reste sur sa ligne
+      const target = e.target as HTMLElement | null
+      if (!target?.closest) return
+      if (target.closest('[data-table-ctl]')) { clearHide(); return }
       const tableEl = target.closest('table') as HTMLTableElement | null
-      if (!tableEl || !view.dom.contains(tableEl)) {
-        // En dehors d'un tableau : masquer (sauf si on survole une poignée).
-        if (!(target.closest('[data-table-ctl]'))) scheduleHide()
-        return
-      }
+      if (!tableEl || !view.dom.contains(tableEl)) { scheduleHide(); return }
       clearHide()
-      tableRef.current = tableEl
       const g = measure(tableEl)
       if (!g) return
       setGeo(g)
-      // Colonne / ligne survolée selon la position de la souris.
       let ci: number | null = null, best = Infinity
       g.cols.forEach(c => { const d = Math.abs(c.center - e.clientX); if (d < best) { best = d; ci = c.index } })
       let ri: number | null = null; best = Infinity
       g.rows.forEach(r => { const d = Math.abs(r.center - e.clientY); if (d < best) { best = d; ri = r.index } })
       setHoverCol(ci); setHoverRow(ri)
     }
-    const dom = view.dom
-    dom.addEventListener('mousemove', onMove)
-    dom.addEventListener('mouseleave', scheduleHide)
+    function onDown(e: MouseEvent) {
+      if (!menuRef.current) return
+      if ((e.target as HTMLElement).closest('[data-table-ctl]')) return
+      openMenu(null); scheduleHide()
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && menuRef.current) { openMenu(null); scheduleHide() }
+    }
+    // Positions en `fixed` mesurées au survol : au moindre défilement elles
+    // deviennent fausses, on masque tout. Le court délai ignore le défilement
+    // éventuel provoqué par l'ouverture du menu elle-même.
+    function onScroll() {
+      if (menuRef.current && Date.now() - openedAt.current < 300) return
+      hideAll()
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onScroll, true)
     return () => {
-      dom.removeEventListener('mousemove', onMove)
-      dom.removeEventListener('mouseleave', scheduleHide)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onScroll, true)
       clearHide()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,87 +205,112 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
 
   if (!geo) return null
 
-  function run(fn: () => void) { fn(); scheduleHide() }
+  // Chaque action re-sélectionne sa ligne ou colonne (la sélection a pu
+  // bouger depuis l'ouverture), puis referme tout : la géométrie a changé.
+  // Le focus n'est rendu qu'une fois la commande passée, et avec un simple
+  // curseur : rendu sur la sélection de cellules, le navigateur la
+  // remplaçait par un bout de texte sélectionné, et la barre de mise en forme
+  // surgissait par-dessus le tableau. Le focus garde Ctrl+Z à portée.
+  function act(m: Menu, command: () => void) {
+    if (m.type === 'row') selectRow(view, m.cell, false); else selectColumn(view, m.cell, false)
+    command()
+    try {
+      view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.selection.$from)))
+    } catch (err) { console.warn('table menu cursor:', err) }
+    view.focus()
+    hideAll()
+  }
+  const chain = () => editor.chain() as any
 
-  const colCell = hoverCol != null ? geo.colCells[hoverCol] : null
-  const rowCell = hoverRow != null ? geo.rowCells[hoverRow] : null
+  function toggleMenu(type: 'row' | 'col', index: number, cell: HTMLElement, grip: HTMLElement) {
+    if (menu && menu.type === type && menu.index === index) { openMenu(null); return }
+    const r = grip.getBoundingClientRect()
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - MENU_WIDTH - 8))
+    const below = r.bottom + 4
+    const top = below + MENU_HEIGHT > window.innerHeight ? Math.max(8, r.top - 4 - MENU_HEIGHT) : below
+    if (type === 'row') selectRow(view, cell, false); else selectColumn(view, cell, false)
+    openMenu({ type, index, cell, left, top })
+  }
+
+  // Menu ouvert : seule sa poignée reste affichée.
+  const colIndex = menu ? (menu.type === 'col' ? menu.index : null) : hoverCol
+  const rowIndex = menu ? (menu.type === 'row' ? menu.index : null) : hoverRow
+  const colCell = colIndex != null ? geo.colCells[colIndex] : null
+  const rowCell = rowIndex != null ? geo.rowCells[rowIndex] : null
   const colRect = colCell?.getBoundingClientRect()
   const rowRect = rowCell?.getBoundingClientRect()
+  const lastCol = geo.colCells[geo.colCells.length - 1]
+  const lastRow = geo.rowCells[geo.rowCells.length - 1]
 
   return (
     <>
       {/* Poignée de colonne — au-dessus de la colonne survolée */}
       {colCell && colRect && (
-        <div data-table-ctl style={{ position: 'fixed', left: colRect.left + colRect.width / 2, top: geo.table.top - 8, transform: 'translate(-50%, -100%)', zIndex: 60, pointerEvents: 'auto' }}
-          onMouseEnter={clearHide} onMouseLeave={scheduleHide}>
-          {colorFor?.type === 'col' && colorFor.index === hoverCol ? (
-            <Pill><ColorRow onPick={v => run(() => { selectColumn(view, colCell); (editor.chain().focus() as any).setCellAttribute('backgroundColor', v).run() })} /></Pill>
-          ) : (
-            <Pill>
-              <IconBtn title="Insérer une colonne à gauche" onClick={() => run(() => { selectColumn(view, colCell); editor.chain().focus().addColumnBefore().run() })}>＋←</IconBtn>
-              <IconBtn title="Insérer une colonne à droite" onClick={() => run(() => { selectColumn(view, colCell); editor.chain().focus().addColumnAfter().run() })}>→＋</IconBtn>
-              <IconBtn title="Couleur de la colonne" onClick={() => { selectColumn(view, colCell); setColorFor({ type: 'col', index: hoverCol! }) }}>🎨</IconBtn>
-              <IconBtn title="Supprimer la colonne" danger onClick={() => run(() => { selectColumn(view, colCell); editor.chain().focus().deleteColumn().run() })}>🗑</IconBtn>
-            </Pill>
-          )}
-        </div>
+        <button type="button" data-table-ctl title="Options de la colonne"
+          className={`table-grip${menu?.type === 'col' ? ' is-active' : ''}`}
+          onMouseDown={e => e.preventDefault()}
+          onClick={e => toggleMenu('col', colIndex!, colCell, e.currentTarget)}
+          style={{ left: colRect.left + colRect.width / 2, top: geo.table.top - 3, width: 22, height: 12, transform: 'translate(-50%, -100%)' }}>
+          <i className="ti ti-grip-horizontal" />
+        </button>
       )}
 
       {/* Poignée de ligne — à gauche de la ligne survolée */}
       {rowCell && rowRect && (
-        <div data-table-ctl style={{ position: 'fixed', left: geo.table.left - 8, top: rowRect.top + rowRect.height / 2, transform: 'translate(-100%, -50%)', zIndex: 60, pointerEvents: 'auto' }}
-          onMouseEnter={clearHide} onMouseLeave={scheduleHide}>
-          {colorFor?.type === 'row' && colorFor.index === hoverRow ? (
-            <Pill><ColorRow onPick={v => run(() => { selectRow(view, rowCell); (editor.chain().focus() as any).setCellAttribute('backgroundColor', v).run() })} /></Pill>
+        <button type="button" data-table-ctl title="Options de la ligne"
+          className={`table-grip${menu?.type === 'row' ? ' is-active' : ''}`}
+          onMouseDown={e => e.preventDefault()}
+          onClick={e => toggleMenu('row', rowIndex!, rowCell, e.currentTarget)}
+          style={{ left: geo.table.left - 3, top: rowRect.top + rowRect.height / 2, width: 12, height: 22, transform: 'translate(-100%, -50%)' }}>
+          <i className="ti ti-grip-vertical" />
+        </button>
+      )}
+
+      {menu && (
+        <div data-table-ctl className="table-menu" style={{ left: menu.left, top: menu.top, width: MENU_WIDTH }}>
+          {menu.type === 'row' ? (
+            <>
+              <MenuItem icon="ti-row-insert-top" label="Insérer au-dessus" onClick={() => act(menu, () => chain().addRowBefore().run())} />
+              <MenuItem icon="ti-row-insert-bottom" label="Insérer en dessous" onClick={() => act(menu, () => chain().addRowAfter().run())} />
+            </>
           ) : (
-            <Pill>
-              <IconBtn title="Insérer une ligne au-dessus" onClick={() => run(() => { selectRow(view, rowCell); editor.chain().focus().addRowBefore().run() })}>↑＋</IconBtn>
-              <IconBtn title="Insérer une ligne en dessous" onClick={() => run(() => { selectRow(view, rowCell); editor.chain().focus().addRowAfter().run() })}>＋↓</IconBtn>
-              <IconBtn title="Couleur de la ligne" onClick={() => { selectRow(view, rowCell); setColorFor({ type: 'row', index: hoverRow! }) }}>🎨</IconBtn>
-              <IconBtn title="Supprimer la ligne" danger onClick={() => run(() => { selectRow(view, rowCell); editor.chain().focus().deleteRow().run() })}>🗑</IconBtn>
-            </Pill>
+            <>
+              <MenuItem icon="ti-column-insert-left" label="Insérer à gauche" onClick={() => act(menu, () => chain().addColumnBefore().run())} />
+              <MenuItem icon="ti-column-insert-right" label="Insérer à droite" onClick={() => act(menu, () => chain().addColumnAfter().run())} />
+            </>
           )}
+          <div className="table-menu-sep" />
+          <div className="table-menu-label">Couleur {menu.type === 'row' ? 'de la ligne' : 'de la colonne'}</div>
+          <CellColorSwatches onPick={v => act(menu, () => chain().setCellAttribute('backgroundColor', v).run())} />
+          <div className="table-menu-sep" />
+          <MenuItem icon="ti-trash" danger
+            label={menu.type === 'row' ? 'Supprimer la ligne' : 'Supprimer la colonne'}
+            onClick={() => act(menu, () => menu.type === 'row' ? chain().deleteRow().run() : chain().deleteColumn().run())} />
+          <MenuItem icon="ti-table-off" danger label="Supprimer le tableau"
+            onClick={() => act(menu, () => chain().deleteTable().run())} />
         </div>
       )}
 
       {/* ＋ Ajouter une colonne — bord droit, au niveau de l'en-tête */}
-      {geo.colCells.length > 0 && (() => {
-        const last = geo.colCells[geo.colCells.length - 1]
-        const r = last.getBoundingClientRect()
+      {lastCol && !menu && (() => {
+        const r = lastCol.getBoundingClientRect()
         return (
-          <button data-table-ctl title="Ajouter une colonne"
-            onMouseEnter={clearHide} onMouseLeave={scheduleHide}
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => run(() => { putCursorInCell(view, last); editor.chain().focus().addColumnAfter().run() })}
-            style={{ position: 'fixed', left: geo.table.left + geo.table.width + 4, top: r.top + r.height / 2, transform: 'translateY(-50%)', zIndex: 60, pointerEvents: 'auto' }}
-            className="w-5 h-5 flex items-center justify-center rounded-full text-xs shadow"
-          ><span style={{ background: '#1f1f22', color: '#fff', width: '100%', height: '100%', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>＋</span></button>
+          <button type="button" data-table-ctl title="Ajouter une colonne" className="table-grip is-round"
+              onMouseDown={e => e.preventDefault()}
+            onClick={() => { putCursorInCell(view, lastCol); editor.chain().focus().addColumnAfter().run(); hideAll() }}
+            style={{ left: geo.table.left + geo.table.width + 4, top: r.top + r.height / 2, width: 20, height: 20, transform: 'translateY(-50%)' }}
+          ><i className="ti ti-plus" /></button>
         )
       })()}
 
-      {/* Supprimer le tableau — coin haut-gauche */}
-      <button data-table-ctl title="Supprimer le tableau"
-        onMouseEnter={clearHide} onMouseLeave={scheduleHide}
-        onMouseDown={e => e.preventDefault()}
-        onClick={() => run(() => { if (geo.colCells[0]) putCursorInCell(view, geo.colCells[0]); editor.chain().focus().deleteTable().run() })}
-        style={{ position: 'fixed', left: geo.table.left - 6, top: geo.table.top - 6, transform: 'translate(-100%, -100%)', zIndex: 60, pointerEvents: 'auto' }}
-        className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] shadow"
-      ><span style={{ background: '#1f1f22', color: '#f87171', width: '100%', height: '100%', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</span></button>
-
-      {/* ＋ Ajouter une ligne — bas, à gauche */}
-      {geo.rowCells.length > 0 && (() => {
-        const last = geo.rowCells[geo.rowCells.length - 1]
-        const r = last.getBoundingClientRect()
-        return (
-          <button data-table-ctl title="Ajouter une ligne"
-            onMouseEnter={clearHide} onMouseLeave={scheduleHide}
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => run(() => { putCursorInCell(view, last); editor.chain().focus().addRowAfter().run() })}
-            style={{ position: 'fixed', left: geo.table.left + 12, top: geo.table.top + geo.table.height + 4, zIndex: 60, pointerEvents: 'auto' }}
-            className="w-5 h-5 flex items-center justify-center rounded-full text-xs shadow"
-          ><span style={{ background: '#1f1f22', color: '#fff', width: '100%', height: '100%', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>＋</span></button>
-        )
-      })()}
+      {/* ＋ Ajouter une ligne — sous le tableau, à gauche */}
+      {lastRow && !menu && (
+        <button type="button" data-table-ctl title="Ajouter une ligne" className="table-grip is-round"
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => { putCursorInCell(view, lastRow); editor.chain().focus().addRowAfter().run(); hideAll() }}
+          style={{ left: geo.table.left + 12, top: geo.table.top + geo.table.height + 4, width: 20, height: 20 }}
+        ><i className="ti ti-plus" /></button>
+      )}
     </>
   )
 }

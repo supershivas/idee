@@ -47,6 +47,16 @@ Mise à jour : `PwaUpdater` compare l'identifiant de build servi par
 recharge dès qu'aucune saisie n'est en cours ; `VersionToast` annonce ensuite
 « Mis à jour en vX.Y.Z ».
 
+## Pièges
+
+- `TableControls.tsx` rend ses contrôles dans une racine React séparée
+  (`createRoot`) : `onMouseEnter`/`onMouseLeave` n'y partent pas quand la
+  souris arrive depuis l'éditeur. Suivre le survol par un `mousemove` natif
+  sur `document`.
+- Ne pas rendre le focus à l'éditeur sur une sélection de cellules
+  (`CellSelection`) : le navigateur la remplace par une sélection de texte et
+  la barre de mise en forme flottante apparaît.
+
 ## Exceptions aux conventions
 
 Aucune.
