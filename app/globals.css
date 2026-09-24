@@ -1,7 +1,7 @@
-/* Valeurs partagées avec La fabrique : voir design-tokens.json
+/* Valeurs partagées avec source : voir design-tokens.json
    (couleurs accent fixe, radii, sidebar, kbd, search) — la
    source de vérité canonique est supershivas/design-system,
-   à récupérer via ./scripts/sync-tokens.sh.
+   récupéré par scripts/sync-design-system.sh.
    Police chargée via <link> dans layout.tsx (plus fiable qu'un @import CSS
    au premier paint, notamment sur /login). */
 

@@ -1,7 +1,11 @@
+@.claude/conventions.md
+
 # idee — notes pour Claude Code
 
-App Next.js / React / TypeScript / Tailwind (`app/app/App.tsx` + composants
-dans `app/app/components/`), styles globaux dans `app/globals.css`.
+Éditeur de notes (https://idee-neon.vercel.app/). App Next.js / React /
+TypeScript / Tailwind (`app/app/App.tsx` + composants dans
+`app/app/components/`), styles globaux dans `app/globals.css`. Cible : mobile
+et bureau.
 
 ## Parité visuelle avec Source (IMPORTANT)
 
@@ -9,7 +13,7 @@ idee et `supershivas/source` doivent avoir **exactement la même sidebar**
 (espacements, dividers, tailles d'icônes, hauteurs de bouton, etc.) — seul le
 contenu/la fonction change. Si tu modifies un style de sidebar ici
 (`App.tsx`, `SearchBar.tsx`, etc.), vérifie toujours son équivalent dans
-source et applique le même changement des deux côtés dans la même session/PR.
+source et applique le même changement des deux côtés dans la même session.
 Ne jamais laisser les deux diverger.
 
 La sidebar est "toujours sombre" indépendamment du thème clair/sombre de
@@ -21,7 +25,8 @@ identiques entre les blocs Light et Dark de `:root`.
 Source de vérité canonique : `supershivas/design-system` (`design-tokens.json`).
 Toute valeur partagée (couleurs sidebar, radii, fonts, dimensions
 search/kbd/header/divider) doit être modifiée **là-bas en premier**, puis
-synchronisée ici via `./scripts/sync-tokens.sh`, puis reportée dans
+synchronisée ici par `scripts/sync-design-system.sh` (lancé automatiquement
+au début de chaque session, avec `app/mobile.css`), puis reportée dans
 `app/globals.css` / les classNames-styles inline qui la consomment. Ne jamais
 modifier une valeur partagée uniquement ici sans la reporter dans
 design-system et dans source.
@@ -46,9 +51,8 @@ compare la version du bundle à celle mémorisée au dernier lancement et
 annonce la mise à jour à l'utilisateur. Il n'y a donc rien à faire de plus
 qu'un bump de `package.json` pour que le toast apparaisse.
 
-## Workflow Git
+## Exceptions aux conventions
 
-- Toujours brancher depuis `main`, jamais commit direct sur `main`.
-- Commits descriptifs en français.
-- Une fois la branche poussée : créer une PR vers `main`, puis squash-merge
-  (`merge_method: "squash"`). C'est le pattern utilisé pour tout ce repo.
+- Versioning (section 2) : la version vit dans `package.json` et non dans
+  `version.json` ; un changement purement doc/config n'est pas bumpé. Voir
+  « Versioning » ci-dessus.
