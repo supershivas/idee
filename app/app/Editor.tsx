@@ -309,10 +309,16 @@ function ImageNodeView({ node, editor, getPos }: any) {
     </NodeViewWrapper>
   )
 }
+// Distance entre le bas d'un tableau et le « + » d'ajout de bloc : sous la
+// ligne fantôme d'ajout de ligne (6px + 18px), avec de l'air. Doit tenir dans
+// la marge basse de `.tableWrapper` (bureau).
+const TABLE_PLUS_OFFSET = 30
+
 function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [plusPos, setPlusPos] = useState<{ top: number; blockEl: Element } | null>(null)
   const plusRef = useRef<HTMLButtonElement>(null)
+  const plusBlockRef = useRef<Element | null>(null)
 
   useEffect(() => {
     const container = containerRef.current
@@ -332,15 +338,32 @@ function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
       const block = (el as HTMLElement).closest(
         '.ProseMirror > p, .ProseMirror > h1, .ProseMirror > h2, .ProseMirror > h3, .ProseMirror > ul, .ProseMirror > ol, .ProseMirror > blockquote, .ProseMirror > pre, .ProseMirror > hr, .ProseMirror > .tableWrapper, .ProseMirror > [data-type="taskList"]'
       )
-      if (!block) { setPlusPos(null); return }
+      if (!block) {
+        // Sous un tableau, le « + » est décollé du bloc : on le garde tant que
+        // la souris descend vers lui dans la marge.
+        const prev = plusBlockRef.current
+        if (prev?.classList.contains('tableWrapper')) {
+          const r = prev.getBoundingClientRect()
+          if (e.clientY >= r.bottom && e.clientY <= r.bottom + TABLE_PLUS_OFFSET + 28) return
+        }
+        plusBlockRef.current = null
+        setPlusPos(null)
+        return
+      }
 
       const containerRect = container.getBoundingClientRect()
       const blockRect = block.getBoundingClientRect()
-      setPlusPos({ top: blockRect.bottom - containerRect.top + container.scrollTop - 7, blockEl: block })
+      // Sous un tableau, place d'abord à la ligne fantôme « ajouter une
+      // ligne » (TableControls) : le « + » de bloc descend en dessous.
+      const offset = block.classList.contains('tableWrapper') ? TABLE_PLUS_OFFSET : -7
+      plusBlockRef.current = block
+      setPlusPos({ top: blockRect.bottom - containerRect.top + container.scrollTop + offset, blockEl: block })
     }
 
 function onMouseLeave(e: MouseEvent) {
   if (plusRef.current?.contains(e.relatedTarget as Node)) return
+  // Passage sur les contrôles du tableau (hors de ce conteneur).
+  if ((e.relatedTarget as HTMLElement | null)?.closest?.('[data-table-ctl]')) return
   // Laisser un délai pour que le curseur puisse atteindre le bouton
   setTimeout(() => {
     if (!plusRef.current?.matches(':hover')) setPlusPos(null)
@@ -1011,6 +1034,8 @@ Image.extend({
         }
         /* Défilement HORIZONTAL seulement → une seule barre verticale (page). */
         .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
+        /* Bureau : place pour la ligne fantôme d'ajout et le « + » de bloc. */
+        @media (hover: hover) and (pointer: fine) { .ProseMirror .tableWrapper { margin-bottom: 64px; } }
         /* En-tête sticky quand le tableau tient (classe .table-fits posée en
            JS) : wrapper en overflow visible → sticky résolu sur le panneau. */
         .ProseMirror .tableWrapper.table-fits { overflow: visible; }

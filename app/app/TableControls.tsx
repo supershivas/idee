@@ -24,6 +24,8 @@ export const CELL_COLORS: { label: string; value: string | null; swatch?: string
 type Rect = { left: number; top: number; width: number; height: number }
 type Geometry = {
   table: Rect
+  // Partie visible du tableau : il peut défiler horizontalement dans son cadre.
+  visible: { left: number; right: number }
   cols: { center: number; index: number }[]
   rows: { center: number; index: number }[]
   colCells: HTMLElement[] // cellule d'en-tête (1re ligne) par colonne
@@ -66,6 +68,7 @@ function measure(tableEl: HTMLTableElement): Geometry | null {
   const headerCells = Array.from(rows[0].cells) as HTMLElement[]
   if (!headerCells.length) return null
   const tRect = tableEl.getBoundingClientRect()
+  const wRect = (tableEl.closest('.tableWrapper') || tableEl).getBoundingClientRect()
   const cols = headerCells.map((c, index) => {
     const r = c.getBoundingClientRect()
     return { center: r.left + r.width / 2, index }
@@ -76,6 +79,7 @@ function measure(tableEl: HTMLTableElement): Geometry | null {
   })
   return {
     table: { left: tRect.left, top: tRect.top, width: tRect.width, height: tRect.height },
+    visible: { left: Math.max(tRect.left, wRect.left), right: Math.min(tRect.right, wRect.right) },
     cols,
     rows: rowInfos,
     colCells: headerCells,
@@ -247,22 +251,22 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
       {/* Poignée de colonne — au-dessus de la colonne survolée */}
       {colCell && colRect && (
         <button type="button" data-table-ctl title="Options de la colonne"
-          className={`table-grip${menu?.type === 'col' ? ' is-active' : ''}`}
+          className={`table-grip is-col${menu?.type === 'col' ? ' is-active' : ''}`}
           onMouseDown={e => e.preventDefault()}
           onClick={e => toggleMenu('col', colIndex!, colCell, e.currentTarget)}
-          style={{ left: colRect.left + colRect.width / 2, top: geo.table.top - 3, width: 22, height: 12, transform: 'translate(-50%, -100%)' }}>
-          <i className="ti ti-grip-horizontal" />
+          style={{ left: colRect.left + colRect.width / 2, top: geo.table.top }}>
+          <span className="table-grip-bar"><i className="ti ti-grip-horizontal" /></span>
         </button>
       )}
 
       {/* Poignée de ligne — à gauche de la ligne survolée */}
       {rowCell && rowRect && (
         <button type="button" data-table-ctl title="Options de la ligne"
-          className={`table-grip${menu?.type === 'row' ? ' is-active' : ''}`}
+          className={`table-grip is-row${menu?.type === 'row' ? ' is-active' : ''}`}
           onMouseDown={e => e.preventDefault()}
           onClick={e => toggleMenu('row', rowIndex!, rowCell, e.currentTarget)}
-          style={{ left: geo.table.left - 3, top: rowRect.top + rowRect.height / 2, width: 12, height: 22, transform: 'translate(-100%, -50%)' }}>
-          <i className="ti ti-grip-vertical" />
+          style={{ left: geo.table.left, top: rowRect.top + rowRect.height / 2 }}>
+          <span className="table-grip-bar"><i className="ti ti-grip-vertical" /></span>
         </button>
       )}
 
@@ -291,24 +295,23 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
         </div>
       )}
 
-      {/* ＋ Ajouter une colonne — bord droit, au niveau de l'en-tête */}
-      {lastCol && !menu && (() => {
-        const r = lastCol.getBoundingClientRect()
-        return (
-          <button type="button" data-table-ctl title="Ajouter une colonne" className="table-grip is-round"
-              onMouseDown={e => e.preventDefault()}
-            onClick={() => { putCursorInCell(view, lastCol); editor.chain().focus().addColumnAfter().run(); hideAll() }}
-            style={{ left: geo.table.left + geo.table.width + 4, top: r.top + r.height / 2, width: 20, height: 20, transform: 'translateY(-50%)' }}
-          ><i className="ti ti-plus" /></button>
-        )
-      })()}
+      {/* ＋ Ajouter une colonne — fine colonne fantôme le long du bord droit,
+          sur toute la hauteur du tableau. */}
+      {lastCol && !menu && (
+        <button type="button" data-table-ctl title="Ajouter une colonne" className="table-add"
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => { putCursorInCell(view, lastCol); editor.chain().focus().addColumnAfter().run(); hideAll() }}
+          style={{ left: geo.visible.right + 6, top: geo.table.top, width: 18, height: geo.table.height }}
+        ><i className="ti ti-plus" /></button>
+      )}
 
-      {/* ＋ Ajouter une ligne — sous le tableau, à gauche */}
+      {/* ＋ Ajouter une ligne — fine ligne fantôme sous le tableau, sur toute
+          sa largeur visible. */}
       {lastRow && !menu && (
-        <button type="button" data-table-ctl title="Ajouter une ligne" className="table-grip is-round"
+        <button type="button" data-table-ctl title="Ajouter une ligne" className="table-add"
           onMouseDown={e => e.preventDefault()}
           onClick={() => { putCursorInCell(view, lastRow); editor.chain().focus().addRowAfter().run(); hideAll() }}
-          style={{ left: geo.table.left + 12, top: geo.table.top + geo.table.height + 4, width: 20, height: 20 }}
+          style={{ left: geo.visible.left, top: geo.table.top + geo.table.height + 6, width: geo.visible.right - geo.visible.left, height: 18 }}
         ><i className="ti ti-plus" /></button>
       )}
     </>

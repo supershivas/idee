@@ -601,18 +601,52 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  background: transparent;
+  /* Centrée sur le trait du tableau. Le bouton est une zone de clic
+     transparente ; seule la barre qu'il contient se voit. */
+  transform: translate(-50%, -50%);
+}
+.table-grip.is-row { width: 16px; height: 26px; }
+.table-grip.is-col { width: 26px; height: 16px; }
+.table-grip-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 11px;
   color: var(--text-muted);
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 4px;
   box-shadow: 0 1px 3px var(--pill-toolbar-shadow);
+  transition: width 0.12s, height 0.12s, background 0.1s, color 0.1s;
+}
+/* Fine au repos, deux fois plus grande au survol pour viser sans peine. */
+.is-row .table-grip-bar { width: 6px; height: 11px; }
+.is-col .table-grip-bar { width: 11px; height: 6px; }
+.is-row:hover .table-grip-bar, .is-row.is-active .table-grip-bar { width: 12px; height: 22px; }
+.is-col:hover .table-grip-bar, .is-col.is-active .table-grip-bar { width: 22px; height: 12px; }
+.table-grip-bar i { opacity: 0; transition: opacity 0.1s; }
+.table-grip:hover .table-grip-bar, .table-grip.is-active .table-grip-bar { background: var(--selected-bg); color: var(--text-primary); }
+.table-grip:hover .table-grip-bar i, .table-grip.is-active .table-grip-bar i { opacity: 1; }
+
+/* « + » d'ajout de ligne ou de colonne : une ligne (ou colonne) fantôme,
+   fine, le long du tableau. */
+.table-add {
+  position: fixed;
+  z-index: 60;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   transition: background 0.1s, color 0.1s;
 }
-.table-grip.is-round { border-radius: 9999px; }
-.table-grip:hover, .table-grip.is-active { background: var(--selected-bg); color: var(--text-primary); }
-/* Zone de clic plus large que la poignée visible, sans la grossir. */
-.table-grip::after { content: ''; position: absolute; inset: -6px; }
+.table-add:hover { background: var(--hover-bg); color: var(--text-primary); }
 
 .table-menu {
   position: fixed;

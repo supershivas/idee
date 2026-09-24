@@ -1,5 +1,10 @@
 # Historique des versions
 
+## 1.38.1 — 2026-09-24
+- Tableaux : poignées plus fines posées sur le bord, qui grossissent au survol
+- Ajouter une ligne ou une colonne : une fine ligne fantôme le long du tableau
+- Le « + » d'ajout de bloc s'écarte du tableau
+
 ## 1.38.0 — 2026-09-24
 - Images et tableaux directement dans la barre d'outils ; « ⋯ » n'apparaît plus que si la place manque
 - Tableaux : une petite poignée par ligne et par colonne ouvre un menu qui reste ouvert
