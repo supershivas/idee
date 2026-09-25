@@ -94,14 +94,14 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
           <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Historique</span>
           <button onClick={onClose}
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>Chargement…</div>
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <span className="text-3xl">📋</span>
+            <i className="ti ti-history" style={{ fontSize: 30, color: 'var(--text-faint)' }} />
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Aucun historique pour l'instant.</p>
           </div>
         ) : (
@@ -133,7 +133,7 @@ export function HistoryModal({ pages, onClose, onNavigate }: {
                         style={{ background: 'var(--selected-bg)', color: 'var(--text-muted)' }}>
                         {entry.count} modif{entry.count > 1 ? 's' : ''}
                       </span>
-                      {page && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>}
+                      {page && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}><i className="ti ti-arrow-right" /></span>}
                     </button>
                   )
                 })}

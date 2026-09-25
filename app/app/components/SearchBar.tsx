@@ -72,7 +72,7 @@ export const SearchBar = forwardRef<SearchBarHandle, { pages: Page[], onSelect: 
               onClick={() => setQuery('')}
               className="w-6 h-6 flex items-center justify-center text-sm flex-shrink-0"
               style={{ color: 'var(--text-muted)' }}
-            >✕</button>
+            ><i className="ti ti-x" /></button>
           )}
         </div>
         {isOpen && (

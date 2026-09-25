@@ -57,7 +57,7 @@ export default function HistoryButton({ page, onRestore }: { page: Page, onResto
               <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Historique</h2>
               <button onClick={() => { setShowPanel(false); setPreview(null) }}
                 className="w-7 h-7 flex items-center justify-center rounded-md transition-opacity hover:opacity-70"
-                style={{ color: 'var(--text-muted)' }}>✕</button>
+                style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
             </div>
             <div className="flex flex-1 overflow-hidden">
               <div className="w-48 overflow-y-auto flex-shrink-0" style={{ borderRight: '1px solid var(--border)' }}>

@@ -24,7 +24,7 @@ function SortableHubCard({ page, onSelect, isMobile }: {
       {!isMobile && (
         <button {...attributes} {...listeners}
           className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded cursor-grab active:cursor-grabbing opacity-0 group-hover/hub:opacity-100 transition-opacity"
-          style={{ color: 'var(--text-faint)' }}>⠿</button>
+          style={{ color: 'var(--text-faint)' }}><i className="ti ti-grip-vertical" /></button>
       )}
       <button
         onClick={() => onSelect(page)}
@@ -49,7 +49,7 @@ function SortableHubCard({ page, onSelect, isMobile }: {
             {page.title || 'Sans titre'}
           </span>
           <span className="text-xs flex-shrink-0 opacity-0 group-hover/hub:opacity-60 transition-opacity"
-            style={{ color: 'var(--text-muted)' }}>→</span>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-arrow-right" /></span>
         </div>
       </button>
     </div>
@@ -103,14 +103,14 @@ function SortableSubpageCard({ page, onSelect, isMobile }: {
             className="cursor-grab active:cursor-grabbing flex-shrink-0 text-sm transition-colors"
             style={{ color: 'var(--text-faint)' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}>⠿</button>
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}><i className="ti ti-grip-vertical" /></button>
         )}
         <button onClick={() => onSelect(page)} className="flex items-center gap-2 min-w-0 flex-1 text-left py-2">
           <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
           <span className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{page.title || 'Sans titre'}</span>
         </button>
         <span className="opacity-0 group-hover:opacity-100 text-xs flex-shrink-0 transition-opacity"
-          style={{ color: 'var(--text-muted)' }}>→</span>
+          style={{ color: 'var(--text-muted)' }}><i className="ti ti-arrow-right" /></span>
       </div>
     </div>
   )

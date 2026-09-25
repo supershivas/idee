@@ -77,7 +77,7 @@ export function JournalList({ entries, selectedId, onSelect, onAdd, scrollRef }:
         {/* Header — empilé sur mobile, horizontal sur desktop */}
         <div className="px-4 md:px-6 pt-5 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-2xl flex-shrink-0">📓</span>
+            <span className="flex-shrink-0"><i className="ti ti-notebook" style={{ fontSize: 24, color: 'var(--text-faint)' }} /></span>
             <h1 className="page-title text-2xl flex-1 min-w-0 truncate">Journal</h1>
             <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
               {sorted.length} entrée{sorted.length !== 1 ? 's' : ''}
@@ -88,7 +88,7 @@ export function JournalList({ entries, selectedId, onSelect, onAdd, scrollRef }:
             className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors md:hidden"
             style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}
           >
-            <span>✏️</span><span>Nouvelle entrée</span>
+            <i className="ti ti-pencil" /><span>Nouvelle entrée</span>
           </button>
           <button
             onClick={onAdd}
@@ -97,14 +97,14 @@ export function JournalList({ entries, selectedId, onSelect, onAdd, scrollRef }:
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--btn-primary-hover)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--btn-primary-bg)')}
           >
-            <span>✏️</span><span>Nouvelle entrée</span>
+            <i className="ti ti-pencil" /><span>Nouvelle entrée</span>
           </button>
         </div>
 
         <div>
           {sorted.length === 0 && (
             <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
-              <p className="text-3xl mb-2">📝</p>
+              <p className="mb-2"><i className="ti ti-notebook" style={{ fontSize: 30, color: 'var(--text-faint)' }} /></p>
               <p className="text-sm">Aucune entrée pour l'instant.</p>
             </div>
           )}
@@ -162,7 +162,7 @@ function JournalRow({ entry, selectedId, onSelect }: { entry: Page; selectedId: 
           )}
         </div>
       )}
-      <span className="hidden md:inline text-xs flex-shrink-0 mt-0.5" style={{ color: 'var(--text-faint)' }}>→</span>
+      <span className="hidden md:inline text-xs flex-shrink-0 mt-0.5" style={{ color: 'var(--text-faint)' }}><i className="ti ti-arrow-right" /></span>
     </button>
   )
 }

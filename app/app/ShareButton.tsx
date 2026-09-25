@@ -79,7 +79,7 @@ export default function ShareButton({ page, onUpdate }: {
               <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Partage public</p>
               <button onClick={() => setShowPanel(false)}
                 className="w-7 h-7 flex items-center justify-center rounded-md transition-opacity hover:opacity-70"
-                style={{ color: 'var(--text-muted)' }}>✕</button>
+                style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
             </div>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
               {isShared ? 'Toute personne avec le lien peut lire cette page.' : 'Activez le partage pour obtenir un lien public.'}
@@ -102,7 +102,7 @@ export default function ShareButton({ page, onUpdate }: {
                   <button onClick={copyLink}
                     className="px-2 py-1.5 text-xs rounded-lg flex-shrink-0 transition-colors"
                     style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
-                    {copied ? '✓' : 'Copier'}
+                    {copied ? <i className="ti ti-check" /> : 'Copier'}
                   </button>
                 </div>
                 <div className="flex items-center justify-between py-1">

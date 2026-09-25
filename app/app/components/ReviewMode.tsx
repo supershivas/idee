@@ -72,13 +72,13 @@ export default function ReviewMode({ pages, onNavigate, onClose }: {
           </div>
           <button onClick={onClose}
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
         <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain px-6 py-8">
 
         {!current ? (
           <div className="text-center py-16">
-            <p className="text-4xl mb-4">🎉</p>
+            <p className="mb-4"><i className="ti ti-confetti" style={{ fontSize: 36, color: 'var(--text-faint)' }} /></p>
             <p className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Toutes les notes révisées !</p>
             <button onClick={() => { setSeen(new Set()); setCurrent(pool[Math.floor(Math.random() * pool.length)]); setRevealed(false) }}
               className="mt-4 px-4 py-2 text-sm rounded-xl"
@@ -113,12 +113,12 @@ export default function ReviewMode({ pages, onNavigate, onClose }: {
             <div className="flex items-center justify-between mt-6 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
               <button onClick={() => onNavigate(current)}
                 className="text-sm transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
-                → Ouvrir la page
+                <span className="inline-flex items-center gap-1"><i className="ti ti-arrow-right" />Ouvrir la page</span>
               </button>
               <button onClick={next}
                 className="px-4 py-2 text-sm rounded-xl font-medium"
                 style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-fg)' }}>
-                {remaining <= 1 ? 'Terminer' : 'Suivante →'}
+                {remaining <= 1 ? 'Terminer' : <span className="inline-flex items-center gap-1">Suivante<i className="ti ti-arrow-right" /></span>}
               </button>
             </div>
           </div>

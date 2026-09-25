@@ -66,7 +66,7 @@ function CoverModal({ page, userId, onApply, onClose }: { page: Page; userId: st
               {t === 'abstract' ? 'Abstrait' : t === 'unsplash' ? 'Unsplash' : 'Upload'}
             </button>
           ))}
-          <button onClick={onClose} className="ml-auto w-7 h-7 flex items-center justify-center rounded-md text-lg transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>×</button>
+          <button onClick={onClose} className="ml-auto w-7 h-7 flex items-center justify-center rounded-md text-lg transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
         <div className="p-4 overflow-y-auto">
           {tab === 'abstract' && (
@@ -98,7 +98,7 @@ function CoverModal({ page, userId, onApply, onClose }: { page: Page; userId: st
           )}
           {tab === 'upload' && (
             <label className="flex flex-col items-center justify-center gap-2 py-10 rounded-xl cursor-pointer transition-colors" style={{ border: '1px dashed var(--border)', color: 'var(--text-muted)' }}>
-              <span className="text-2xl">⬆️</span>
+              <i className="ti ti-upload" style={{ fontSize: 24, color: 'var(--text-faint)' }} />
               <span className="text-sm">{uploading ? 'Envoi…' : 'Choisir une image'}</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
             </label>
@@ -225,7 +225,7 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
     <div className="flex-shrink-0">
       <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1">
         {isJournal ? (
-          <button onClick={onBack} className="flex items-center gap-1 text-xs transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>← Journal</button>
+          <button onClick={onBack} className="flex items-center gap-1 text-xs transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}><i className="ti ti-arrow-left" />Journal</button>
         ) : (
           <BreadcrumbInline pages={pages} selected={page} onSelect={onSelectPage} />
         )}
@@ -349,7 +349,7 @@ export function PageHeader({ page, pages, userId, saveState, isMobile, onBack, o
             }`}
             style={{ color: page.favorite ? '#f59e0b' : 'var(--text-faint)' }}
             title={page.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
-            {page.favorite ? '★' : '☆'}
+            <i className="ti ti-star" />
           </button>
         </div>
       </div>

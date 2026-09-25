@@ -87,7 +87,7 @@ export default function Error({
             transition: 'all 0.2s',
           }}
         >
-          {copied ? '✓ Copié' : 'Copier'}
+          {copied ? <><i className="ti ti-check" /> Copié</> : 'Copier'}
         </button>
       </div>
       <button

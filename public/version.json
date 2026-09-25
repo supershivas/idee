@@ -1,8 +1,8 @@
 {
-  "version": "1.39.1",
+  "version": "1.39.2",
   "date": "2026-09-25",
   "changes": [
-    "Barre d'outils : toutes les icônes passent au trait, fini les emojis et les lettres",
-    "Menu des tableaux sur téléphone : icônes au trait devant chaque action"
+    "Toutes les icônes de l'app passent au trait (fermer, flèches, favoris, corbeille, menus…)",
+    "Le « + » d'ajout de bloc passe dans la marge gauche et ne masque plus le texte"
   ]
 }

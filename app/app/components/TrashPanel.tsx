@@ -46,13 +46,13 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
           </div>
           <button onClick={onClose}
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
 
         <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain">
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16" style={{ color: 'var(--text-muted)' }}>
-              <span className="text-4xl mb-3">🗑️</span>
+              <span className="mb-3"><i className="ti ti-trash" style={{ fontSize: 36, color: 'var(--text-faint)' }} /></span>
               <p className="text-sm">La corbeille est vide</p>
             </div>
           ) : sorted.map(page => (
@@ -82,7 +82,7 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
                       className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
                       Confirmer
                     </button>
-                    <button onClick={() => setConfirmId(null)} className="px-2 py-1.5 text-xs rounded-lg" style={{ color: 'var(--text-muted)' }}>✕</button>
+                    <button onClick={() => setConfirmId(null)} className="px-2 py-1.5 text-xs rounded-lg" style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
                   </div>
                 ) : (
                   <button onClick={() => setConfirmId(page.id)}
@@ -90,7 +90,7 @@ export function TrashPanel({ trashedPages, onRestore, onDeleteForever, onClose }
                     style={{ color: 'var(--text-faint)' }}
                     onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.background = 'transparent' }}>
-                    🗑
+                    <i className="ti ti-trash" style={{ fontSize: 16 }} />
                   </button>
                 )}
               </div>

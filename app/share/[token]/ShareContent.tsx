@@ -69,9 +69,9 @@ function EmojiPickerTab({ onPick, className = '', style }: { onPick: (emoji: str
         onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
         className="w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
         title="Réagir"
-        style={{ fontSize: '11px' }}
+        style={{ fontSize: '13px', color: '#9ca3af' }}
       >
-        😊
+        <i className="ti ti-mood-smile" />
       </button>
       {open && (
         <>
@@ -234,7 +234,7 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
         <div className="px-3 py-2.5">
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-1.5">
-              {comment.pinned && <span className="text-[10px] text-amber-600 font-medium">📌</span>}
+              {comment.pinned && <i className="ti ti-pin text-[11px] text-amber-600" />}
               <span className="font-semibold text-gray-800 text-[12px]">{comment.author_name}</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -243,8 +243,8 @@ function CommentCard({ comment, allComments, commentsEnabled, onHighlight, onUpd
               {isOwn && !editing && (
                 <div className="flex gap-0.5">
                   <button onClick={() => { setEditValue(comment.content); setEditing(true) }}
-                    className="text-[11px] text-gray-400 hover:text-gray-600 px-0.5">✎</button>
-                  <button onClick={deleteComment} className="text-[11px] text-gray-400 hover:text-red-500 px-0.5">×</button>
+                    className="text-[11px] text-gray-400 hover:text-gray-600 px-0.5"><i className="ti ti-pencil" /></button>
+                  <button onClick={deleteComment} className="text-[11px] text-gray-400 hover:text-red-500 px-0.5"><i className="ti ti-x" /></button>
                 </div>
               )}
             </div>
@@ -386,8 +386,8 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete, onReplyTo, commen
           <span className="text-[10px] text-gray-400">{timeAgo(comment.created_at)}</span>
           {isOwn && !editing && (
             <div className="flex gap-0.5">
-              <button onClick={() => { setEditValue(comment.content); setEditing(true) }} className="text-[10px] text-gray-400 hover:text-gray-600">✎</button>
-              <button onClick={deleteComment} className="text-[10px] text-gray-400 hover:text-red-500">×</button>
+              <button onClick={() => { setEditValue(comment.content); setEditing(true) }} className="text-[10px] text-gray-400 hover:text-gray-600"><i className="ti ti-pencil" /></button>
+              <button onClick={deleteComment} className="text-[10px] text-gray-400 hover:text-red-500"><i className="ti ti-x" /></button>
             </div>
           )}
         </div>
@@ -421,7 +421,7 @@ function ReplyItem({ comment, authorToken, onUpdate, onDelete, onReplyTo, commen
       {!editing && commentsEnabled && onReplyTo && (
         <button onClick={() => onReplyTo(comment.author_name)}
           className="text-[10px] text-gray-400 hover:text-gray-600 mt-0.5 transition-colors">
-          ↩ Répondre
+          <span className="inline-flex items-center gap-0.5"><i className="ti ti-corner-up-left" />Répondre</span>
         </button>
       )}
 
@@ -739,7 +739,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
           }}
           style={{ position: 'fixed', left: bubble.x, top: bubble.y, transform: 'translate(-50%, -100%)', zIndex: 50, background: '#1a1a1a', borderRadius: '9999px', padding: '5px 12px', fontSize: '12px', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          💬 Commenter
+          <i className="ti ti-message-circle" style={{ fontSize: 14 }} />Commenter
         </button>
       )}
 
@@ -750,7 +750,7 @@ export default function ShareContent({ pageId, pageIcon, pageTitle, safeContent,
             className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-gray-900 text-sm">Laisser un commentaire</span>
-              <button type="button" onClick={() => { setShowForm(false); setSelRects([]) }} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
+              <button type="button" onClick={() => { setShowForm(false); setSelRects([]) }} className="text-gray-400 hover:text-gray-600 text-lg"><i className="ti ti-x" /></button>
             </div>
             {selectedText && (
               <div className="text-xs rounded-lg px-3 py-2 border-l-2 italic"

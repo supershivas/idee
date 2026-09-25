@@ -9,14 +9,14 @@ import { useState, useEffect, useRef } from 'react'
 type TiptapEditor = Editor
 
 const TURN_INTO: { label: string; icon: string; action: (e: TiptapEditor) => void }[] = [
-  { label: 'Texte',           icon: '¶',    action: e => e.chain().focus().setParagraph().run() },
-  { label: 'Titre 1',         icon: 'H1',   action: e => e.chain().focus().setHeading({ level: 1 }).run() },
-  { label: 'Titre 2',         icon: 'H2',   action: e => e.chain().focus().setHeading({ level: 2 }).run() },
-  { label: 'Titre 3',         icon: 'H3',   action: e => e.chain().focus().setHeading({ level: 3 }).run() },
-  { label: 'Liste à puces',   icon: '•',    action: e => e.chain().focus().toggleBulletList().run() },
-  { label: 'Liste numérotée', icon: '1.',   action: e => e.chain().focus().toggleOrderedList().run() },
-  { label: 'Citation',        icon: '❝',    action: e => e.chain().focus().toggleBlockquote().run() },
-  { label: 'Code',            icon: '</>',  action: e => e.chain().focus().toggleCodeBlock().run() },
+  { label: 'Texte',           icon: 'ti-pilcrow',    action: e => e.chain().focus().setParagraph().run() },
+  { label: 'Titre 1',         icon: 'ti-h-1',   action: e => e.chain().focus().setHeading({ level: 1 }).run() },
+  { label: 'Titre 2',         icon: 'ti-h-2',   action: e => e.chain().focus().setHeading({ level: 2 }).run() },
+  { label: 'Titre 3',         icon: 'ti-h-3',   action: e => e.chain().focus().setHeading({ level: 3 }).run() },
+  { label: 'Liste à puces',   icon: 'ti-list',    action: e => e.chain().focus().toggleBulletList().run() },
+  { label: 'Liste numérotée', icon: 'ti-list-numbers',   action: e => e.chain().focus().toggleOrderedList().run() },
+  { label: 'Citation',        icon: 'ti-quote',    action: e => e.chain().focus().toggleBlockquote().run() },
+  { label: 'Code',            icon: 'ti-source-code',  action: e => e.chain().focus().toggleCodeBlock().run() },
 ]
 
 function moveNode(view: EditorView, nodePos: number, direction: 'up' | 'down') {
@@ -75,8 +75,8 @@ function BlockMenu({ x, y, editor, nodePos, view, onClose }: {
         className={`w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors
           ${danger ? 'text-red-500 hover:bg-red-50' : ''}`}
       >
-        <span className="w-6 h-6 flex items-center justify-center bg-gray-100 rounded text-xs font-mono font-bold text-gray-600 flex-shrink-0">
-          {icon}
+        <span className="w-6 h-6 flex items-center justify-center bg-gray-100 rounded text-gray-600 flex-shrink-0">
+          <i className={`ti ${icon}`} style={{ fontSize: 15 }} />
         </span>
         <span className="text-sm text-gray-700">{label}</span>
       </button>
@@ -90,8 +90,8 @@ function BlockMenu({ x, y, editor, nodePos, view, onClose }: {
       className="bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
     >
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2.5 pb-1">Déplacer</p>
-      <Item icon="↑" label="Vers le haut" onClick={() => { moveNode(view, nodePos, 'up'); onClose() }} />
-      <Item icon="↓" label="Vers le bas"  onClick={() => { moveNode(view, nodePos, 'down'); onClose() }} />
+      <Item icon="ti-arrow-up" label="Vers le haut" onClick={() => { moveNode(view, nodePos, 'up'); onClose() }} />
+      <Item icon="ti-arrow-down" label="Vers le bas"  onClick={() => { moveNode(view, nodePos, 'down'); onClose() }} />
       <div className="border-t border-gray-100 my-1" />
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-1.5 pb-1">Convertir en</p>
       {TURN_INTO.map(item => (
@@ -111,8 +111,8 @@ function BlockMenu({ x, y, editor, nodePos, view, onClose }: {
           }}
           className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors"
         >
-          <span className="w-6 h-6 flex items-center justify-center bg-gray-100 rounded text-xs font-mono font-bold text-gray-600 flex-shrink-0">
-            {item.icon}
+          <span className="w-6 h-6 flex items-center justify-center bg-gray-100 rounded text-gray-600 flex-shrink-0">
+            <i className={`ti ${item.icon}`} style={{ fontSize: 15 }} />
           </span>
           <span className="text-sm text-gray-700">{item.label}</span>
         </button>
@@ -205,7 +205,7 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
         }}
         className="flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors select-none"
         title="Cliquer pour déplacer ou convertir"
-      >⠿</button>
+      ><i className="ti ti-grip-vertical" /></button>
       {menu && (
         <BlockMenu
           x={menu.x}

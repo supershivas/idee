@@ -305,7 +305,7 @@ function ImageNodeView({ node, editor, getPos }: any) {
               cursor: 'pointer',
             }}
             title="Ajouter un bloc après"
-          >+</button>
+          ><i className="ti ti-plus" /></button>
         )}
       </div>
     </NodeViewWrapper>
@@ -315,6 +315,16 @@ function ImageNodeView({ node, editor, getPos }: any) {
 // ligne fantôme d'ajout de ligne (6px + 18px), avec de l'air. Doit tenir dans
 // la marge basse de `.tableWrapper` (bureau).
 const TABLE_PLUS_OFFSET = 30
+const PLUS_SIZE = 22
+
+// Le « + » d'ajout de bloc vit dans la marge gauche, centré sur la limite
+// basse du bloc survolé : les blocs ne sont séparés que de 8 à 10px, aucun
+// bouton n'y tient, et centré sur le texte il en masquait la dernière ligne.
+// Sous un tableau, il descend sous la ligne fantôme « ajouter une ligne ».
+function plusTop(block: Element): number {
+  const bottom = block.getBoundingClientRect().bottom
+  return block.classList.contains('tableWrapper') ? bottom + TABLE_PLUS_OFFSET : bottom - PLUS_SIZE / 2
+}
 
 function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -332,6 +342,15 @@ function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
       if (!el) return
       // Ignore le bouton + lui-même
       if (plusRef.current?.contains(el as Node)) return
+      // On garde le « + » tant que la souris va vers lui : vers la marge
+      // gauche, ou vers le bas pour un tableau.
+      const prev = plusBlockRef.current
+      if (prev?.isConnected) {
+        const r = prev.getBoundingClientRect()
+        const bottom = plusTop(prev) + PLUS_SIZE
+        if (e.clientY >= r.top && e.clientY <= bottom && e.clientX < r.left) return
+        if (prev.classList.contains('tableWrapper') && e.clientY > r.bottom && e.clientY <= bottom) return
+      }
 
       const proseMirror = container.querySelector('.ProseMirror')
       if (!proseMirror) return
@@ -341,25 +360,14 @@ function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
         '.ProseMirror > p, .ProseMirror > h1, .ProseMirror > h2, .ProseMirror > h3, .ProseMirror > ul, .ProseMirror > ol, .ProseMirror > blockquote, .ProseMirror > pre, .ProseMirror > hr, .ProseMirror > .tableWrapper, .ProseMirror > [data-type="taskList"]'
       )
       if (!block) {
-        // Sous un tableau, le « + » est décollé du bloc : on le garde tant que
-        // la souris descend vers lui dans la marge.
-        const prev = plusBlockRef.current
-        if (prev?.classList.contains('tableWrapper')) {
-          const r = prev.getBoundingClientRect()
-          if (e.clientY >= r.bottom && e.clientY <= r.bottom + TABLE_PLUS_OFFSET + 28) return
-        }
         plusBlockRef.current = null
         setPlusPos(null)
         return
       }
 
       const containerRect = container.getBoundingClientRect()
-      const blockRect = block.getBoundingClientRect()
-      // Sous un tableau, place d'abord à la ligne fantôme « ajouter une
-      // ligne » (TableControls) : le « + » de bloc descend en dessous.
-      const offset = block.classList.contains('tableWrapper') ? TABLE_PLUS_OFFSET : -7
       plusBlockRef.current = block
-      setPlusPos({ top: blockRect.bottom - containerRect.top + container.scrollTop + offset, blockEl: block })
+      setPlusPos({ top: plusTop(block) - containerRect.top + container.scrollTop, blockEl: block })
     }
 
 function onMouseLeave(e: MouseEvent) {
@@ -406,11 +414,13 @@ function onMouseLeave(e: MouseEvent) {
           onClick={insertAfterBlock}
           onMouseEnter={() => {}}
           onMouseLeave={() => setPlusPos(null)}
-          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center rounded-full shadow-md text-sm font-bold transition-all pointer-events-auto"
+          className="absolute flex items-center justify-center rounded-full shadow-md transition-all pointer-events-auto"
           style={{
             top: `${plusPos.top}px`,
-            width: '28px',
-            height: '28px',
+            left: 6,
+            width: PLUS_SIZE,
+            height: PLUS_SIZE,
+            fontSize: 14,
             background: 'var(--card-bg)',
             border: '1.5px solid var(--border)',
             color: 'var(--text-muted)',
@@ -418,7 +428,7 @@ function onMouseLeave(e: MouseEvent) {
             cursor: 'pointer',
           }}
           title="Ajouter un bloc après"
-        >+</button>
+        ><i className="ti ti-plus" /></button>
       )}
       <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
     </div>
@@ -936,7 +946,7 @@ Image.extend({
             className="flex items-center gap-1.5 text-xs font-medium mb-1.5 transition-opacity hover:opacity-100 opacity-60"
             style={{ color: 'var(--text-secondary)' }}
           >
-            <span style={{ fontSize: '9px' }}>{tocOpen ? '▾' : '▸'}</span>
+            <span style={{ fontSize: '9px' }}><i className={`ti ${tocOpen ? 'ti-chevron-down' : 'ti-chevron-right'}`} /></span>
             Table des matières
           </button>
           {tocOpen && (

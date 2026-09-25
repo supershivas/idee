@@ -31,7 +31,7 @@ export function TagBadge({ tag, onRemove, onClick }: { tag: string; onRemove?: (
     >
       #{tag}
       {onRemove && (
-        <button onClick={e => { e.stopPropagation(); onRemove() }} className="hover:opacity-60 transition-opacity leading-none ml-0.5">×</button>
+        <button onClick={e => { e.stopPropagation(); onRemove() }} className="hover:opacity-60 transition-opacity leading-none ml-0.5"><i className="ti ti-x" /></button>
       )}
     </El>
   )
@@ -189,7 +189,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
             </span>
             <button onClick={onClose}
               className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-              style={{ color: 'var(--text-muted)' }}>✕</button>
+              style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
             {search && (
               <button onClick={() => { setSearch(''); searchRef.current?.focus() }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-base transition-opacity hover:opacity-60"
-                style={{ color: 'var(--text-muted)' }}>×</button>
+                style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
             )}
           </div>
         </div>
@@ -222,7 +222,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
                 <button key={tag} onClick={() => toggleTag(tag)}
                   className="inline-flex items-center gap-1 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full text-[11px] md:text-xs font-medium transition-all"
                   style={{ background: c.text, color: '#fff', border: `1px solid ${c.text}` }}>
-                  #{tag} <span className="opacity-70">×</span>
+                  #{tag} <i className="ti ti-x opacity-70" />
                 </button>
               )
             })}
@@ -257,7 +257,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
                     </div>
                   )}
                 </div>
-                <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>→</span>
+                <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}><i className="ti ti-arrow-right" /></span>
               </button>
             ))}
           </div>
@@ -266,7 +266,7 @@ export function TagsView({ pages, onSelect, initialTag, onClose }: { pages: Page
         {/* Empty state */}
         {allTags.length === 0 && (
           <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
-            <p className="text-4xl mb-3">🏷️</p>
+            <p className="mb-3"><i className="ti ti-tag" style={{ fontSize: 36, color: 'var(--text-faint)' }} /></p>
             <p className="text-sm">Aucun tag pour l'instant.</p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>Ajoute des tags sous le titre d'une page.</p>
           </div>

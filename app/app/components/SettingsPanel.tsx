@@ -100,9 +100,9 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
   }
 
   const THEMES: { value: Theme, label: string, icon: string }[] = [
-    { value: 'light', label: 'Clair',   icon: '☀️' },
-    { value: 'dark',  label: 'Sombre',  icon: '🌙' },
-    { value: 'system',label: 'Système', icon: '💻' },
+    { value: 'light', label: 'Clair',   icon: 'ti-sun' },
+    { value: 'dark',  label: 'Sombre',  icon: 'ti-moon' },
+    { value: 'system',label: 'Système', icon: 'ti-device-desktop' },
   ]
 
   const contentRef = useRef<HTMLDivElement>(null)
@@ -124,7 +124,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
           <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Réglages</span>
           <button onClick={onClose}
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
 
         {/* Contenu */}
@@ -186,7 +186,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                     onMouseEnter={e => { if (theme !== t.value) e.currentTarget.style.borderColor = 'var(--text-faint)' }}
                     onMouseLeave={e => { if (theme !== t.value) e.currentTarget.style.borderColor = 'var(--border)' }}
                   >
-                    <span className="text-lg">{t.icon}</span>
+                    <i className={`ti ${t.icon}`} style={{ fontSize: 18 }} />
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.label}</span>
                   </button>
                 ))}
@@ -198,13 +198,13 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Ma bibliothèque</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: 'Pages',    value: totalPages,    icon: '📄' },
-                  { label: 'Journal',  value: journalCount,  icon: '📓' },
-                  { label: 'Favoris',  value: favoriteCount, icon: '★' },
-                  { label: 'Corbeille',value: trashedCount,  icon: '🗑' },
+                  { label: 'Pages',    value: totalPages,    icon: 'ti-file-text' },
+                  { label: 'Journal',  value: journalCount,  icon: 'ti-notebook' },
+                  { label: 'Favoris',  value: favoriteCount, icon: 'ti-star' },
+                  { label: 'Corbeille',value: trashedCount,  icon: 'ti-trash' },
                 ].map(s => (
                   <div key={s.label} className="rounded-xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'var(--selected-bg)' }}>
-                    <span className="text-base">{s.icon}</span>
+                    <i className={`ti ${s.icon}`} style={{ fontSize: 17, color: 'var(--text-muted)' }} />
                     <div>
                       <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{s.value}</p>
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
@@ -233,7 +233,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
                 >
-                  <span className="text-lg">⬇️</span>
+                  <i className="ti ti-download" style={{ fontSize: 18, color: 'var(--text-muted)' }} />
                   <div>
                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Exporter mes données</p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>JSON · pages + journal (corbeille exclue)</p>
@@ -247,7 +247,7 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                   onMouseEnter={e => { if (!importing) e.currentTarget.style.background = 'var(--hover-bg)' }}
                   onMouseLeave={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
                 >
-                  <span className="text-lg">{importing ? '⏳' : '⬆️'}</span>
+                  <i className={`ti ${importing ? 'ti-loader-2 animate-spin' : 'ti-upload'}`} style={{ fontSize: 18, color: 'var(--text-muted)' }} />
                   <div>
                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                       {importing ? 'Import en cours…' : 'Importer des données'}
@@ -255,8 +255,8 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {importStatus
                         ? importStatus.err === -1
-                          ? '❌ Fichier invalide'
-                          : `✅ ${importStatus.ok} page(s) importée(s)${importStatus.err ? `, ${importStatus.err} erreur(s)` : ''}`
+                          ? 'Fichier invalide'
+                          : `${importStatus.ok} page(s) importée(s)${importStatus.err ? `, ${importStatus.err} erreur(s)` : ''}`
                         : 'JSON exporté depuis idee'}
                     </p>
                   </div>

@@ -13,7 +13,7 @@ function SubpageView({ node, pages, onNavigate }: {
     return (
       <NodeViewWrapper contentEditable={false}>
         <div className="flex items-center gap-2 px-3 py-2 my-1 rounded-xl border border-dashed border-gray-200 text-gray-400 text-sm select-none">
-          <span>📄</span>
+          <i className="ti ti-file-off" />
           <span className="italic">Page introuvable</span>
         </div>
       </NodeViewWrapper>
@@ -30,7 +30,7 @@ function SubpageView({ node, pages, onNavigate }: {
       >
         <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
         <span className="flex-1 text-sm text-gray-700 truncate">{page.title || 'Sans titre'}</span>
-        <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs flex-shrink-0 transition-opacity">→</span>
+        <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-xs flex-shrink-0 transition-opacity"><i className="ti ti-arrow-right" /></span>
       </button>
     </NodeViewWrapper>
   )

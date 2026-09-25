@@ -50,14 +50,14 @@ export default function TemplateModal({ onSelect, onClose }: {
         <div className="flex items-center justify-between mb-4">
           <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Nouveau depuis un template</p>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md transition-opacity hover:opacity-70"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
         <div className="flex flex-col gap-1">
           <button
             onClick={() => onSelect({ icon: '📄', title: 'Sans titre', content: '' })}
             className="u-hover-bg flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left"
             style={{ color: 'var(--text-secondary)' }}>
-            <span className="text-lg">📄</span>
+            <i className="ti ti-file" style={{ fontSize: 18, color: 'var(--text-faint)' }} />
             <div>
               <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Page vide</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Commence from scratch</p>

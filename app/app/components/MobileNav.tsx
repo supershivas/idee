@@ -338,7 +338,7 @@ function MobileSearchOverlay({ pages, onSelect, onClose, onSelectTag }: {
             style={{ color: 'var(--text-primary)' }}
           />
           {query && (
-            <button onClick={() => setQuery('')} className="w-5 h-5 flex items-center justify-center text-xs" style={{ color: 'var(--text-muted)' }}>✕</button>
+            <button onClick={() => setQuery('')} className="w-5 h-5 flex items-center justify-center text-xs" style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
           )}
         </div>
         <button onClick={onClose} className="flex-shrink-0 text-sm font-medium px-1" style={{ color: 'var(--text-secondary)' }}>
@@ -466,10 +466,11 @@ function SearchResultRow({ page, snippet, query, onSelect }: {
 // corbeille), swipe droite = action secondaire (accent, ex. favori). Le
 // contenu réel de la ligne reste inchangé (children) ; ce wrapper ajoute
 // juste le drag horizontal + les pastilles de fond révélées dessous.
-function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', rightIcon = '★', onLongPress, selectMode }: {
+function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = 'ti-trash', rightIcon = 'ti-star', onLongPress, selectMode }: {
   children: React.ReactNode
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
+  // Classes Tabler (icônes au trait).
   leftIcon?: string
   rightIcon?: string
   onLongPress?: () => void
@@ -550,13 +551,13 @@ function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftIcon = '🗑', 
       {onSwipeLeft && (
         <div className="absolute inset-y-0 right-0 flex items-center justify-end pr-4 rounded-xl"
           style={{ width: MAX + 24, background: '#ef4444', opacity: Math.min(1, Math.max(0, -dragX) / THRESHOLD) }}>
-          <span className="text-white text-base">{leftIcon}</span>
+          <i className={`ti ${leftIcon} text-white`} style={{ fontSize: 18 }} />
         </div>
       )}
       {onSwipeRight && (
         <div className="absolute inset-y-0 left-0 flex items-center pl-4 rounded-xl"
           style={{ width: MAX + 24, background: 'var(--accent)', opacity: Math.min(1, Math.max(0, dragX) / THRESHOLD) }}>
-          <span className="text-white text-base">{rightIcon}</span>
+          <i className={`ti ${rightIcon} text-white`} style={{ fontSize: 18 }} />
         </div>
       )}
       <div
@@ -577,7 +578,7 @@ function SelectCheckbox({ checked }: { checked?: boolean }) {
   return (
     <span className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
       style={{ borderColor: checked ? 'var(--accent)' : 'var(--text-faint)', background: checked ? 'var(--accent)' : 'transparent' }}>
-      {checked && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1 }}>✓</span>}
+      {checked && <i className="ti ti-check" style={{ color: '#fff', fontSize: 12, lineHeight: 1 }} />}
     </span>
   )
 }
@@ -835,14 +836,14 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFav
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-colors"
           style={{ background: tab === 'pages' ? 'var(--selected-bg)' : 'transparent', color: tab === 'pages' ? 'var(--text-primary)' : 'var(--text-muted)' }}
         >
-          <span>📄</span><span>Pages</span>
+          <i className="ti ti-file-text" /><span>Pages</span>
         </button>
         <button
           onClick={() => switchTab('journal')}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-colors"
           style={{ background: tab === 'journal' ? 'var(--selected-bg)' : 'transparent', color: tab === 'journal' ? 'var(--text-primary)' : 'var(--text-muted)' }}
         >
-          <span>📓</span><span>Journal</span>
+          <i className="ti ti-notebook" /><span>Journal</span>
           {journalCount > 0 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
               {journalCount}
@@ -857,7 +858,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFav
           <div className="flex items-center justify-center overflow-hidden transition-[height] duration-150"
             style={{ height: isRefreshing ? PULL_THRESHOLD : pullDistance, color: 'var(--text-muted)', fontSize: 12 }}>
             <span style={{ transform: !isRefreshing && pullDistance >= PULL_THRESHOLD ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', display: 'inline-block', marginRight: 6 }}>
-              {isRefreshing ? '↻' : '↓'}
+              <i className={`ti ${isRefreshing ? 'ti-refresh animate-spin' : 'ti-arrow-down'}`} />
             </span>
             {isRefreshing ? 'Actualisation…' : pullDistance >= PULL_THRESHOLD ? 'Relâcher pour actualiser' : 'Tirer pour actualiser'}
           </div>
@@ -998,7 +999,7 @@ export function MobileHomeView({ pages, selectedId, onSelect, onAdd, onToggleFav
             className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-medium transition-colors flex-shrink-0"
             style={{ background: selectedIds.size > 0 ? '#ef4444' : 'var(--selected-bg)', color: selectedIds.size > 0 ? '#fff' : 'var(--text-faint)' }}
           >
-            <span>🗑</span>
+            <i className="ti ti-trash" />
             <span>Supprimer</span>
           </button>
         </div>
@@ -1073,7 +1074,7 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
           className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors"
           style={{ color: page.favorite ? 'var(--accent)' : 'var(--text-faint)' }}
         >
-          {page.favorite ? '★' : '☆'}
+          <i className="ti ti-star" />
         </button>
       )}
       {!selectMode && onShowActions && (
@@ -1082,7 +1083,7 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
           className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-base transition-colors"
           style={{ color: 'var(--text-faint)' }}
           title="Plus d'actions"
-        >⋯</button>
+        ><i className="ti ti-dots" /></button>
       )}
       {!selectMode && hasChildren && (
         <>
@@ -1091,7 +1092,7 @@ function PageRow({ page, selectedId, onSelect, onToggleFavorite, onDrillDown, ha
             className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-xs transition-colors"
             style={{ color: 'var(--text-faint)' }}
             title="Ouvrir"
-          >↗</button>
+          ><i className="ti ti-arrow-up-right" /></button>
           <span className="flex-shrink-0 text-sm" style={{ color: 'var(--text-faint)' }}>›</span>
         </>
       )}

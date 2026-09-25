@@ -105,7 +105,7 @@ export function MoveToModal({ page, pages, onMove, onClose }: {
             className="flex-1 outline-none text-sm min-w-0"
             style={{ color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', caretColor: 'var(--accent)', background: 'transparent' }} />
           {query && (
-            <button onClick={() => setQuery('')} className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>✕</button>
+            <button onClick={() => setQuery('')} className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
           )}
           <kbd className="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>Esc</kbd>
         </div>

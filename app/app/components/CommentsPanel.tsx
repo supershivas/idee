@@ -130,7 +130,7 @@ export function CommentsPanel({ pageId, onClose }: { pageId: string; onClose: ()
           <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
             Commentaires <span style={{ color: 'var(--text-muted)' }}>({comments.length})</span>
           </span>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md text-lg transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}>×</button>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md text-lg transition-opacity hover:opacity-70" style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
 
         <div className="flex gap-1 px-5 py-2 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -138,7 +138,7 @@ export function CommentsPanel({ pageId, onClose }: { pageId: string; onClose: ()
             <button key={f} onClick={() => setFilter(f)}
               className="text-xs px-2.5 py-1 rounded-md transition-colors"
               style={{ background: filter === f ? 'var(--hover-bg)' : 'transparent', color: filter === f ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-              {f === 'unresolved' ? 'Ouverts' : f === 'all' ? 'Tous' : '📌 Épinglés'}
+              {f === 'unresolved' ? 'Ouverts' : f === 'all' ? 'Tous' : <span className="inline-flex items-center gap-1"><i className="ti ti-pin" />Épinglés</span>}
             </button>
           ))}
         </div>
@@ -149,7 +149,7 @@ export function CommentsPanel({ pageId, onClose }: { pageId: string; onClose: ()
           ) : filtered.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                {filter === 'pinned' ? 'Aucun commentaire épinglé.' : filter === 'unresolved' ? 'Tout est résolu 🎉' : 'Aucun commentaire.'}
+                {filter === 'pinned' ? 'Aucun commentaire épinglé.' : filter === 'unresolved' ? 'Tout est résolu.' : 'Aucun commentaire.'}
               </p>
             </div>
           ) : (
@@ -167,20 +167,20 @@ export function CommentsPanel({ pageId, onClose }: { pageId: string; onClose: ()
                     <div className="rounded-xl px-4 py-3" style={{ background: c.pinned ? 'rgba(245,158,11,0.08)' : 'var(--hover-bg)', border: c.pinned ? '1px solid rgba(245,158,11,0.3)' : '1px solid transparent' }}>
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <div>
-                          {c.pinned && <span className="text-[10px] text-amber-500 font-medium block">📌 Épinglé</span>}
+                          {c.pinned && <span className="text-[10px] text-amber-500 font-medium flex items-center gap-0.5"><i className="ti ti-pin" />Épinglé</span>}
                           <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{c.author_name}</span>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>{timeAgo(c.created_at)}</span>
                           <button onClick={() => togglePin(c)} title={c.pinned ? 'Désépingler' : 'Épingler'}
                             className="text-[11px] px-1.5 py-0.5 rounded transition-opacity hover:opacity-100 opacity-40"
-                            style={{ color: c.pinned ? '#f59e0b' : 'var(--text-muted)' }}>📌</button>
+                            style={{ color: c.pinned ? '#f59e0b' : 'var(--text-muted)' }}><i className="ti ti-pin" /></button>
                           <button onClick={() => toggleResolve(c)} title={c.resolved ? 'Rouvrir' : 'Résoudre'}
                             className="text-[11px] px-1.5 py-0.5 rounded transition-opacity hover:opacity-100 opacity-40"
-                            style={{ color: c.resolved ? '#22c55e' : 'var(--text-muted)' }}>✓</button>
+                            style={{ color: c.resolved ? '#22c55e' : 'var(--text-muted)' }}><i className="ti ti-check" /></button>
                           <button onClick={() => deleteComment(c.id)} title="Supprimer"
                             className="text-[11px] px-1.5 py-0.5 rounded transition-opacity hover:opacity-100 opacity-40"
-                            style={{ color: 'var(--text-muted)' }}>×</button>
+                            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
                         </div>
                       </div>
                       <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{c.content}</p>
@@ -202,7 +202,7 @@ export function CommentsPanel({ pageId, onClose }: { pageId: string; onClose: ()
                               <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{r.author_name}</span>
                               <div className="flex items-center gap-1">
                                 <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>{timeAgo(r.created_at)}</span>
-                                <button onClick={() => deleteComment(r.id)} className="text-[11px] opacity-40 hover:opacity-100" style={{ color: 'var(--text-muted)' }}>×</button>
+                                <button onClick={() => deleteComment(r.id)} className="text-[11px] opacity-40 hover:opacity-100" style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
                               </div>
                             </div>
                             <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{r.content}</p>

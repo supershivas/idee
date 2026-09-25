@@ -57,6 +57,13 @@ recharge dès qu'aucune saisie n'est en cours ; `VersionToast` annonce ensuite
   (`CellSelection`) : le navigateur la remplace par une sélection de texte et
   la barre de mise en forme flottante apparaît.
 
+## Icônes
+
+Règle du design system : icônes Tabler au trait uniquement. Restent en
+emoji parce que ce sont des contenus, pas de l'interface : l'icône d'une
+page (choisie par l'utilisateur, `📄` par défaut), les modèles de page, les
+callouts et les réactions de la page partagée.
+
 ## Exceptions aux conventions
 
 Aucune.

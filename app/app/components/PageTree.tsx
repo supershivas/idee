@@ -86,7 +86,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
             className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-xs"
             style={{ color: 'var(--sidebar-muted)', pointerEvents: 'none' }}
           >
-            {hasChildren ? (isOpen ? '▾' : '▸') : ''}
+            {hasChildren ? <i className={`ti ${isOpen ? 'ti-chevron-down' : 'ti-chevron-right'}`} /> : ''}
           </div>
           {/* Icône */}
           <span className="text-sm flex-shrink-0" style={{ pointerEvents: 'none' }}>{page.icon || '📄'}</span>
@@ -124,7 +124,7 @@ export function SortablePageItem({ page, pages, depth, selectedId, onSelect, onA
             onClick={e => { e.stopPropagation(); onAdd(page.id) }}
             className="w-6 h-6 flex items-center justify-center rounded text-sm sidebar-icon-btn flex-shrink-0 opacity-0 group-hover:opacity-100 cursor-pointer"
             title="Ajouter une sous-page"
-          >+</button>
+          ><i className="ti ti-plus" /></button>
         )}
       </div>
 
@@ -211,7 +211,7 @@ function SortableFavoriteItem({ page, selectedId, onSelect, onToggleFavorite, is
         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs flex-shrink-0 transition-opacity sidebar-icon-btn"
         style={{ color: 'var(--accent)' }}
         title="Retirer des favoris"
-      >★</button>
+      ><i className="ti ti-star" /></button>
     </div>
   )
 }

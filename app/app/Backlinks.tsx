@@ -40,7 +40,7 @@ export function Backlinks({ currentPage, pages, onNavigate }: {
           >
             <span className="text-base flex-shrink-0">{page.icon || '📄'}</span>
             <span className="text-sm">{page.title || 'Sans titre'}</span>
-            <span className="text-xs opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: 'var(--text-muted)' }}>↗</span>
+            <span className="text-xs opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: 'var(--text-muted)' }}><i className="ti ti-arrow-up-right" /></span>
           </button>
         ))}
       </div>

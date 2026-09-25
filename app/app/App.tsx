@@ -1579,7 +1579,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
           ) : (
             <div className="hidden md:flex flex-1 items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-4xl mb-3">💡</p>
+                <p className="mb-3"><i className="ti ti-bulb" style={{ fontSize: 36, color: 'var(--text-faint)' }} /></p>
                 <p className="text-lg font-medium mb-1" style={{ color: 'var(--empty-title)' }}>Aucune page sélectionnée</p>
                 <button onClick={() => addPage(null)} className="text-sm text-blue-500 hover:text-blue-400 underline">Créer une page</button>
               </div>
@@ -1664,7 +1664,7 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
               ) : (
                 <div className="flex flex-1 items-center justify-center h-full min-h-[50vh]">
                   <div className="text-center">
-                    <p className="text-3xl mb-3">📄</p>
+                    <p className="mb-3"><i className="ti ti-file-text" style={{ fontSize: 30, color: 'var(--text-faint)' }} /></p>
                     <p className="text-sm font-medium mb-2" style={{ color: 'var(--empty-title)' }}>Aucune page sélectionnée</p>
                     <button
                       onClick={() => setPagePicker('right')}

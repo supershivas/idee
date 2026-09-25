@@ -23,7 +23,7 @@ export function SummaryMenuItem({ hasSummary, onClick }: { hasSummary: boolean; 
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
       <i className="ti ti-sparkles" style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0, opacity: 0.55 }} />
       <span>Résumé</span>
-      {hasSummary && <span className="ml-auto text-[10px]" style={{ color: 'var(--text-faint)' }}>●</span>}
+      {hasSummary && <span className="ml-auto rounded-full" style={{ width: 6, height: 6, background: 'var(--text-faint)' }} />}
     </button>
   )
 }
@@ -67,7 +67,7 @@ export default function SummaryModal({ page, onSummaryUpdate, onClose }: {
         onSummaryUpdate?.(data.summary)
         setEditValue(data.summary)
         setEditing(false)
-        toast('Résumé généré ✓', 'success')
+        toast('Résumé généré', 'success')
       } else {
         toast(data.error || 'Résumé vide reçu de Mistral', 'error')
       }
@@ -141,7 +141,7 @@ function SummarySheet({ page, loading, editing, editValue, setEditValue, setEdit
           <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Résumé</span>
           <button onClick={onClose}
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
 
         <div ref={contentRef} className="px-5 py-4 overflow-y-auto overscroll-contain flex-1">
@@ -153,7 +153,7 @@ function SummarySheet({ page, loading, editing, editValue, setEditValue, setEdit
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{page.summary}</p>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
-              <span className="text-3xl">✨</span>
+              <i className="ti ti-sparkles" style={{ fontSize: 30, color: 'var(--text-faint)' }} />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Pas encore de résumé pour cette note.</p>
             </div>
           )}

@@ -1,5 +1,9 @@
 # Historique des versions
 
+## 1.39.2 — 2026-09-25
+- Toutes les icônes de l'app passent au trait (fermer, flèches, favoris, corbeille, menus…)
+- Le « + » d'ajout de bloc passe dans la marge gauche et ne masque plus le texte
+
 ## 1.39.1 — 2026-09-25
 - Barre d'outils : toutes les icônes passent au trait, fini les emojis et les lettres
 - Menu des tableaux sur téléphone : icônes au trait devant chaque action

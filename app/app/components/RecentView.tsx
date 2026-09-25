@@ -78,7 +78,7 @@ export default function RecentView({ pages, onSelect, onClose }: {
           <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Vue récente</h2>
           <button onClick={onClose}
             className="u-hover-bg w-8 h-8 flex items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--text-muted)' }}>✕</button>
+            style={{ color: 'var(--text-muted)' }}><i className="ti ti-x" /></button>
         </div>
         <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain py-2">
       {overdue.length > 0 && (
@@ -92,7 +92,7 @@ export default function RecentView({ pages, onSelect, onClose }: {
                 className="u-hover-bg w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm">
                 <span>{p.icon || '📄'}</span>
                 <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
-                <span className="text-[10px] flex-shrink-0 font-medium" style={{ color: '#ef4444' }}>📅 {d}</span>
+                <span className="text-[10px] flex-shrink-0 font-medium inline-flex items-center gap-0.5" style={{ color: '#ef4444' }}><i className="ti ti-calendar" /> {d}</span>
               </button>
             )
           })}
@@ -109,7 +109,7 @@ export default function RecentView({ pages, onSelect, onClose }: {
                 className="u-hover-bg w-full flex items-center gap-2.5 px-4 py-2 text-left text-sm">
                 <span>{p.icon || '📄'}</span>
                 <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
-                <span className="text-[10px] flex-shrink-0 font-medium" style={{ color: '#f59e0b' }}>📅 {d}</span>
+                <span className="text-[10px] flex-shrink-0 font-medium inline-flex items-center gap-0.5" style={{ color: '#f59e0b' }}><i className="ti ti-calendar" /> {d}</span>
               </button>
             )
           })}

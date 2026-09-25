@@ -353,7 +353,7 @@ export default function ExportButton({ page }: { page: Page }) {
   <div class="print-bar">
     <span class="print-bar-title">${page.icon || '📄'} ${page.title || 'Sans titre'}</span>
     <span class="print-bar-hint">Choisir « Enregistrer en PDF » dans la boîte d'impression</span>
-    <button class="print-btn" onclick="window.print()">🖨 Imprimer / PDF</button>
+    <button class="print-btn" onclick="window.print()">Imprimer / PDF</button>
   </div>
   <div class="doc-header">
     <span class="doc-icon">${page.icon || '📄'}</span>
@@ -387,7 +387,7 @@ export default function ExportButton({ page }: { page: Page }) {
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
         <i className="ti ti-download" style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0, opacity: 0.55 }} />
         <span className="flex-1">Exporter</span>
-        <span style={{ opacity: 0.35, fontSize: '9px' }}>{open ? '▲' : '▼'}</span>
+        <span style={{ opacity: 0.35, fontSize: '9px' }}><i className={`ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}`} /></span>
       </button>
       {open && (
         <div className="ml-5 flex flex-col pb-1">

@@ -89,67 +89,67 @@ type Command = {
 
 const getCommands = (onAddSubpage: () => void, onUploadImage: () => void): Command[] => [
   {
-    title: 'Texte', description: 'Paragraphe normal', icon: '¶', keywords: ['p', 'texte', 'paragraphe'],
+    title: 'Texte', description: 'Paragraphe normal', icon: 'ti-pilcrow', keywords: ['p', 'texte', 'paragraphe'],
     action: e => e.chain().focus().setParagraph().run()
   },
   {
-    title: 'Titre 1', description: 'Grand titre', icon: 'H1', keywords: ['h1', 'titre', 'heading'],
+    title: 'Titre 1', description: 'Grand titre', icon: 'ti-h-1', keywords: ['h1', 'titre', 'heading'],
     action: e => e.chain().focus().setHeading({ level: 1 }).run()
   },
   {
-    title: 'Titre 2', description: 'Titre moyen', icon: 'H2', keywords: ['h2', 'titre', 'heading'],
+    title: 'Titre 2', description: 'Titre moyen', icon: 'ti-h-2', keywords: ['h2', 'titre', 'heading'],
     action: e => e.chain().focus().setHeading({ level: 2 }).run()
   },
   {
-    title: 'Titre 3', description: 'Petit titre', icon: 'H3', keywords: ['h3', 'titre', 'heading'],
+    title: 'Titre 3', description: 'Petit titre', icon: 'ti-h-3', keywords: ['h3', 'titre', 'heading'],
     action: e => e.chain().focus().setHeading({ level: 3 }).run()
   },
   {
-    title: 'Liste à puces', description: 'Liste simple', icon: '•', keywords: ['liste', 'ul', 'bullet'],
+    title: 'Liste à puces', description: 'Liste simple', icon: 'ti-list', keywords: ['liste', 'ul', 'bullet'],
     action: e => e.chain().focus().toggleBulletList().run()
   },
   {
-    title: 'Liste numérotée', description: 'Liste avec numéros', icon: '1.', keywords: ['liste', 'ol', 'numéro'],
+    title: 'Liste numérotée', description: 'Liste avec numéros', icon: 'ti-list-numbers', keywords: ['liste', 'ol', 'numéro'],
     action: e => e.chain().focus().toggleOrderedList().run()
   },
   {
-    title: 'Cases à cocher', description: 'Liste de tâches', icon: '☑', keywords: ['todo', 'task', 'check', 'case'],
+    title: 'Cases à cocher', description: 'Liste de tâches', icon: 'ti-list-check', keywords: ['todo', 'task', 'check', 'case'],
     action: e => (e.chain().focus() as any).toggleTaskList().run()
   },
   {
-    title: 'Citation', description: 'Bloc de citation', icon: '❝', keywords: ['quote', 'citation', 'blockquote'],
+    title: 'Citation', description: 'Bloc de citation', icon: 'ti-quote', keywords: ['quote', 'citation', 'blockquote'],
     action: e => e.chain().focus().toggleBlockquote().run()
   },
   {
-    title: 'Code', description: 'Bloc de code', icon: '<>', keywords: ['code', 'pre'],
+    title: 'Code', description: 'Bloc de code', icon: 'ti-source-code', keywords: ['code', 'pre'],
     action: e => e.chain().focus().toggleCodeBlock().run()
   },
   {
-    title: 'Tableau', description: 'Insérer un tableau 3×3', icon: '⊞', keywords: ['table', 'tableau', 'grille'],
+    title: 'Tableau', description: 'Insérer un tableau 3×3', icon: 'ti-table', keywords: ['table', 'tableau', 'grille'],
     action: e => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
   },
   {
-    title: 'Séparateur', description: 'Ligne horizontale', icon: '—', keywords: ['hr', 'divider', 'ligne'],
+    title: 'Séparateur', description: 'Ligne horizontale', icon: 'ti-separator-horizontal', keywords: ['hr', 'divider', 'ligne'],
     action: e => e.chain().focus().setHorizontalRule().run()
   },
   {
-    title: 'Callout', description: 'Bloc mis en valeur', icon: '📣', keywords: ['callout', 'note', 'encadré', 'info', 'warning'],
+    title: 'Callout', description: 'Bloc mis en valeur', icon: 'ti-speakerphone', keywords: ['callout', 'note', 'encadré', 'info', 'warning'],
     action: e => e.chain().focus().insertContent({ type: 'callout', attrs: { color: 'yellow', emoji: '💡' }, content: [{ type: 'text', text: 'Écris ici…' }] }).run()
   },
   {
-    title: 'Image', description: 'Uploader une image', icon: '🖼️', keywords: ['image', 'photo', 'upload'],
+    title: 'Image', description: 'Uploader une image', icon: 'ti-photo', keywords: ['image', 'photo', 'upload'],
     action: () => onUploadImage()
   },
   {
-    title: 'Lien vers une page', description: 'Lien cliquable vers une page', icon: '🔗', keywords: ['lien', 'page', 'link'],
+    title: 'Lien vers une page', description: 'Lien cliquable vers une page', icon: 'ti-link', keywords: ['lien', 'page', 'link'],
     action: () => {} // géré spécialement
   },
   {
-    title: 'Bloc sous-page', description: 'Insérer une sous-page en bloc', icon: '📄', keywords: ['page', 'sous', 'bloc', 'embed'],
+    title: 'Bloc sous-page', description: 'Insérer une sous-page en bloc', icon: 'ti-file-text', keywords: ['page', 'sous', 'bloc', 'embed'],
     action: () => {} // géré spécialement
   },
   {
-    title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: '＋', keywords: ['page', 'nouveau', 'créer', 'enfant'],
+    title: 'Nouvelle sous-page', description: 'Créer une page enfant', icon: 'ti-file-plus', keywords: ['page', 'nouveau', 'créer', 'enfant'],
     action: () => onAddSubpage()
   },
 ]
@@ -277,8 +277,8 @@ const CommandList = forwardRef((props: any, ref) => {
                   onMouseEnter={() => setSelected(idx)}
                   className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${isSelected ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
                 >
-                  <span className="w-7 h-7 flex items-center justify-center bg-gray-100 rounded-lg text-sm font-mono font-bold text-gray-600 flex-shrink-0">
-                    {item.icon}
+                  <span className="w-7 h-7 flex items-center justify-center bg-gray-100 rounded-lg text-gray-600 flex-shrink-0">
+                    <i className={`ti ${item.icon}`} style={{ fontSize: 16 }} />
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
