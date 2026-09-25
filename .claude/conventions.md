@@ -125,6 +125,11 @@ développer une fonctionnalité listée ci-dessous.
   l'inventer localement.
 - Les toasts, modales, boutons et l'icône réglages ont le même aspect dans toutes
   les apps.
+- Icônes d'interface : uniquement des icônes au trait (*stroke*), jamais
+  d'icône pleine (*filled*), d'emoji ou de caractère typographique (●, ☑, ⊞,
+  🔗, 🗑…) en guise d'icône. Jeu de référence : Tabler Icons, variante outline
+  (webfont `ti ti-*`). Seule exception : les choix de couleur (pastilles,
+  roue de couleurs), qui montrent la couleur elle-même.
 
 ## 6. Favicon et icônes
 
