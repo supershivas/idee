@@ -2,7 +2,7 @@
 import { Extension, type Editor } from '@tiptap/core'
 import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state'
 import { EditorView } from '@tiptap/pm/view'
-import { CellSelection } from '@tiptap/pm/tables'
+import { CellSelection, TableMap, addColumn, addRow, selectedRect } from '@tiptap/pm/tables'
 import { createRoot } from 'react-dom/client'
 import { useState, useEffect, useRef } from 'react'
 
@@ -87,9 +87,16 @@ function measure(tableEl: HTMLTableElement): Geometry | null {
   }
 }
 
-type Menu = { type: 'row' | 'col'; index: number; cell: HTMLElement; left: number; top: number }
+type GripMenu = { type: 'row' | 'col'; index: number; cell: HTMLElement; left: number; top: number }
+// Menu « combien ? » ouvert par un clic long sur une ligne/colonne fantôme.
+type AddMenu = { type: 'addRow' | 'addCol'; cell: HTMLElement; left: number; top: number }
+type Menu = GripMenu | AddMenu
+
+const LONG_PRESS_MS = 450
+const ADD_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 const MENU_WIDTH = 220
+const ADD_MENU_WIDTH = 188
 const MENU_HEIGHT = 290 // hauteur approximative, pour le basculer au-dessus en bas d'écran
 
 function MenuItem({ icon, label, onClick, danger }: {
@@ -140,6 +147,9 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
   const menuRef = useRef<Menu | null>(null)
   const openedAt = useRef(0)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Clic long sur une ligne/colonne fantôme « + ».
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressed = useRef(false)
 
   function openMenu(m: Menu | null) {
     menuRef.current = m
@@ -215,7 +225,7 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
   // curseur : rendu sur la sélection de cellules, le navigateur la
   // remplaçait par un bout de texte sélectionné, et la barre de mise en forme
   // surgissait par-dessus le tableau. Le focus garde Ctrl+Z à portée.
-  function act(m: Menu, command: () => void) {
+  function act(m: GripMenu, command: () => void) {
     if (m.type === 'row') selectRow(view, m.cell, false); else selectColumn(view, m.cell, false)
     command()
     try {
@@ -235,6 +245,62 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
     if (type === 'row') selectRow(view, cell, false); else selectColumn(view, cell, false)
     openMenu({ type, index, cell, left, top })
   }
+
+  // Ajoute `count` lignes (ou colonnes) à la fin du tableau, en une seule
+  // transaction : un seul Ctrl+Z les retire toutes. Les deux fonctions de
+  // prosemirror-tables ne raisonnent pas pareil : `addRow` lit les positions
+  // du document courant (d'où un tableau relu à chaque tour), `addColumn`
+  // remappe celles du document de départ (d'où le même rectangle d'origine
+  // à chaque tour — les cellules s'ajoutent alors l'une après l'autre).
+  function addMany(type: 'row' | 'col', cell: HTMLElement, count: number) {
+    putCursorInCell(view, cell)
+    try {
+      const start = selectedRect(view.state)
+      const tr = view.state.tr
+      for (let i = 0; i < count; i++) {
+        if (type === 'col') { addColumn(tr, start, start.map.width); continue }
+        const table = tr.doc.nodeAt(start.tableStart - 1)
+        if (!table) break
+        const map = TableMap.get(table)
+        addRow(tr, { ...start, map, table }, map.height)
+      }
+      view.dispatch(tr)
+      view.focus()
+    } catch (err) { console.warn('addMany:', err) }
+    hideAll()
+  }
+
+  // Clic : ajoute une ligne/colonne. Clic long : ouvre le choix du nombre, à
+  // l'endroit du pointeur. Le clic qui suit le relâchement est alors ignoré.
+  function cancelPress() { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }
+  function addHandlers(type: 'row' | 'col', cell: HTMLElement) {
+    return {
+      onMouseDown: (e: React.MouseEvent) => {
+        e.preventDefault()
+        if (e.button !== 0) return
+        longPressed.current = false
+        const { clientX, clientY } = e
+        cancelPress()
+        pressTimer.current = setTimeout(() => {
+          pressTimer.current = null
+          longPressed.current = true
+          const left = Math.max(8, Math.min(clientX - 20, window.innerWidth - ADD_MENU_WIDTH - 8))
+          const top = clientY + 12 + 130 > window.innerHeight ? clientY - 12 - 130 : clientY + 12
+          openMenu({ type: type === 'row' ? 'addRow' : 'addCol', cell, left, top })
+        }, LONG_PRESS_MS)
+      },
+      onMouseUp: cancelPress,
+      onMouseLeave: cancelPress,
+      onClick: () => {
+        if (longPressed.current) { longPressed.current = false; return }
+        cancelPress()
+        addMany(type, cell, 1)
+      },
+    }
+  }
+
+  const gripMenu = menu && (menu.type === 'row' || menu.type === 'col') ? menu : null
+  const addMenu = menu && (menu.type === 'addRow' || menu.type === 'addCol') ? menu : null
 
   // Menu ouvert : seule sa poignée reste affichée.
   const colIndex = menu ? (menu.type === 'col' ? menu.index : null) : hoverCol
@@ -270,7 +336,7 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
         </button>
       )}
 
-      {menu && (
+      {gripMenu && (() => { const menu = gripMenu; return (
         <div data-table-ctl className="table-menu" style={{ left: menu.left, top: menu.top, width: MENU_WIDTH }}>
           {menu.type === 'row' ? (
             <>
@@ -293,24 +359,40 @@ function TableOverlay({ view, editor }: { view: EditorView; editor: Editor }) {
           <MenuItem icon="ti-table-off" danger label="Supprimer le tableau"
             onClick={() => act(menu, () => chain().deleteTable().run())} />
         </div>
+      ) })()}
+
+      {addMenu && (
+        <div data-table-ctl className="table-menu" style={{ left: addMenu.left, top: addMenu.top, width: ADD_MENU_WIDTH }}>
+          <div className="table-menu-label" style={{ paddingBottom: 4 }}>
+            {addMenu.type === 'addRow' ? 'Ajouter des lignes' : 'Ajouter des colonnes'}
+          </div>
+          <div className="table-menu-counts">
+            {ADD_COUNTS.map(n => (
+              <button key={n} type="button" className="table-menu-count"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => addMany(addMenu.type === 'addRow' ? 'row' : 'col', addMenu.cell, n)}
+              >{n}</button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ＋ Ajouter une colonne — fine colonne fantôme le long du bord droit,
           sur toute la hauteur du tableau. */}
-      {lastCol && !menu && (
-        <button type="button" data-table-ctl title="Ajouter une colonne" className="table-add"
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => { putCursorInCell(view, lastCol); editor.chain().focus().addColumnAfter().run(); hideAll() }}
+      {lastCol && (!menu || menu.type === 'addCol') && (
+        <button type="button" data-table-ctl title="Ajouter une colonne — clic long : en ajouter plusieurs"
+          className={`table-add${menu ? ' is-active' : ''}`}
+          {...addHandlers('col', lastCol)}
           style={{ left: geo.visible.right + 6, top: geo.table.top, width: 18, height: geo.table.height }}
         ><i className="ti ti-plus" /></button>
       )}
 
       {/* ＋ Ajouter une ligne — fine ligne fantôme sous le tableau, sur toute
           sa largeur visible. */}
-      {lastRow && !menu && (
-        <button type="button" data-table-ctl title="Ajouter une ligne" className="table-add"
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => { putCursorInCell(view, lastRow); editor.chain().focus().addRowAfter().run(); hideAll() }}
+      {lastRow && (!menu || menu.type === 'addRow') && (
+        <button type="button" data-table-ctl title="Ajouter une ligne — clic long : en ajouter plusieurs"
+          className={`table-add${menu ? ' is-active' : ''}`}
+          {...addHandlers('row', lastRow)}
           style={{ left: geo.visible.left, top: geo.table.top + geo.table.height + 6, width: geo.visible.right - geo.visible.left, height: 18 }}
         ><i className="ti ti-plus" /></button>
       )}

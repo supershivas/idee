@@ -1,5 +1,8 @@
 # Historique des versions
 
+## 1.39.0 — 2026-09-25
+- Tableaux : un clic long sur « + » permet de choisir combien de lignes ou de colonnes ajouter (1 à 10)
+
 ## 1.38.1 — 2026-09-24
 - Tableaux : poignées plus fines posées sur le bord, qui grossissent au survol
 - Ajouter une ligne ou une colonne : une fine ligne fantôme le long du tableau

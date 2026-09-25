@@ -646,7 +646,7 @@ html, body {
   border-radius: 6px;
   transition: background 0.1s, color 0.1s;
 }
-.table-add:hover { background: var(--hover-bg); color: var(--text-primary); }
+.table-add:hover, .table-add.is-active { background: var(--hover-bg); color: var(--text-primary); }
 
 .table-menu {
   position: fixed;
@@ -679,6 +679,17 @@ html, body {
 .table-menu-item.is-danger, .table-menu-item.is-danger i { color: #f87171; }
 .table-menu-sep { height: 1px; margin: 4px 6px; background: var(--sidebar-border); }
 .table-menu-label { padding: 4px 10px 0; font-size: 11px; color: var(--sidebar-muted); }
+/* Choix du nombre de lignes/colonnes à ajouter (clic long sur « + »). */
+.table-menu-counts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; padding: 0 2px 2px; }
+.table-menu-count {
+  height: 32px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sidebar-fg);
+  transition: background 0.1s;
+}
+.table-menu-count:hover { background: var(--sidebar-hover); }
 /* Les huit couleurs sur une seule rangée. */
 .table-menu .toolbar-swatch { min-width: 25px; }
 
