@@ -142,12 +142,17 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
   }
 
   useEffect(() => {
+    // Écouté sur tout le document : ces boutons vivent dans une racine React
+    // à part, où `onMouseEnter` ne part pas quand la souris arrive depuis
+    // l'éditeur — la poignée disparaissait alors sous le pointeur.
     function onMouseMove(e: MouseEvent) {
       if (menu) return
-      clearHide()
-      const target = e.target as HTMLElement
+      const target = e.target as HTMLElement | null
+      if (!target?.closest) return
+      if (target.closest('[data-drag-ctl]')) { clearHide(); return }
       const pmNode = target.closest('.ProseMirror > *') as HTMLElement | null
-      if (!pmNode) { scheduleHide(); return }
+      if (!pmNode || !view.dom.contains(pmNode)) { scheduleHide(); return }
+      clearHide()
       try {
         const domPos = view.posAtDOM(pmNode, 0)
         const $pos = view.state.doc.resolve(domPos)
@@ -163,13 +168,9 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
       const left = rect.left - BTN_OFFSET
       setPos({ top, left })
     }
-    function onMouseLeave() { scheduleHide() }
-    const dom = view.dom
-    dom.addEventListener('mousemove', onMouseMove)
-    dom.addEventListener('mouseleave', onMouseLeave)
+    document.addEventListener('mousemove', onMouseMove)
     return () => {
-      dom.removeEventListener('mousemove', onMouseMove)
-      dom.removeEventListener('mouseleave', onMouseLeave)
+      document.removeEventListener('mousemove', onMouseMove)
       clearHide()
     }
   }, [view, menu])
@@ -182,30 +183,54 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
     setMenu({ x: rect.right + 6, y: rect.top, nodePos: currentNodePosRef.current })
   }
 
+  // Ajoute un paragraphe vide juste après le bloc survolé.
+  function insertAfter() {
+    try {
+      const nodePos = currentNodePosRef.current
+      const node = view.state.doc.nodeAt(nodePos)
+      if (!node) return
+      editor.chain().focus().insertContentAt(nodePos + node.nodeSize, { type: 'paragraph' }).run()
+    } catch (err) { console.warn('insertAfter:', err) }
+    setPos(null)
+  }
+
   if (!pos) return null
+
+  const btnStyle = {
+    position: 'fixed' as const,
+    left: pos.left,
+    width: BTN_SIZE,
+    height: BTN_SIZE,
+    fontSize: 16,
+    zIndex: 100,
+    pointerEvents: 'auto' as const,
+    cursor: 'pointer',
+  }
+  const btnClass = 'flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors select-none'
 
   return (
     <>
       <button
         ref={btnRef}
+        data-drag-ctl
         onMouseDown={e => e.preventDefault()}
         onClick={handleClick}
-        onMouseEnter={clearHide}
-        onMouseLeave={() => { if (!menu) scheduleHide() }}
-        style={{
-          position: 'fixed',
-          top: pos.top,
-          left: pos.left,
-          width: BTN_SIZE,
-          height: BTN_SIZE,
-          fontSize: 16,
-          zIndex: 100,
-          pointerEvents: 'auto',
-          cursor: 'pointer',
-        }}
-        className="flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors select-none"
+        style={{ ...btnStyle, top: pos.top }}
+        className={btnClass}
         title="Cliquer pour déplacer ou convertir"
       ><i className="ti ti-grip-vertical" /></button>
+      {/* « + » d'ajout de bloc : juste sous la poignée, même bouton, même
+          colonne — il ne recouvre jamais le texte. */}
+      {!menu && (
+        <button
+          data-drag-ctl
+          onMouseDown={e => e.preventDefault()}
+          onClick={insertAfter}
+          style={{ ...btnStyle, top: pos.top + BTN_SIZE }}
+          className={btnClass}
+          title="Ajouter un bloc après"
+        ><i className="ti ti-plus" /></button>
+      )}
       {menu && (
         <BlockMenu
           x={menu.x}

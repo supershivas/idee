@@ -1,5 +1,9 @@
 # Historique des versions
 
+## 1.39.3 — 2026-09-25
+- Le « + » d'ajout de bloc se place juste sous la poignée du bloc, au même format
+- La poignée de bloc ne disparaît plus quand on va la chercher
+
 ## 1.39.2 — 2026-09-25
 - Toutes les icônes de l'app passent au trait (fermer, flèches, favoris, corbeille, menus…)
 - Le « + » d'ajout de bloc passe dans la marge gauche et ne masque plus le texte

@@ -269,167 +269,27 @@ async function uploadFileToSupabase(file: File, userId: string): Promise<string 
     return null
   }
 }
-function ImageNodeView({ node, editor, getPos }: any) {
-  const [hovered, setHovered] = useState(false)
-  function insertAfter() {
-    if (!editor || typeof getPos !== 'function') return
-    const pos = getPos() + node.nodeSize
-    editor.chain().focus().insertContentAt(pos, { type: 'paragraph' }).run()
-  }
+function ImageNodeView({ node }: any) {
   return (
     <NodeViewWrapper className="relative inline-block w-full">
-      <div
-        className="relative"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <img
-          src={node.attrs.src}
-          alt={node.attrs.alt || ''}
-          className="max-w-full rounded-lg"
-          style={{ display: 'block', margin: '1.5rem 0' }}
-        />
-        {hovered && (
-          <button
-            onClick={insertAfter}
-            contentEditable={false}
-            className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center rounded-full shadow-md text-sm font-bold transition-all"
-            style={{
-              bottom: '-14px',
-              width: '28px',
-              height: '28px',
-              background: 'var(--card-bg)',
-              border: '1.5px solid var(--border)',
-              color: 'var(--text-muted)',
-              zIndex: 10,
-              cursor: 'pointer',
-            }}
-            title="Ajouter un bloc après"
-          ><i className="ti ti-plus" /></button>
-        )}
-      </div>
+      <img
+        src={node.attrs.src}
+        alt={node.attrs.alt || ''}
+        className="max-w-full rounded-lg"
+        style={{ display: 'block', margin: '1.5rem 0' }}
+      />
     </NodeViewWrapper>
   )
 }
-// Distance entre le bas d'un tableau et le « + » d'ajout de bloc : sous la
-// ligne fantôme d'ajout de ligne (6px + 18px), avec de l'air. Doit tenir dans
-// la marge basse de `.tableWrapper` (bureau).
-const TABLE_PLUS_OFFSET = 30
-const PLUS_SIZE = 22
-
-// Le « + » d'ajout de bloc vit dans la marge gauche, centré sur la limite
-// basse du bloc survolé : les blocs ne sont séparés que de 8 à 10px, aucun
-// bouton n'y tient, et centré sur le texte il en masquait la dernière ligne.
-// Sous un tableau, il descend sous la ligne fantôme « ajouter une ligne ».
-function plusTop(block: Element): number {
-  const bottom = block.getBoundingClientRect().bottom
-  return block.classList.contains('tableWrapper') ? bottom + TABLE_PLUS_OFFSET : bottom - PLUS_SIZE / 2
-}
-
+// Le « + » d'ajout de bloc vit avec la poignée de bloc (DragHandle.tsx).
 function EditorZone({ editor, page, pages, onNavigate, isMobile }: any) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [plusPos, setPlusPos] = useState<{ top: number; blockEl: Element } | null>(null)
-  const plusRef = useRef<HTMLButtonElement>(null)
-  const plusBlockRef = useRef<Element | null>(null)
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container || !editor) return
-
-    function onMouseMove(e: MouseEvent) {
-      if (!editor) return
-      const el = document.elementFromPoint(e.clientX, e.clientY)
-      if (!el) return
-      // Ignore le bouton + lui-même
-      if (plusRef.current?.contains(el as Node)) return
-      // On garde le « + » tant que la souris va vers lui : vers la marge
-      // gauche, ou vers le bas pour un tableau.
-      const prev = plusBlockRef.current
-      if (prev?.isConnected) {
-        const r = prev.getBoundingClientRect()
-        const bottom = plusTop(prev) + PLUS_SIZE
-        if (e.clientY >= r.top && e.clientY <= bottom && e.clientX < r.left) return
-        if (prev.classList.contains('tableWrapper') && e.clientY > r.bottom && e.clientY <= bottom) return
-      }
-
-      const proseMirror = container.querySelector('.ProseMirror')
-      if (!proseMirror) return
-
-      // Trouve le bloc direct de ProseMirror le plus proche
-      const block = (el as HTMLElement).closest(
-        '.ProseMirror > p, .ProseMirror > h1, .ProseMirror > h2, .ProseMirror > h3, .ProseMirror > ul, .ProseMirror > ol, .ProseMirror > blockquote, .ProseMirror > pre, .ProseMirror > hr, .ProseMirror > .tableWrapper, .ProseMirror > [data-type="taskList"]'
-      )
-      if (!block) {
-        plusBlockRef.current = null
-        setPlusPos(null)
-        return
-      }
-
-      const containerRect = container.getBoundingClientRect()
-      plusBlockRef.current = block
-      setPlusPos({ top: plusTop(block) - containerRect.top + container.scrollTop, blockEl: block })
-    }
-
-function onMouseLeave(e: MouseEvent) {
-  if (plusRef.current?.contains(e.relatedTarget as Node)) return
-  // Passage sur les contrôles du tableau (hors de ce conteneur).
-  if ((e.relatedTarget as HTMLElement | null)?.closest?.('[data-table-ctl]')) return
-  // Laisser un délai pour que le curseur puisse atteindre le bouton
-  setTimeout(() => {
-    if (!plusRef.current?.matches(':hover')) setPlusPos(null)
-  }, 200)
-}
-
-    container.addEventListener('mousemove', onMouseMove)
-    container.addEventListener('mouseleave', onMouseLeave)
-    return () => {
-      container.removeEventListener('mousemove', onMouseMove)
-      container.removeEventListener('mouseleave', onMouseLeave)
-    }
-  }, [editor])
-
-  function insertAfterBlock() {
-    if (!editor || !plusPos) return
-    const proseMirror = containerRef.current?.querySelector('.ProseMirror')
-    if (!proseMirror) return
-    // Trouve la position ProseMirror du nœud correspondant
-    const blockEl = plusPos.blockEl
-    const pos = editor.view.posAtDOM(blockEl, 0)
-    const resolved = editor.state.doc.resolve(pos)
-    const nodeEnd = resolved.node(1) ? resolved.before(1) + resolved.node(1).nodeSize : pos
-    editor.chain().focus().insertContentAt(nodeEnd, { type: 'paragraph' }).run()
-    setPlusPos(null)
-  }
-
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto relative">
+    <div className="flex-1 overflow-y-auto relative">
       <EditorContent
         editor={editor}
         className="prose max-w-none py-6 md:py-6"
         style={{ paddingLeft: isMobile ? '16px' : '52px', paddingRight: isMobile ? '16px' : '52px' }}
       />
-      {plusPos && !isMobile && (
-        <button
-          ref={plusRef}
-          onClick={insertAfterBlock}
-          onMouseEnter={() => {}}
-          onMouseLeave={() => setPlusPos(null)}
-          className="absolute flex items-center justify-center rounded-full shadow-md transition-all pointer-events-auto"
-          style={{
-            top: `${plusPos.top}px`,
-            left: 6,
-            width: PLUS_SIZE,
-            height: PLUS_SIZE,
-            fontSize: 14,
-            background: 'var(--card-bg)',
-            border: '1.5px solid var(--border)',
-            color: 'var(--text-muted)',
-            zIndex: 10,
-            cursor: 'pointer',
-          }}
-          title="Ajouter un bloc après"
-        ><i className="ti ti-plus" /></button>
-      )}
       <Backlinks currentPage={page} pages={pages} onNavigate={onNavigate} />
     </div>
   )
@@ -1046,8 +906,8 @@ Image.extend({
         }
         /* Défilement HORIZONTAL seulement → une seule barre verticale (page). */
         .ProseMirror .tableWrapper { overflow-x: auto; margin: 1rem 0; }
-        /* Bureau : place pour la ligne fantôme d'ajout et le « + » de bloc. */
-        @media (hover: hover) and (pointer: fine) { .ProseMirror .tableWrapper { margin-bottom: 64px; } }
+        /* Bureau : place pour la ligne fantôme « ajouter une ligne ». */
+        @media (hover: hover) and (pointer: fine) { .ProseMirror .tableWrapper { margin-bottom: 36px; } }
         /* En-tête sticky quand le tableau tient (classe .table-fits posée en
            JS) : wrapper en overflow visible → sticky résolu sur le panneau. */
         .ProseMirror .tableWrapper.table-fits { overflow: visible; }
