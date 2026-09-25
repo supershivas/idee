@@ -110,7 +110,7 @@ function PillSwatches({ editor, onPick }: { editor: any, onPick?: () => void }) 
       })}
       {editor?.isActive('pill') && (
         <ToolBtn onClick={() => { editor?.chain().focus().unsetMark('pill').run(); onPick?.() }}
-          label="×" title="Retirer le surlignage" />
+          label={<i className="ti ti-x" />} title="Retirer le surlignage" />
       )}
     </>
   )
@@ -191,7 +191,7 @@ function MoreMenu({ children }: { children: ReactNode }) {
   useDismiss(open, ref, () => setOpen(false))
   return (
     <div ref={ref} className="relative flex-shrink-0" onMouseDown={e => e.preventDefault()}>
-      <ToolBtn onClick={() => setOpen(v => !v)} active={open} label="⋯" title="Plus d'options" />
+      <ToolBtn onClick={() => setOpen(v => !v)} active={open} label={<i className="ti ti-dots" />} title="Plus d'options" />
       {open && (
         <div className="toolbar-popover" style={{ right: 0, top: '100%', marginTop: 6, flexWrap: 'wrap', width: 'max-content', maxWidth: 320 }}
           onClick={e => { if (!(e.target as HTMLElement).closest('[data-keep-open]')) setOpen(false) }}>
@@ -204,13 +204,13 @@ function MoreMenu({ children }: { children: ReactNode }) {
 
 function TableBottomSheet({ editor, onClose }: { editor: any, onClose: () => void }) {
   const actions = [
-    { label: '← Colonne avant', fn: () => editor.chain().focus().addColumnBefore().run() },
-    { label: 'Colonne après →', fn: () => editor.chain().focus().addColumnAfter().run() },
-    { label: '↑ Ligne avant', fn: () => editor.chain().focus().addRowBefore().run() },
-    { label: 'Ligne après ↓', fn: () => editor.chain().focus().addRowAfter().run() },
-    { label: '− Supprimer colonne', fn: () => editor.chain().focus().deleteColumn().run(), danger: true },
-    { label: '− Supprimer ligne', fn: () => editor.chain().focus().deleteRow().run(), danger: true },
-    { label: '🗑 Supprimer tableau', fn: () => editor.chain().focus().deleteTable().run(), danger: true },
+    { icon: 'ti-column-insert-left', label: 'Colonne avant', fn: () => editor.chain().focus().addColumnBefore().run() },
+    { icon: 'ti-column-insert-right', label: 'Colonne après', fn: () => editor.chain().focus().addColumnAfter().run() },
+    { icon: 'ti-row-insert-top', label: 'Ligne avant', fn: () => editor.chain().focus().addRowBefore().run() },
+    { icon: 'ti-row-insert-bottom', label: 'Ligne après', fn: () => editor.chain().focus().addRowAfter().run() },
+    { icon: 'ti-column-remove', label: 'Supprimer la colonne', fn: () => editor.chain().focus().deleteColumn().run(), danger: true },
+    { icon: 'ti-row-remove', label: 'Supprimer la ligne', fn: () => editor.chain().focus().deleteRow().run(), danger: true },
+    { icon: 'ti-table-off', label: 'Supprimer le tableau', fn: () => editor.chain().focus().deleteTable().run(), danger: true },
   ]
   return (
     <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
@@ -222,16 +222,18 @@ function TableBottomSheet({ editor, onClose }: { editor: any, onClose: () => voi
             <button key={c.label} title={c.label}
               onClick={() => { (editor.chain().focus() as any).setCellAttribute('backgroundColor', c.value).run(); onClose() }}
               className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
-              style={{ background: c.swatch || 'transparent', border: c.swatch ? '1px solid rgba(0,0,0,0.15)' : '1px solid var(--border)' }}>
-              {c.value === null && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>⦸</span>}
-            </button>
+              style={{
+                background: c.swatch || 'linear-gradient(135deg, transparent 45%, var(--text-muted) 45%, var(--text-muted) 55%, transparent 55%)',
+                border: c.swatch ? '1px solid rgba(0,0,0,0.15)' : '1px solid var(--border)',
+              }} />
           ))}
         </div>
         <p className="text-xs font-medium uppercase tracking-wide px-5 mb-2" style={{ color: 'var(--text-muted)' }}>Tableau</p>
         {actions.map((a, i) => (
           <button key={i} onClick={() => { a.fn(); onClose() }}
-            className={`w-full text-left px-5 py-4 text-base transition-colors`}
+            className="w-full flex items-center gap-3 text-left px-5 py-4 text-base transition-colors"
             style={{ borderTop: '1px solid var(--border-light)', color: a.danger ? '#f87171' : 'var(--text-primary)' }}>
+            <i className={`ti ${a.icon}`} style={{ fontSize: 18, color: a.danger ? '#f87171' : 'var(--text-muted)' }} />
             {a.label}
           </button>
         ))}
@@ -764,19 +766,19 @@ Image.extend({
   // elles.
   const toolbarMobilePrimary = (
     <>
-      <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label={<i className="ti ti-bold" />} title="Gras" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label={<i className="ti ti-italic" />} title="Italique" />
       <Sep />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label={<i className="ti ti-h-1" />} title="Titre 1" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label={<i className="ti ti-h-2" />} title="Titre 2" />
       <Sep />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste" />
-      <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" />
-      <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" />
-      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label={<i className="ti ti-list" />} title="Liste" />
+      <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label={<i className="ti ti-list-check" />} title="Cases à cocher" />
+      <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label={<i className="ti ti-link" />} title="Lien" />
+      <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={<i className={`ti ${uploading ? 'ti-loader-2 animate-spin' : 'ti-photo'}`} />} title="Image" />
       <ToolBtn
         onClick={() => editor?.isActive('table') ? setShowTableSheet(true) : editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-        active={editor?.isActive('table')} label="⊞" title="Tableau" />
+        active={editor?.isActive('table')} label={<i className="ti ti-table" />} title="Tableau" />
     </>
   )
 
@@ -784,13 +786,13 @@ Image.extend({
   // rangée à moitié vide faisait sauter la pastille au-dessus du clavier.
   const toolbarMobileSecondary = (
     <>
-      <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} label="</>" title="Code en ligne" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label={<i className="ti ti-underline" />} title="Souligné" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label={<i className="ti ti-strikethrough" />} title="Barré" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} label={<i className="ti ti-code" />} title="Code en ligne" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label={<i className="ti ti-quote" />} title="Citation" />
       <Sep />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Numérotée" />
-      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label={<i className="ti ti-code" />} title="Bloc de code" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label={<i className="ti ti-list-numbers" />} title="Numérotée" />
+      <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label={<i className="ti ti-source-code" />} title="Bloc de code" />
       <Sep />
       <ToolBtn onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} active={false}
         label={<i className="ti ti-clear-formatting" />} title="Effacer la mise en forme" />
@@ -802,27 +804,27 @@ Image.extend({
   // Une entrée par bouton (ou séparateur), dans l'ordre d'usage : ce qui ne
   // tient pas passe dans « ⋯ » en partant de la fin.
   const desktopItems: { key: string; node: ReactNode; sep?: boolean }[] = [
-    { key: 'bold', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label="B" title="Gras" /> },
-    { key: 'italic', node: <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label="I" title="Italique" /> },
-    { key: 'underline', node: <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label="U̲" title="Souligné" /> },
-    { key: 'strike', node: <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label="S̶" title="Barré" /> },
+    { key: 'bold', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} label={<i className="ti ti-bold" />} title="Gras" /> },
+    { key: 'italic', node: <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} label={<i className="ti ti-italic" />} title="Italique" /> },
+    { key: 'underline', node: <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} label={<i className="ti ti-underline" />} title="Souligné" /> },
+    { key: 'strike', node: <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} label={<i className="ti ti-strikethrough" />} title="Barré" /> },
     { key: 's1', node: <Sep />, sep: true },
-    { key: 'h1', node: <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label="H1" title="Titre 1" /> },
-    { key: 'h2', node: <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label="H2" title="Titre 2" /> },
+    { key: 'h1', node: <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} label={<i className="ti ti-h-1" />} title="Titre 1" /> },
+    { key: 'h2', node: <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} label={<i className="ti ti-h-2" />} title="Titre 2" /> },
     { key: 's2', node: <Sep />, sep: true },
-    { key: 'bullet', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label="•" title="Liste à puces" /> },
-    { key: 'ordered', node: <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label="1." title="Liste numérotée" /> },
-    { key: 'task', node: <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label="☑" title="Cases à cocher" /> },
+    { key: 'bullet', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} label={<i className="ti ti-list" />} title="Liste à puces" /> },
+    { key: 'ordered', node: <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} label={<i className="ti ti-list-numbers" />} title="Liste numérotée" /> },
+    { key: 'task', node: <ToolBtn onClick={() => (editor?.chain().focus() as any).toggleTaskList().run()} active={editor?.isActive('taskList')} label={<i className="ti ti-list-check" />} title="Cases à cocher" /> },
     { key: 's3', node: <Sep />, sep: true },
-    { key: 'quote', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label="❝" title="Citation" /> },
-    { key: 'link', node: <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label="🔗" title="Lien" /> },
-    { key: 'image', node: <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={uploading ? '⏳' : '🖼️'} title="Image" /> },
-    { key: 'table', node: <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label="⊞" title="Tableau 3×3" /> },
+    { key: 'quote', node: <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} label={<i className="ti ti-quote" />} title="Citation" /> },
+    { key: 'link', node: <ToolBtn onClick={openLinkPicker} active={editor?.isActive('link')} label={<i className="ti ti-link" />} title="Lien" /> },
+    { key: 'image', node: <ToolBtn onClick={() => fileInputRef.current?.click()} active={false} label={<i className={`ti ${uploading ? 'ti-loader-2 animate-spin' : 'ti-photo'}`} />} title="Image" /> },
+    { key: 'table', node: <ToolBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor?.isActive('table')} label={<i className="ti ti-table" />} title="Tableau 3×3" /> },
     // Surlignage : n'existait que dans la barre de sélection, donc
     // inatteignable tant qu'on n'avait pas déjà sélectionné du texte.
     { key: 'pill', node: <PillMenu editor={editor} /> },
     { key: 's4', node: <Sep />, sep: true },
-    { key: 'codeBlock', node: <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label="</>" title="Bloc de code" /> },
+    { key: 'codeBlock', node: <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} label={<i className="ti ti-source-code" />} title="Bloc de code" /> },
     // Remet la sélection en texte nu : `unsetAllMarks` retire gras, italique,
     // couleurs, liens ; `clearNodes` ramène titres, listes et citations au
     // paragraphe. Il fallait sinon désactiver chaque style un par un, en
@@ -874,25 +876,25 @@ Image.extend({
               `.editor-toolbar-bubble`. Tout était auparavant réécrit ici en
               dur — d'où deux barres qui divergeaient à chaque retouche. */}
           <div className="editor-toolbar editor-toolbar-bubble flex items-center gap-0.5 px-1.5 py-1.5">
-            <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} label="B" title="Gras" />
-            <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} label="I" title="Italique" />
-            <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} label="U̲" title="Souligné" />
-            <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} label="S̶" title="Barré" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} label={<i className="ti ti-bold" />} title="Gras" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} label={<i className="ti ti-italic" />} title="Italique" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} label={<i className="ti ti-underline" />} title="Souligné" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} label={<i className="ti ti-strikethrough" />} title="Barré" />
             <Sep />
-            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} label="H1" title="Titre 1" />
-            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} label="H2" title="Titre 2" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} label={<i className="ti ti-h-1" />} title="Titre 1" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} label={<i className="ti ti-h-2" />} title="Titre 2" />
             <Sep />
-            <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} label="❝" title="Citation" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} label={<i className="ti ti-quote" />} title="Citation" />
             {/* Sur une sélection, « code » veut dire code en ligne — le bloc de
                 code, lui, s'applique depuis la barre collante. */}
-            <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} label="</>" title="Code en ligne" />
+            <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} label={<i className="ti ti-code" />} title="Code en ligne" />
             <Sep />
             <ToolBtn
               onClick={() => {
                 if (editor.isActive('link')) editor.chain().focus().unsetLink().run()
                 else openLinkPicker()
               }}
-              active={editor.isActive('link')} label="🔗"
+              active={editor.isActive('link')} label={<i className={`ti ${editor.isActive('link') ? 'ti-link-off' : 'ti-link'}`} />}
               title={editor.isActive('link') ? 'Retirer le lien' : 'Ajouter un lien'} />
             <Sep />
             <PillMenu editor={editor} up />
@@ -992,7 +994,7 @@ Image.extend({
           {/* Ressort : garde le bouton de bascule calé à droite du rang. */}
           <div className="flex-1 min-w-0" />
           <ToolBtn onClick={() => setMoreTools(v => !v)} active={moreTools}
-            label={moreTools ? <i className="ti ti-x" /> : '⋯'} title={moreTools ? 'Revenir aux actions courantes' : 'Plus d\'options'} />
+            label={<i className={`ti ${moreTools ? 'ti-x' : 'ti-dots'}`} />} title={moreTools ? 'Revenir aux actions courantes' : 'Plus d\'options'} />
         </div>
       )}
 

@@ -702,6 +702,9 @@ html, body {
   min-height: 40px;
   padding: 0 8px;
 }
+/* Icônes au trait (Tabler outline), comme partout : pas d'emoji ni de
+   caractère typographique en guise d'icône. */
+.toolbar-btn .ti { font-size: 18px; line-height: 1; }
 .toolbar-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-fg); }
 .toolbar-btn.is-active { background: var(--sidebar-selected); color: var(--sidebar-selected-fg); }
 

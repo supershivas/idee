@@ -1,5 +1,9 @@
 # Historique des versions
 
+## 1.39.1 — 2026-09-25
+- Barre d'outils : toutes les icônes passent au trait, fini les emojis et les lettres
+- Menu des tableaux sur téléphone : icônes au trait devant chaque action
+
 ## 1.39.0 — 2026-09-25
 - Tableaux : un clic long sur « + » permet de choisir combien de lignes ou de colonnes ajouter (1 à 10)
 
