@@ -1,5 +1,8 @@
 # Historique des versions
 
+## 1.39.4 — 2026-09-30
+- L'icône de l'app s'affiche aussi dans les navigateurs et les liens qui demandent favicon.ico
+
 ## 1.39.3 — 2026-09-25
 - Le « + » d'ajout de bloc se place juste sous la poignée du bloc, au même format
 - La poignée de bloc ne disparaît plus quand on va la chercher
