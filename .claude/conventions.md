@@ -30,7 +30,7 @@ développer une fonctionnalité listée ci-dessous.
 - Réglages : version, 5 dernières versions, export des données en JSON (section 3).
 - Mise à jour automatique avec toast (section 4).
 - Tokens et `mobile.css` du design system (section 5).
-- `favicon.svg` et `apple-touch-icon.png` (section 6).
+- `favicon.svg`, `favicon.ico` et `apple-touch-icon.png` (section 6).
 - Aucun secret commité (section 7).
 
 **Avancé — obligatoire pour une app primaire, facultatif pour une secondaire**
@@ -43,6 +43,9 @@ développer une fonctionnalité listée ci-dessous.
 - Corbeille ou annulation d'une suppression.
 - Parité visuelle stricte avec les autres apps primaires (même sidebar,
   mêmes composants).
+- Rubrique « Labo » (section 8 ter).
+- Rubrique « Atelier » (section 8 quater), pour une app dont le contenu se
+  modifie (dessins, niveaux, textes, données de jeu).
 
 ---
 
@@ -136,6 +139,8 @@ développer une fonctionnalité listée ci-dessous.
 Chaque app a, dès sa création :
 
 - `favicon.svg` (qui fonctionne en clair et en sombre) ;
+- `favicon.ico` (16, 32 et 48 px, tiré du SVG) : c'est l'adresse que les navigateurs
+  demandent par défaut, et celle des liens « Autres apps » des autres apps ;
 - `apple-touch-icon.png` en 180 × 180 ;
 - si c'est une PWA (obligatoire pour une app primaire), les icônes 192 et 512 du
   `manifest.json`.
@@ -163,6 +168,12 @@ Le motif est simple, lisible à 16 px, dans les couleurs des tokens.
 - Mobile d'abord : tout doit fonctionner en largeur téléphone (375 px) avant le
   bureau, sauf pour une app uniquement bureau.
 - Zones tactiles d'au moins 44 × 44 px.
+- Pas de zoom à l'ouverture du clavier sur iOS : tout champ de saisie (`input`,
+  `textarea`, `select`) fait au moins 16 px sur mobile, y compris ceux qui ont
+  un `font-size` en ligne. `mobile.css` impose cette taille avec `!important`.
+- Pas de double toucher : les styles `:hover` vont dans `@media (hover: hover)`
+  (avec Tailwind : `future.hoverOnlyWhenSupported`). Sinon iOS prend le premier
+  toucher pour un survol et n'exécute le clic qu'au second.
 - Mode sombre selon `prefers-color-scheme`, via les tokens (app primaire ; facultatif
   pour une app secondaire).
 - L'app doit s'ouvrir sur ordinateur comme sur téléphone. Si elle est conçue
@@ -174,6 +185,124 @@ Le motif est simple, lisible à 16 px, dans les couleurs des tokens.
   téléphone sans rien casser : un bandeau discret, refermable, indique
   « Cette app est prévue pour un écran d'ordinateur ». Ne l'optimise pas pour
   le mobile sans ma demande.
+
+## 8 bis. Jeux
+
+Pour toute app qui est un jeu :
+
+- **Pas de sous-titre.** Jamais de sous-titre ni de baseline sous le nom du jeu,
+  ni dans l'en-tête ni sur l'écran d'accueil.
+- **Palette limitée.** La palette du jeu est restreinte, déclarée dans le
+  `CLAUDE.md` de l'app, et identique entre le canvas, le HUD et les commandes.
+  C'est une exception assumée aux tokens, uniquement pour le jeu. L'en-tête, les
+  réglages et les modales gardent les tokens.
+- **Commandes.** Elles se jouent au pouce (zones de 44 px minimum) et aussi au
+  clavier.
+- **Clavier.** Les déplacements lisent la touche physique (`event.code`) :
+  ZQSD en AZERTY et WASD en QWERTY marchent sans réglage, de même que les
+  flèches. Les commandes nommées par une lettre (M la carte, I l'inventaire,
+  E l'action…) lisent le caractère (`event.key`), pour que la touche écrite
+  M ouvre la carte quel que soit le clavier ; repli sur `event.code` si le
+  caractère n'est pas une lettre latine. Aucun raccourci avec Ctrl, Cmd ou
+  Alt, et aucun ne se répète quand on garde la touche enfoncée (`e.repeat`).
+- **Pas de recherche automatique du navigateur.** Firefox lance sa recherche
+  dans la page dès qu'on tape une lettre (ou `'` et `/`) : en jeu, hors des
+  champs de saisie, toute touche imprimable est retenue (`preventDefault` au
+  `keydown`), même si elle n'a pas d'effet. Espace et Entrée restent libres
+  sur un bouton ou un lien qui a le focus.
+- **Pause et sauvegarde.** Le jeu se met en pause quand une modale est ouverte.
+  La progression est sauvegardée automatiquement (régulièrement et à la
+  fermeture), pour ne rien perdre lors d'une mise à jour automatique.
+
+## 8 ter. Labo
+
+Chaque app primaire a une rubrique **Labo** : un banc d'essai où je compare des
+variantes avant d'en adopter une. Pour une app secondaire, elle est facultative
+et ne se crée que sur ma demande. Le labo n'est **jamais une longue page à
+défiler** : c'est un écran qui montre une variante à la fois.
+
+- **Accès** : une page dédiée (`labo.html` pour une app statique, `/app/labo`
+  ou `/labo` pour Next.js), avec un lien discret « Labo » (icône Tabler
+  `ti ti-flask`) dans les réglages, jamais dans l'en-tête de l'app.
+- **En-tête du labo** : il reprend le titre de l'app (logo et nom, même police
+  que l'en-tête de l'app, lien de retour) suivi de « LABO » en police mono,
+  majuscules espacées, dans un cadre fin. Fond **couleur d'accent** de l'app,
+  texte blanc : on doit voir au premier coup d'œil qu'on est dans le labo.
+- **Onglet du navigateur** : titre « Labo — Nom de l'app », et favicon du labo
+  (`favicon-labo.svg`, plus un PNG 32 px) = le favicon de l'app avec, en haut à
+  droite, une **pastille sombre (`#1C1C1E`, liseré blanc) portant une fiole
+  blanche** (Tabler `flask`, au trait). Le même signe dans toutes les apps, pour
+  reconnaître un onglet de labo au premier coup d'œil.
+- **Écran à hauteur fixe** (`100dvh`) : en-tête, menu et barre de variantes
+  restent en place ; seul le contenu de la variante défile, et seulement s'il le
+  faut.
+- **Menu à trois niveaux** : des **groupes** en onglets dans l'en-tête (Liste,
+  Détail, Modales…), les **sujets** du groupe dans la **marge de gauche** (icône
+  Tabler, nombre de variantes), et le sujet ouvert **déplie ses variantes** :
+  lettre **A, B, C…** (**A est toujours l'actuelle**) + titre, la lettre active
+  sur fond d'accent. Un seul sujet ouvert à la fois. Avec peu de sujets, un ou
+  deux niveaux suffisent.
+- **Mobile** (≤ 768 px) : pas de marge. Les sujets du groupe passent en puces
+  sous l'en-tête, et les variantes dans une **barre en bas de l'écran** (lettres,
+  précédent/suivant, titre de la variante ouverte).
+- **Changer de variante** : clic, flèches du clavier, balayage horizontal sur
+  mobile. Zones de 44 px minimum.
+- **Adresse** : elle garde le sujet et la lettre (`#cartes-C`), pour partager un
+  lien ; on la met à jour sans recharger la page.
+- **Chaque variante** a un titre et une phrase qui dit ce qu'elle change. Une
+  variante en place dans l'app est marquée « actuelle » ; celle que j'ai choisie
+  est marquée « retenue » (point d'accent sur sa lettre) et branchée dans
+  l'app ; l'ancienne reste marquée « ancienne » ou est retirée.
+- **Données** : des données d'exemple en dur ; le labo ne lit ni n'écrit rien
+  dans Supabase ni dans le `localStorage`. Ce qui modifie le contenu de l'app
+  n'est pas dans le labo : c'est l'Atelier (section 8 quater).
+- **Règles** : tokens et icônes au trait comme partout (sections 5 et 8) ; la page
+  est protégée par la même authentification que l'app. Créer le labo ou adopter
+  une variante change ce que je vois : incrémente la version (section 2).
+- Modèle de référence : `app/app/labo/page.tsx` dans `supershivas/source`
+  (tableau `TOPICS` : ajouter un sujet ou une variante = ajouter une entrée).
+
+## 8 quater. Atelier
+
+Une app dont le contenu se modifie (dessins, placement d'objets, niveaux,
+textes, réglages de jeu) peut avoir un **Atelier**, sur ma demande. Le **Labo**
+**montre et compare** des variantes sans rien changer ; l'**Atelier**
+**modifie** le contenu que l'app lit. Ce n'est jamais un onglet du Labo :
+c'est une app à part.
+
+- **Accès** : une page dédiée (`atelier.html` pour une app statique,
+  `/atelier` pour Next.js), avec un lien « Atelier » (icône Tabler
+  `ti ti-brush`) dans les réglages, une icône pinceau dans l'en-tête du Labo,
+  et une icône fiole vers le Labo dans l'en-tête de l'Atelier. Jamais dans
+  l'en-tête de l'app.
+- **En-tête de l'atelier** : le titre de l'app (logo et nom, lien de retour)
+  suivi de « ATELIER » en police mono, majuscules espacées, dans un cadre
+  fin. Fond **sombre `#1C1C1E`**, texte blanc (le Labo est sur la couleur
+  d'accent) : on sait d'un coup d'œil où l'on est.
+- **Onglet du navigateur** : titre « Atelier — Nom de l'app », favicon de
+  l'atelier (`favicon-atelier.svg`, plus un PNG 32 px) = le favicon de l'app
+  avec la même pastille sombre que le Labo (`#1C1C1E`, liseré blanc), portant
+  un **pinceau** blanc (Tabler `brush`, au trait) au lieu de la fiole.
+- **Écran à hauteur fixe** (`100dvh`) : l'en-tête reste en place, seule la
+  zone de travail défile. Les boîtes de dialogue sont rattachées au `body`
+  (rangées dans un conteneur caché, elles s'ouvrent invisibles et bloquent la
+  page).
+- **Outils** : un outil par sorte de contenu (éditeur de pixels, carte où l'on
+  place les objets, éditeur de textes…), chacun dans un onglet ou un panneau
+  de l'Atelier.
+- **Données** : chaque modification est enregistrée tout de suite dans le
+  navigateur (rien ne se perd), puis **publiée** en un geste vers la source de
+  vérité de l'app : le dépôt pour une app statique (un commit sur `main` par
+  l'API de GitHub, avec un jeton personnel fin gardé dans ce navigateur et
+  jamais exporté), Supabase pour une app primaire. L'app lit le contenu
+  publié à son lancement ; ce qui n'est pas encore publié reste visible dans
+  ce navigateur et signalé (« 3 à publier »).
+- **Règles** : tokens et icônes au trait (sections 5 et 8), zones de 44 px,
+  même authentification que l'app. Créer l'atelier change ce que je vois :
+  incrémente la version (section 2).
+- Modèle de référence : `atelier.html` dans `supershivas/kingvi` (dessins,
+  animations, assets créés, placement des objets sur la carte, textes : chaque
+  texte sous une clé stable, réécrit sur place dans ses données au lancement).
 
 ## 9. Code
 
@@ -196,10 +325,12 @@ Le motif est simple, lisible à 16 px, dans les couleurs des tokens.
 À la création d'une nouvelle app :
 
 0. Demande-moi si l'app est primaire ou secondaire, et note-le dans son `CLAUDE.md`.
+   Pose toujours les décisions à trancher (catégorie, cible, stack, hébergement,
+   données…) avec `AskUserQuestion`, en questions à choix multiples.
 1. Copie depuis `design-system/templates/` : `sync-design-system.sh` dans `scripts/`,
    `claude-settings.json` en `.claude/settings.json`, `CLAUDE.app.md` en `CLAUDE.md`.
 2. Lance le sync.
-3. Crée `version.json` (`1.0.0`), le favicon, l'en-tête (nom cliquable à gauche,
+3. Crée `version.json` (`1.0.0`), les icônes (section 6), l'en-tête (nom cliquable à gauche,
    roue crantée à droite) avec version et changelog dans les réglages,
    et la vérification de mise à jour.
 4. Propose-moi d'ajouter l'app au tableau du README de `design-system`.
