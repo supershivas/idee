@@ -1,5 +1,8 @@
 # Historique des versions
 
+## 1.39.6 — 2026-10-08
+- Le « + » d'ajout de bloc réapparaît après avoir déplacé un bloc
+
 ## 1.39.5 — 2026-10-08
 - On peut déplacer un bloc en glissant sa poignée ⋮⋮ ; un clic ouvre toujours le menu
 - Une ligne rouge montre où le bloc sera déposé

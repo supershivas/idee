@@ -1,8 +1,7 @@
 {
-  "version": "1.39.5",
+  "version": "1.39.6",
   "date": "2026-10-08",
   "changes": [
-    "On peut déplacer un bloc en glissant sa poignée ⋮⋮ ; un clic ouvre toujours le menu",
-    "Une ligne rouge montre où le bloc sera déposé"
+    "Le « + » d'ajout de bloc réapparaît après avoir déplacé un bloc"
   ]
 }

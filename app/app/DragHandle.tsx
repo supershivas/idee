@@ -148,6 +148,9 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
     // à part, où `onMouseEnter` ne part pas quand la souris arrive depuis
     // l'éditeur — la poignée disparaissait alors sous le pointeur.
     function onMouseMove(e: MouseEvent) {
+      // Aucun `mousemove` pendant un glisser : s'il en arrive un, le glisser
+      // est fini, même si `dragend` n'est jamais parti (annulé, Safari…).
+      setDragging(false)
       if (menu) return
       const target = e.target as HTMLElement | null
       if (!target?.closest) return
@@ -171,9 +174,14 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
       const left = rect.left - BTN_OFFSET
       setPos({ top, left })
     }
+    function onDragDone() { setDragging(false) }
     document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('drop', onDragDone, true)
+    document.addEventListener('dragend', onDragDone, true)
     return () => {
       document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('drop', onDragDone, true)
+      document.removeEventListener('dragend', onDragDone, true)
       clearHide()
     }
   }, [view, menu])
