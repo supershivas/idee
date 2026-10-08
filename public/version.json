@@ -1,7 +1,8 @@
 {
-  "version": "1.39.4",
-  "date": "2026-09-30",
+  "version": "1.39.5",
+  "date": "2026-10-08",
   "changes": [
-    "L'icône de l'app s'affiche aussi dans les navigateurs et les liens qui demandent favicon.ico"
+    "On peut déplacer un bloc en glissant sa poignée ⋮⋮ ; un clic ouvre toujours le menu",
+    "Une ligne rouge montre où le bloc sera déposé"
   ]
 }

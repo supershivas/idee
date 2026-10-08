@@ -399,7 +399,7 @@ export default function Editor({ page, pages, onUpdate, onAddSubpage, onNavigate
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ dropcursor: { color: 'var(--accent)', width: 2 } }),
       TypographyShortcuts,
       Underline,
       TaskList,

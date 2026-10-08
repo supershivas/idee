@@ -1,5 +1,9 @@
 # Historique des versions
 
+## 1.39.5 — 2026-10-08
+- On peut déplacer un bloc en glissant sa poignée ⋮⋮ ; un clic ouvre toujours le menu
+- Une ligne rouge montre où le bloc sera déposé
+
 ## 1.39.4 — 2026-09-30
 - L'icône de l'app s'affiche aussi dans les navigateurs et les liens qui demandent favicon.ico
 

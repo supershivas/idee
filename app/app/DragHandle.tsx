@@ -1,7 +1,7 @@
 'use client'
 import { Extension, type Editor } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import { TextSelection } from '@tiptap/pm/state'
+import { TextSelection, NodeSelection } from '@tiptap/pm/state'
 import { EditorView } from '@tiptap/pm/view'
 import { createRoot } from 'react-dom/client'
 import { useState, useEffect, useRef } from 'react'
@@ -132,6 +132,8 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
   const btnRef = useRef<HTMLButtonElement>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentNodePosRef = useRef<number>(0)
+  const currentBlockRef = useRef<HTMLElement | null>(null)
+  const [dragging, setDragging] = useState(false)
 
   function clearHide() {
     if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null }
@@ -153,6 +155,7 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
       const pmNode = target.closest('.ProseMirror > *') as HTMLElement | null
       if (!pmNode || !view.dom.contains(pmNode)) { scheduleHide(); return }
       clearHide()
+      currentBlockRef.current = pmNode
       try {
         const domPos = view.posAtDOM(pmNode, 0)
         const $pos = view.state.doc.resolve(domPos)
@@ -174,6 +177,33 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
       clearHide()
     }
   }, [view, menu])
+
+  // Glisser la poignée déplace le bloc : on sélectionne le nœud et on le
+  // confie à ProseMirror (`view.dragging`), qui gère le dépôt, le curseur de
+  // dépôt et la suppression à l'ancienne place.
+  function handleDragStart(e: React.DragEvent) {
+    try {
+      const sel = NodeSelection.create(view.state.doc, currentNodePosRef.current)
+      view.dispatch(view.state.tr.setSelection(sel))
+      const slice = sel.content()
+      const { dom, text } = view.serializeForClipboard(slice)
+      e.dataTransfer.clearData()
+      e.dataTransfer.setData('text/html', dom.innerHTML)
+      e.dataTransfer.setData('text/plain', text)
+      e.dataTransfer.effectAllowed = 'copyMove'
+      if (currentBlockRef.current) e.dataTransfer.setDragImage(currentBlockRef.current, 0, 0)
+      view.dragging = { slice, move: true, node: sel } as typeof view.dragging
+      setDragging(true)
+    } catch (err) {
+      console.warn('dragStart:', err)
+      e.preventDefault()
+    }
+  }
+
+  function handleDragEnd() {
+    setDragging(false)
+    setPos(null)
+  }
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -213,15 +243,17 @@ function DragButton({ view, editor }: { view: EditorView, editor: TiptapEditor }
       <button
         ref={btnRef}
         data-drag-ctl
-        onMouseDown={e => e.preventDefault()}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onClick={handleClick}
-        style={{ ...btnStyle, top: pos.top }}
+        style={{ ...btnStyle, top: pos.top, cursor: 'grab' }}
         className={btnClass}
-        title="Cliquer pour déplacer ou convertir"
+        title="Glisser pour déplacer, cliquer pour plus d'options"
       ><i className="ti ti-grip-vertical" /></button>
       {/* « + » d'ajout de bloc : juste sous la poignée, même bouton, même
           colonne — il ne recouvre jamais le texte. */}
-      {!menu && (
+      {!menu && !dragging && (
         <button
           data-drag-ctl
           onMouseDown={e => e.preventDefault()}
