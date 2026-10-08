@@ -57,6 +57,11 @@ recharge dès qu'aucune saisie n'est en cours ; `VersionToast` annonce ensuite
   (`CellSelection`) : le navigateur la remplace par une sélection de texte et
   la barre de mise en forme flottante apparaît.
 
+- Ne jamais monter/démonter le `BubbleMenu` (barre de style) sous condition,
+  ni insérer un élément juste avant lui : tippy déplace son nœud dans `body`
+  et React plante (`removeChild`/`insertBefore`). Le masquer par `shouldShow`
+  ou le régler par `tippyOptions` (z-index 49, sous les fenêtres z-50).
+
 ## Icônes
 
 Règle du design system : icônes Tabler au trait uniquement. Restent en
