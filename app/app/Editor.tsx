@@ -739,7 +739,10 @@ Image.extend({
             if (selection instanceof CellSelection) return false
             return !empty
           }}
-          tippyOptions={{ placement: 'top', offset: [0, 8], animation: 'fade', maxWidth: 'none' }}
+          // Juste au-dessus de la barre collante (45), mais sous les fenêtres
+          // (z-50 et plus) : par défaut tippy prend 9999 et la barre masquait
+          // le sélecteur de lien ouvert depuis elle.
+          tippyOptions={{ placement: 'top', offset: [0, 8], animation: 'fade', maxWidth: 'none', zIndex: 49 }}
         >
           {/* Mêmes boutons, mêmes séparateurs et mêmes pastilles que la barre
               collante : seule la surface diffère (pastille flottante), via

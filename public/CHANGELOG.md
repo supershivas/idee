@@ -1,5 +1,8 @@
 # Historique des versions
 
+## 1.39.7 — 2026-10-08
+- La fenêtre de lien (créer ou choisir une page) passe devant la barre de style au lieu d'apparaître derrière
+
 ## 1.39.6 — 2026-10-08
 - Le « + » d'ajout de bloc réapparaît après avoir déplacé un bloc
 

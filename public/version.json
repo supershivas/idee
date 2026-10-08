@@ -1,7 +1,7 @@
 {
-  "version": "1.39.6",
+  "version": "1.39.7",
   "date": "2026-10-08",
   "changes": [
-    "Le « + » d'ajout de bloc réapparaît après avoir déplacé un bloc"
+    "La fenêtre de lien (créer ou choisir une page) passe devant la barre de style au lieu d'apparaître derrière"
   ]
 }
