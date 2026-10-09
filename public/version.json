@@ -1,7 +1,8 @@
 {
-  "version": "1.39.7",
-  "date": "2026-10-08",
+  "version": "1.39.8",
+  "date": "2026-10-09",
   "changes": [
-    "La fenêtre de lien (créer ou choisir une page) passe devant la barre de style au lieu d'apparaître derrière"
+    "Les tags qui ne diffèrent que par les accents ou les majuscules (« poesie », « poésie ») sont fusionnés en un seul, sans perdre aucune page",
+    "Taper un tag sans accent réutilise le tag existant"
   ]
 }

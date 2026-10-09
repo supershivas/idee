@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { Page } from '../types'
+import { tagKey } from '../utils'
 import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 
 const TAG_PALETTE: Array<{ bg: string; text: string; border: string }> = [
@@ -57,14 +58,17 @@ export function TagsInput({ tags, onChange, allTags, compact, singleLine, onTagC
   const inputRef = useRef<HTMLInputElement>(null)
 
   const suggestions = focused && input.trim()
-    ? (allTags || []).filter(t => t.startsWith(input.trim().toLowerCase()) && !tags.includes(t))
+    ? (allTags || []).filter(t => tagKey(t).startsWith(tagKey(input)) && !tags.some(x => tagKey(x) === tagKey(t)))
     : []
 
   useEffect(() => { setHighlightIdx(0) }, [input])
 
   function addTag(raw: string) {
-    const tag = raw.trim().toLowerCase().replace(/[^a-z0-9\u00e0-\u00ff\-_]/g, '')
-    if (!tag || tags.includes(tag)) { setInput(''); return }
+    const typed = raw.trim().toLowerCase().replace(/[^a-z0-9\u00e0-\u00ff\-_]/g, '')
+    // Un tag existant qui ne diffère que par les accents est réutilisé tel
+    // quel : taper « poesie » range la page sous « poésie ».
+    const tag = (allTags || []).find(t => tagKey(t) === tagKey(typed)) ?? typed
+    if (!tag || tags.some(t => tagKey(t) === tagKey(tag))) { setInput(''); return }
     onChange([...tags, tag]); setInput('')
   }
 

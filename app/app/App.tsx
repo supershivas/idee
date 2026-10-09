@@ -18,7 +18,7 @@ const closestVertical: CollisionDetection = ({ collisionRect, droppableRects, dr
 }
 import { Page } from './types'
 import { PAGE_META_COLUMNS } from '@/lib/pageColumns'
-import { getAncestorIds, getDescendantIds, slugify, extractStoragePaths } from './utils'
+import { getAncestorIds, getDescendantIds, slugify, extractStoragePaths, canonicalTags, mergeTagVariants } from './utils'
 import { useIsMobile, useToggleFavorite, usePageSaver, useRealtimePages } from './hooks'
 import { PagePickerModal } from './components/PagePickerModal'
 import { MoveToModal } from './components/MoveToModal'
@@ -392,6 +392,17 @@ export default function App({ initialPages, userId, userEmail, initialPageId }: 
   }, [])
 
   useRealtimePages(userId, { onUpsert: applyRemoteUpsert, onDelete: applyRemoteDelete })
+
+  // Fusionne les variantes d'un même tag (« poesie » / « poésie ») sous une
+  // seule orthographe, y compris celles arrivées d'un autre appareil.
+  useEffect(() => {
+    const canon = canonicalTags(pages)
+    const fixes = pages
+      .map(p => ({ p, tags: mergeTagVariants(p.tags || [], canon) }))
+      .filter(({ p, tags }) => tags.join('\u0000') !== (p.tags || []).join('\u0000'))
+    fixes.forEach(({ p, tags }) => updateTags(p.id, tags))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages])
 
   useEffect(() => {
     if (initialPageId) return

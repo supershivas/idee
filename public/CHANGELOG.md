@@ -1,5 +1,9 @@
 # Historique des versions
 
+## 1.39.8 — 2026-10-09
+- Les tags qui ne diffèrent que par les accents ou les majuscules (« poesie », « poésie ») sont fusionnés en un seul, sans perdre aucune page
+- Taper un tag sans accent réutilise le tag existant
+
 ## 1.39.7 — 2026-10-08
 - La fenêtre de lien (créer ou choisir une page) passe devant la barre de style au lieu d'apparaître derrière
 

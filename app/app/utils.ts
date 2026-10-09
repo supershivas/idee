@@ -5,6 +5,42 @@ export function normalizeStr(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 
+// Deux tags qui ne diffèrent que par les accents ou la casse sont le même
+// tag : « poesie » et « Poésie » se rangent sous la même clé.
+export function tagKey(tag: string) {
+  return normalizeStr(tag.trim())
+}
+
+function accentCount(s: string) {
+  return (s.normalize('NFD').match(/[\u0300-\u036f]/g) || []).length
+}
+
+// Orthographe retenue pour chaque clé de tag : la plus accentuée
+// (« poésie » plutôt que « poesie »), puis la plus utilisée.
+export function canonicalTags(pages: Page[]): Map<string, string> {
+  const counts = new Map<string, number>()
+  pages.forEach(p => (p.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)))
+  const canon = new Map<string, string>()
+  counts.forEach((n, t) => {
+    const key = tagKey(t)
+    const best = canon.get(key)
+    if (!best) { canon.set(key, t); return }
+    const diff = accentCount(t) - accentCount(best)
+    if (diff > 0 || (diff === 0 && n > (counts.get(best) || 0))) canon.set(key, t)
+  })
+  return canon
+}
+
+// Remplace chaque tag par son orthographe retenue et retire les doublons.
+export function mergeTagVariants(tags: string[], canon: Map<string, string>): string[] {
+  const out: string[] = []
+  tags.forEach(t => {
+    const c = canon.get(tagKey(t)) ?? t
+    if (!out.some(o => tagKey(o) === tagKey(c))) out.push(c)
+  })
+  return out
+}
+
 export function getAncestorIds(pages: Page[], pageId: string): string[] {
   const ids: string[] = []
   let current = pages.find(p => p.id === pageId)
