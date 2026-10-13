@@ -103,18 +103,43 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
     downloadJSON(pages.filter(p => !p.deleted_at))
   }
 
-  // Export filtré : les pages cochées avec toutes leurs sous-pages (y compris
-  // les entrées de journal rangées dessous), plus tout le journal si coché.
-  // Même format que l'export complet, donc réimportable.
+  // Export filtré : pages et entrées de journal cochées une à une. Une page
+  // cochée emporte toujours toutes ses sous-pages (y compris les entrées de
+  // journal rangées dessous). Même format que l'export complet, donc
+  // réimportable.
   const [showFiltered, setShowFiltered] = useState(false)
+  const [filterTab, setFilterTab] = useState<'pages' | 'journal'>('pages')
   const [filterQuery, setFilterQuery] = useState('')
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
-  const [includeJournal, setIncludeJournal] = useState(true)
   const activePages = pages.filter(p => !p.deleted_at)
+
+  const childrenOf = new Map<string, Page[]>()
+  activePages.forEach(p => {
+    if (!p.parent_id) return
+    const list = childrenOf.get(p.parent_id)
+    if (list) list.push(p); else childrenOf.set(p.parent_id, [p])
+  })
+  function descendantIds(id: string, acc = new Set<string>()): Set<string> {
+    for (const c of childrenOf.get(id) || []) {
+      if (!acc.has(c.id)) { acc.add(c.id); descendantIds(c.id, acc) }
+    }
+    return acc
+  }
+  // Éléments emportés par une page cochée : cochés d'office, non décochables.
+  const includedByParent = new Set<string>()
+  checkedIds.forEach(id => descendantIds(id, includedByParent))
+  const selectedIds = new Set([...checkedIds, ...includedByParent])
+  const filteredCount = activePages.filter(p => selectedIds.has(p.id)).length
+
+  const matchesQuery = (p: Page) => !filterQuery.trim() || normalizeStr(p.title || '').includes(normalizeStr(filterQuery))
   const pickablePages = activePages
-    .filter(p => p.type !== 'journal')
-    .filter(p => !filterQuery.trim() || normalizeStr(p.title || '').includes(normalizeStr(filterQuery)))
+    .filter(p => p.type !== 'journal' && matchesQuery(p))
     .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'fr'))
+  const pickableJournal = activePages
+    .filter(p => p.type === 'journal' && matchesQuery(p))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const visibleRows = filterTab === 'pages' ? pickablePages : pickableJournal
+  const allVisibleChecked = visibleRows.length > 0 && visibleRows.every(p => selectedIds.has(p.id))
 
   function toggleChecked(id: string) {
     setCheckedIds(prev => {
@@ -124,24 +149,17 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
     })
   }
 
-  function filteredSelection(): Page[] {
-    const ids = new Set(checkedIds)
-    // Ajoute les descendants jusqu'à ce que plus rien ne change.
-    let grew = true
-    while (grew) {
-      grew = false
-      for (const p of activePages) {
-        if (p.parent_id && ids.has(p.parent_id) && !ids.has(p.id)) { ids.add(p.id); grew = true }
-      }
-    }
-    if (includeJournal) activePages.forEach(p => { if (p.type === 'journal') ids.add(p.id) })
-    return activePages.filter(p => ids.has(p.id))
+  function toggleAllVisible() {
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      visibleRows.forEach(p => { if (allVisibleChecked) next.delete(p.id); else next.add(p.id) })
+      return next
+    })
   }
-  const filteredCount = filteredSelection().length
 
   function exportFiltered() {
     if (filteredCount === 0) return
-    downloadJSON(filteredSelection(), '-selection')
+    downloadJSON(activePages.filter(p => selectedIds.has(p.id)), '-selection')
   }
 
   const THEMES: { value: Theme, label: string, icon: string }[] = [
@@ -295,35 +313,78 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                   <i className="ti ti-filter" style={{ fontSize: 18, color: 'var(--text-muted)' }} />
                   <div className="flex-1">
                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Exporter une sélection</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>JSON · pages choisies avec leurs sous-pages, et le journal</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>JSON · pages choisies (avec leurs sous-pages) et entrées du journal</p>
                   </div>
                   <i className={`ti ${showFiltered ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: 16, color: 'var(--text-muted)' }} />
                 </button>
                 {showFiltered && (
                   <div className="rounded-xl p-3 space-y-2" style={{ background: 'var(--selected-bg)' }}>
-                    <label className="flex items-center gap-3 px-1 min-h-[44px] cursor-pointer">
-                      <input type="checkbox" checked={includeJournal} onChange={e => setIncludeJournal(e.target.checked)} className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Tout le journal ({journalCount} entrée{journalCount > 1 ? 's' : ''})</span>
-                    </label>
+                    <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--card-bg)' }}>
+                      {([['pages', 'Pages', totalPages], ['journal', 'Journal', journalCount]] as const).map(([value, label, count]) => (
+                        <button
+                          key={value}
+                          onClick={() => setFilterTab(value)}
+                          className="flex-1 min-h-[44px] rounded-md text-sm font-medium"
+                          style={{
+                            background: filterTab === value ? 'var(--selected-bg)' : 'transparent',
+                            color: filterTab === value ? 'var(--text-primary)' : 'var(--text-muted)',
+                          }}
+                        >
+                          {label} <span style={{ color: 'var(--text-muted)' }}>{count}</span>
+                        </button>
+                      ))}
+                    </div>
                     <input
                       type="text"
                       value={filterQuery}
                       onChange={e => setFilterQuery(e.target.value)}
-                      placeholder="Chercher une page…"
+                      placeholder={filterTab === 'pages' ? 'Chercher une page…' : 'Chercher une entrée…'}
                       className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                       style={{ background: 'var(--card-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
                     />
-                    <div className="max-h-56 overflow-y-auto">
-                      {pickablePages.length === 0 && (
-                        <p className="text-xs px-1 py-2" style={{ color: 'var(--text-muted)' }}>Aucune page</p>
+                    {visibleRows.length > 0 && (
+                      <button
+                        onClick={toggleAllVisible}
+                        className="min-h-[44px] px-1 text-sm font-medium"
+                        style={{ color: 'var(--accent)' }}
+                      >
+                        {allVisibleChecked ? 'Tout décocher' : `Tout cocher${filterQuery.trim() ? ` (${visibleRows.length})` : ''}`}
+                      </button>
+                    )}
+                    <div className="max-h-64 overflow-y-auto">
+                      {visibleRows.length === 0 && (
+                        <p className="text-xs px-1 py-2" style={{ color: 'var(--text-muted)' }}>
+                          {filterTab === 'pages' ? 'Aucune page' : 'Aucune entrée'}
+                        </p>
                       )}
-                      {pickablePages.map(p => (
-                        <label key={p.id} className="flex items-center gap-3 px-1 min-h-[44px] cursor-pointer">
-                          <input type="checkbox" checked={checkedIds.has(p.id)} onChange={() => toggleChecked(p.id)} className="w-4 h-4 flex-shrink-0" />
-                          <span className="flex-shrink-0">{p.icon || '📄'}</span>
-                          <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
-                        </label>
-                      ))}
+                      {visibleRows.map(p => {
+                        const inherited = includedByParent.has(p.id) && !checkedIds.has(p.id)
+                        const subCount = filterTab === 'pages' ? descendantIds(p.id).size : 0
+                        return (
+                          <label key={p.id} className="flex items-center gap-3 px-1 min-h-[44px] cursor-pointer" style={{ opacity: inherited ? 0.6 : 1 }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(p.id)}
+                              disabled={inherited}
+                              onChange={() => toggleChecked(p.id)}
+                              className="w-4 h-4 flex-shrink-0"
+                            />
+                            <span className="flex-shrink-0">{p.icon || (p.type === 'journal' ? '📝' : '📄')}</span>
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-sm truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
+                              {(filterTab === 'journal' || subCount > 0 || inherited) && (
+                                <span className="block text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                                  {[
+                                    filterTab === 'journal' && formatUpdatedAt(p.created_at),
+                                    subCount > 0 && `+ ${subCount} sous-page${subCount > 1 ? 's' : ''}`,
+                                    inherited && 'incluse avec sa page parente',
+                                  ].filter(Boolean).join(' · ')}
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        )
+                      })}
                     </div>
                     <button
                       onClick={exportFiltered}

@@ -1,5 +1,9 @@
 # Historique des versions
 
+## 1.40.1 — 2026-10-13
+- Export d'une sélection : on coche les entrées du journal une à une (avec recherche et « Tout cocher »)
+- Chaque page indique combien de sous-pages elle emporte ; celles-ci sont cochées d'office
+
 ## 1.40.0 — 2026-10-13
 - Réglages : « Exporter une sélection » télécharge en JSON les pages choisies avec toutes leurs sous-pages, et le journal
 
