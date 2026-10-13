@@ -1,5 +1,8 @@
 # Historique des versions
 
+## 1.40.0 — 2026-10-13
+- Réglages : « Exporter une sélection » télécharge en JSON les pages choisies avec toutes leurs sous-pages, et le journal
+
 ## 1.39.8 — 2026-10-09
 - Les tags qui ne diffèrent que par les accents ou les majuscules (« poesie », « poésie ») sont fusionnés en un seul, sans perdre aucune page
 - Taper un tag sans accent réutilise le tag existant

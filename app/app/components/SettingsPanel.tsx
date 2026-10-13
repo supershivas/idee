@@ -4,6 +4,7 @@ import { Page } from '../types'
 import { useSwipeDownToDismiss, useBackgroundScrollLock } from './MobileNav'
 import { ServerUsage } from './StorageUsage'
 import Changelog from './Changelog'
+import { normalizeStr } from '../utils'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -88,15 +89,59 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
   const trashedCount = pages.filter(p => !!p.deleted_at).length
   const favoriteCount = pages.filter(p => p.favorite && !p.deleted_at).length
 
-  function exportJSON() {
-    const data = pages.filter(p => !p.deleted_at)
+  function downloadJSON(data: Page[], suffix = '') {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `idee-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `idee-export${suffix}-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  function exportJSON() {
+    downloadJSON(pages.filter(p => !p.deleted_at))
+  }
+
+  // Export filtré : les pages cochées avec toutes leurs sous-pages (y compris
+  // les entrées de journal rangées dessous), plus tout le journal si coché.
+  // Même format que l'export complet, donc réimportable.
+  const [showFiltered, setShowFiltered] = useState(false)
+  const [filterQuery, setFilterQuery] = useState('')
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
+  const [includeJournal, setIncludeJournal] = useState(true)
+  const activePages = pages.filter(p => !p.deleted_at)
+  const pickablePages = activePages
+    .filter(p => p.type !== 'journal')
+    .filter(p => !filterQuery.trim() || normalizeStr(p.title || '').includes(normalizeStr(filterQuery)))
+    .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'fr'))
+
+  function toggleChecked(id: string) {
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function filteredSelection(): Page[] {
+    const ids = new Set(checkedIds)
+    // Ajoute les descendants jusqu'à ce que plus rien ne change.
+    let grew = true
+    while (grew) {
+      grew = false
+      for (const p of activePages) {
+        if (p.parent_id && ids.has(p.parent_id) && !ids.has(p.id)) { ids.add(p.id); grew = true }
+      }
+    }
+    if (includeJournal) activePages.forEach(p => { if (p.type === 'journal') ids.add(p.id) })
+    return activePages.filter(p => ids.has(p.id))
+  }
+  const filteredCount = filteredSelection().length
+
+  function exportFiltered() {
+    if (filteredCount === 0) return
+    downloadJSON(filteredSelection(), '-selection')
   }
 
   const THEMES: { value: Theme, label: string, icon: string }[] = [
@@ -239,6 +284,58 @@ export function SettingsPanel({ onClose, onLogout, onImport, pages, userId, user
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>JSON · pages + journal (corbeille exclue)</p>
                   </div>
                 </button>
+                <button
+                  onClick={() => setShowFiltered(v => !v)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left"
+                  style={{ background: 'var(--selected-bg)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--selected-bg)')}
+                  aria-expanded={showFiltered}
+                >
+                  <i className="ti ti-filter" style={{ fontSize: 18, color: 'var(--text-muted)' }} />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Exporter une sélection</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>JSON · pages choisies avec leurs sous-pages, et le journal</p>
+                  </div>
+                  <i className={`ti ${showFiltered ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: 16, color: 'var(--text-muted)' }} />
+                </button>
+                {showFiltered && (
+                  <div className="rounded-xl p-3 space-y-2" style={{ background: 'var(--selected-bg)' }}>
+                    <label className="flex items-center gap-3 px-1 min-h-[44px] cursor-pointer">
+                      <input type="checkbox" checked={includeJournal} onChange={e => setIncludeJournal(e.target.checked)} className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Tout le journal ({journalCount} entrée{journalCount > 1 ? 's' : ''})</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={filterQuery}
+                      onChange={e => setFilterQuery(e.target.value)}
+                      placeholder="Chercher une page…"
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: 'var(--card-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                    />
+                    <div className="max-h-56 overflow-y-auto">
+                      {pickablePages.length === 0 && (
+                        <p className="text-xs px-1 py-2" style={{ color: 'var(--text-muted)' }}>Aucune page</p>
+                      )}
+                      {pickablePages.map(p => (
+                        <label key={p.id} className="flex items-center gap-3 px-1 min-h-[44px] cursor-pointer">
+                          <input type="checkbox" checked={checkedIds.has(p.id)} onChange={() => toggleChecked(p.id)} className="w-4 h-4 flex-shrink-0" />
+                          <span className="flex-shrink-0">{p.icon || '📄'}</span>
+                          <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{p.title || 'Sans titre'}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <button
+                      onClick={exportFiltered}
+                      disabled={filteredCount === 0}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
+                    >
+                      <i className="ti ti-download" style={{ fontSize: 16 }} />
+                      Exporter {filteredCount} élément{filteredCount > 1 ? 's' : ''}
+                    </button>
+                  </div>
+                )}
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={importing}
